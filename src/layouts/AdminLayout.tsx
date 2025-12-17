@@ -1,29 +1,46 @@
+import {
+  BookOpen,
+  Box,
+  Calculator,
+  Camera,
+  ChevronDown,
+  FileText,
+  FolderTree,
+  Gift,
+  HelpCircle,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  Menu,
+  Package,
+  Settings,
+  X
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  Users, 
-  FolderTree,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  ChevronDown
-} from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { toast } from 'sonner';
+import { useSettings } from '../context/SettingsContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Produk', href: '/admin/products', icon: Package },
-  { name: 'Pesanan', href: '/admin/orders', icon: ShoppingBag },
-  { name: 'Customer', href: '/admin/customers', icon: Users },
   { name: 'Kategori', href: '/admin/categories', icon: FolderTree },
+  { name: 'Kalkulator Leads', href: '/admin/calculator-leads', icon: Calculator },
+  { name: 'Komponen Kalkulator', href: '/admin/calculator-components', icon: Box },
+  { name: 'Dokumen', href: '/admin/documents', icon: FileText },
+  { name: 'Artikel', href: '/admin/articles', icon: BookOpen },
+  { name: 'Galeri', href: '/admin/gallery', icon: Camera },
+  { name: 'FAQ', href: '/admin/faqs', icon: HelpCircle },
+  { name: 'Kontak', href: '/admin/contacts', icon: Mail },
+  { name: 'Program Referral', href: '/admin/referrals', icon: Gift },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
+import { useAuth } from '../context/AuthContext';
+
 export function AdminLayout() {
+  const { logout } = useAuth();
+  const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,9 +54,13 @@ export function AdminLayout() {
 
   const handleLogout = () => {
     if (confirm('Yakin ingin logout?')) {
-      localStorage.removeItem('adminAuth');
-      localStorage.removeItem('adminUser');
-      navigate('/admin/login');
+      logout(); // Call logout from AuthContext
+      navigate('/admin/login'); // Navigate to admin login page
+      toast.success('Berhasil logout. Sampai jumpa!');
+      // Use setTimeout to ensure toast is shown before navigation
+      setTimeout(() => {
+        navigate('/'); // Navigate to the public home page after a delay
+      }, 500);
     }
   };
 
@@ -47,7 +68,7 @@ export function AdminLayout() {
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -55,16 +76,23 @@ export function AdminLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-40 w-64 h-screen transition-transform ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 bg-white border-r border-gray-200`}
+        className={`fixed top-0 left-0 z-40 w-64 h-screen transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 bg-white border-r border-gray-200 flex flex-col`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
           <Link to="/admin" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#EB216A] rounded-lg flex items-center justify-center">
-              <span className="text-white text-lg">A</span>
-            </div>
+            {settings.siteLogo ? (
+              <img
+                src={settings.siteLogo}
+                alt={settings.siteName}
+                className="h-8 w-auto object-contain"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: settings.brandColor || '#EB216A' }}>
+                <span className="text-white text-lg">A</span>
+              </div>
+            )}
             <span className="text-xl text-gray-900">Admin</span>
           </Link>
           <button
@@ -75,8 +103,8 @@ export function AdminLayout() {
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-1">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -85,11 +113,10 @@ export function AdminLayout() {
                 key={item.name}
                 to={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  active
-                    ? 'bg-[#EB216A] text-white shadow-md'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active
+                  ? 'bg-[#EB216A] text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-sm">{item.name}</span>
@@ -98,17 +125,17 @@ export function AdminLayout() {
           })}
         </nav>
 
-        {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        {/* User section - Fixed at bottom */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 cursor-pointer">
-            <div className="w-10 h-10 bg-[#EB216A]/10 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#EB216A]/10 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-[#EB216A]">AD</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm text-gray-900 truncate">Admin User</p>
               <p className="text-xs text-gray-500">admin@amagriya.com</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
           </div>
           <button
             className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors"
@@ -133,16 +160,6 @@ export function AdminLayout() {
           <h1 className="text-xl text-gray-900 hidden lg:block">
             Amagriya Gorden - Admin Panel
           </h1>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-gray-300"
-              onClick={() => window.open('/', '_blank')}
-            >
-              Lihat Website
-            </Button>
-          </div>
         </header>
 
         {/* Page content */}

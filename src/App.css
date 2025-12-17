@@ -1,42 +1,193 @@
+/* Vite defaults */
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 0;
+  text-align: left;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* ========================================
+   DYNAMIC BRAND COLOR SYSTEM
+   Uses CSS variables set by SettingsContext
+   ======================================== */
+
+:root {
+  --brand-color: #EB216A;
+  --brand-color-dark: #d11d5e;
+  --brand-color-light: rgba(235, 33, 106, 0.1);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Override Tailwind's arbitrary value classes for brand color */
+/* Background colors */
+.bg-\[\#EB216A\],
+.bg-\[\#eb216a\] {
+  background-color: var(--brand-color) !important;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.hover\:bg-\[\#d11d5e\]:hover,
+.hover\:bg-\[\#D11D5E\]:hover {
+  background-color: var(--brand-color-dark) !important;
 }
 
-.card {
-  padding: 2em;
+/* Text colors */
+.text-\[\#EB216A\],
+.text-\[\#eb216a\] {
+  color: var(--brand-color) !important;
 }
 
-.read-the-docs {
-  color: #888;
+.hover\:text-\[\#EB216A\]:hover,
+.hover\:text-\[\#eb216a\]:hover {
+  color: var(--brand-color) !important;
+}
+
+/* Border colors */
+.border-\[\#EB216A\],
+.border-\[\#eb216a\] {
+  border-color: var(--brand-color) !important;
+}
+
+.hover\:border-\[\#EB216A\]:hover,
+.hover\:border-\[\#eb216a\]:hover {
+  border-color: var(--brand-color) !important;
+}
+
+.border-l-\[\#EB216A\] {
+  border-left-color: var(--brand-color) !important;
+}
+
+/* Gradient colors */
+.from-\[\#EB216A\] {
+  --tw-gradient-from: var(--brand-color) !important;
+}
+
+.to-\[\#d11d5e\],
+.to-\[\#D11D5E\] {
+  --tw-gradient-to: var(--brand-color-dark) !important;
+}
+
+/* Background with opacity */
+.bg-\[\#EB216A\]\/5,
+.bg-\[\#EB216A\]\/10,
+.bg-\[\#EB216A\]\/20 {
+  background-color: var(--brand-color-light) !important;
+}
+
+/* Focus states */
+.focus\:border-\[\#EB216A\]:focus {
+  border-color: var(--brand-color) !important;
+}
+
+.focus\:ring-\[\#EB216A\]:focus {
+  --tw-ring-color: var(--brand-color) !important;
+}
+
+/* Data state active for tabs */
+[data-state="active"].data-\[state\=active\]\:bg-\[\#EB216A\] {
+  background-color: var(--brand-color) !important;
+}
+
+/* Ring colors */
+.ring-\[\#EB216A\] {
+  --tw-ring-color: var(--brand-color) !important;
+}
+
+/* Outline colors */
+.outline-\[\#EB216A\] {
+  outline-color: var(--brand-color) !important;
+}
+
+/* Brand color helper classes - use these in new components */
+.brand-bg {
+  background-color: var(--brand-color);
+}
+
+.brand-bg-dark {
+  background-color: var(--brand-color-dark);
+}
+
+.brand-bg-light {
+  background-color: var(--brand-color-light);
+}
+
+.brand-text {
+  color: var(--brand-color);
+}
+
+.brand-border {
+  border-color: var(--brand-color);
+}
+
+.brand-gradient {
+  background: linear-gradient(to right, var(--brand-color), var(--brand-color-dark));
+}
+
+/* Hover variants */
+.hover\:brand-bg:hover {
+  background-color: var(--brand-color);
+}
+
+.hover\:brand-bg-dark:hover {
+  background-color: var(--brand-color-dark);
+}
+
+.hover\:brand-text:hover {
+  color: var(--brand-color);
+}
+
+/* Group hover variants */
+.group:hover .group-hover\:text-\[\#EB216A\],
+.group:hover .group-hover\:text-\[\#eb216a\] {
+  color: var(--brand-color) !important;
+}
+
+.group:hover .group-hover\:w-full {
+  width: 100%;
+}
+
+/* Active/checked states */
+.active\:bg-\[\#EB216A\]:active {
+  background-color: var(--brand-color) !important;
+}
+
+/* Loading spinner border */
+.border-t-\[\#EB216A\] {
+  border-top-color: var(--brand-color) !important;
+}
+
+/* More background opacity variants */
+.bg-\[\#EB216A\]\/90 {
+  background-color: color-mix(in srgb, var(--brand-color) 90%, transparent) !important;
+}
+
+/* Gradient variants - pink to darker */
+.to-\[\#f067a0\] {
+  --tw-gradient-to: color-mix(in srgb, var(--brand-color) 70%, white) !important;
+}
+
+.from-\[\#f067a0\] {
+  --tw-gradient-from: color-mix(in srgb, var(--brand-color) 70%, white) !important;
+}
+
+/* Hover opacity variants */
+.hover\:bg-\[\#EB216A\]\/50:hover {
+  background-color: color-mix(in srgb, var(--brand-color) 50%, transparent) !important;
+}
+
+.hover\:border-\[\#EB216A\]\/50:hover {
+  border-color: color-mix(in srgb, var(--brand-color) 50%, transparent) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-color);
+}
+
+/* Focus visible ring */
+.focus-visible\:ring-\[\#EB216A\]:focus-visible {
+  --tw-ring-color: var(--brand-color) !important;
+}
+
+/* Checkbox / Switch checked states */
+[data-state="checked"] {
+  background-color: var(--brand-color) !important;
 }

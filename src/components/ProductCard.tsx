@@ -8,12 +8,20 @@ interface ProductCardProps {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image?: string;
+  images?: string[];
   category: string;
+  comparePrice?: number;
+  featured?: boolean;
+  bestSeller?: boolean;
+  newArrival?: boolean;
 }
 
-export function ProductCard({ id, name, price, image, category }: ProductCardProps) {
+export function ProductCard({ id, name, price, image, images, category, comparePrice, featured, bestSeller, newArrival }: ProductCardProps) {
   const navigate = useNavigate();
+  
+  // Use first image from images array or fallback to image prop
+  const productImage = images?.[0] || image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=400';
 
   return (
     <div className="group relative h-full">
@@ -22,7 +30,7 @@ export function ProductCard({ id, name, price, image, category }: ProductCardPro
         {/* Image Section */}
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <ImageWithFallback
-            src={image}
+            src={productImage}
             alt={name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
@@ -30,10 +38,12 @@ export function ProductCard({ id, name, price, image, category }: ProductCardPro
           {/* Gradient Overlay on Hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           
-          {/* Category Badge */}
-          <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
-            {category}
-          </Badge>
+          {/* Badge */}
+          {(featured || bestSeller || newArrival) && (
+            <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
+              {bestSeller ? 'Best Seller' : newArrival ? 'New' : category}
+            </Badge>
+          )}
 
           {/* Wishlist Button */}
           <button className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#EB216A] hover:text-white shadow-lg">

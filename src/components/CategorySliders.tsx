@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ShoppingCart, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { productsApi, categoriesApi } from '../utils/api';
 
 interface Product {
   id: number;
@@ -400,7 +401,7 @@ const allProducts: Product[] = [
     category: 'Produk Other',
   },
   {
-    id: 46,
+    id:46,
     name: 'Lantai Vynil Minimalis',
     price: 'Rp 320.000',
     image: 'https://images.unsplash.com/photo-1617597190828-1bf579d485ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwY3VydGFpbnMlMjBob21lfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -538,8 +539,26 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const products = allProducts.filter(p => p.category === category);
+  // Fetch products by category
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        console.log(`🔄 Fetching products for category: ${category}`);
+        const response = await productsApi.getAll({ category, limit: 10 });
+        console.log(`✅ Products fetched for ${category}:`, response);
+        setProducts(response.data || []);
+      } catch (error) {
+        console.error(`❌ Error fetching products for ${category}:`, error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [category]);
 
   const checkScroll = () => {
     if (scrollContainerRef.current) {
@@ -624,7 +643,7 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
                 {/* Image Section */}
                 <div className="relative aspect-square overflow-hidden bg-gray-100">
                   <img
-                    src={product.image}
+                    src={product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=400'}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
@@ -633,9 +652,9 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   {/* Badge */}
-                  {product.badge && (
+                  {(product.badge || product.bestSeller || product.newArrival || product.featured) && (
                     <Badge className="absolute top-3 left-3 bg-[#EB216A] text-white border-0 shadow-lg text-xs">
-                      {product.badge}
+                      {product.badge || (product.bestSeller ? 'Best Seller' : product.newArrival ? 'New' : 'Featured')}
                     </Badge>
                   )}
 
@@ -649,10 +668,11 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
                     <Button
                       className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl text-xs lg:text-sm"
                       size="sm"
+                      onClick={() => navigate(`/product/${product.id}`)}
                     >
                       <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
-                      <span className="hidden lg:inline">Tambah ke Keranjang</span>
-                      <span className="lg:hidden">Tambah</span>
+                      <span className="hidden lg:inline">Lihat Detail</span>
+                      <span className="lg:hidden">Detail</span>
                     </Button>
                   </div>
                 </div>
@@ -666,25 +686,25 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
                   {/* Price Section */}
                   <div className="flex items-end justify-between mt-auto">
                     <div className="flex flex-col gap-0.5 lg:gap-1">
-                      {product.originalPrice ? (
+                      {product.comparePrice ? (
                         <>
                           <div className="flex items-center gap-1 lg:gap-2">
                             <span className="text-xs text-gray-400 line-through">
-                              {product.originalPrice}
+                              Rp {typeof product.comparePrice === 'number' ? product.comparePrice.toLocaleString('id-ID') : product.comparePrice}
                             </span>
                             <span className="text-[10px] lg:text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">
-                              -{product.discount}
+                              -{product.discount || Math.round((1 - product.price / product.comparePrice) * 100)}%
                             </span>
                           </div>
                           <span className="text-base lg:text-xl text-[#EB216A]">
-                            {product.price}
+                            Rp {typeof product.price === 'number' ? product.price.toLocaleString('id-ID') : product.price}
                           </span>
                         </>
                       ) : (
                         <>
                           <div className="h-4 lg:h-5" />
                           <span className="text-base lg:text-xl text-[#EB216A]">
-                            {product.price}
+                            Rp {typeof product.price === 'number' ? product.price.toLocaleString('id-ID') : product.price}
                           </span>
                         </>
                       )}

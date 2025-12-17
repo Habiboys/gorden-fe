@@ -1,83 +1,66 @@
-import { useState } from 'react';
-import { ProductCard } from '../components/ProductCard';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-
-// Mock product data
-const products = [
-  {
-    id: '1',
-    name: 'Gorden Blackout Minimalis Premium',
-    price: 185000,
-    image: 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjdXJ0YWlucyUyMGludGVyaW9yfGVufDF8fHx8MTc2NTA4NTY4NXww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Gorden Minimalis'
-  },
-  {
-    id: '2',
-    name: 'Vertical Blind Modern Elegan',
-    price: 165000,
-    image: 'https://images.unsplash.com/photo-1527776702328-f127392d764f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB3aW5kb3clMjBibGluZHN8ZW58MXx8fHwxNzY1MDg1Njg1fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Vertical Blind'
-  },
-  {
-    id: '3',
-    name: 'Gorden Klasik Mewah Berkualitas',
-    price: 225000,
-    image: 'https://images.unsplash.com/photo-1762360411005-863ffdaa7691?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwZHJhcGVzJTIwZmFicmljfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Gorden Klasik'
-  },
-  {
-    id: '4',
-    name: 'Vitrase Sheer Tipis Transparan',
-    price: 95000,
-    image: 'https://images.unsplash.com/photo-1617597190828-1bf579d485ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwY3VydGFpbnMlMjBob21lfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Vitrase'
-  },
-  {
-    id: '5',
-    name: 'Roller Blind Anti UV Terbaik',
-    price: 145000,
-    image: 'https://images.unsplash.com/photo-1527776702328-f127392d764f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyb2xsZXIlMjBibGluZHMlMjBtb2Rlcm58ZW58MXx8fHwxNzY1MDg1Njg3fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Roller Blind'
-  },
-  {
-    id: '6',
-    name: 'Gorden Katun Linen Natural',
-    price: 175000,
-    image: 'https://images.unsplash.com/photo-1763718094072-239b21e9dc20?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbGFzc2ljJTIwd2luZG93JTIwdHJlYXRtZW50fGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Gorden Minimalis'
-  },
-  {
-    id: '7',
-    name: 'Gorden Polyester Premium Awet',
-    price: 135000,
-    image: 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjdXJ0YWlucyUyMGludGVyaW9yfGVufDF8fHx8MTc2NTA4NTY4NXww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Gorden Minimalis'
-  },
-  {
-    id: '8',
-    name: 'Gorden Suede Luxury Eksklusif',
-    price: 285000,
-    image: 'https://images.unsplash.com/photo-1762360411005-863ffdaa7691?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwZHJhcGVzJTIwZmFicmljfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Gorden Klasik'
-  },
-  {
-    id: '9',
-    name: 'Gorden Satin Glossy Mengkilap',
-    price: 195000,
-    image: 'https://images.unsplash.com/photo-1617597190828-1bf579d485ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwY3VydGFpbnMlMjBob21lfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    category: 'Gorden Minimalis'
-  }
-];
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { categoriesApi, productsApi } from '../utils/api';
 
 export default function ProductListing() {
   const [sortBy, setSortBy] = useState('popular');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([{ value: 'all', label: 'Semua Kategori' }]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = [
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        console.log('🔄 Fetching products from backend...');
+        const response = await productsApi.getAll();
+        console.log('✅ Products fetched:', response);
+        const mappedProducts = (response.data || []).map((p: any) => ({
+          ...p,
+          image: p.image_url, // map snake_case to camelCase for component
+          category: p.category_id || p.category, // fallback
+          price: typeof p.price_self_measure === 'string' ? parseFloat(p.price_self_measure) : p.price_self_measure, // ensure number
+          featured: p.is_featured,
+          bestSeller: p.is_best_seller,
+          newArrival: p.is_new_arrival
+        }));
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error('❌ Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchCategories = async () => {
+      try {
+        console.log('🔄 Fetching categories from backend...');
+        const response = await categoriesApi.getAll();
+        console.log('✅ Categories fetched:', response);
+        const categoryOptions = [
+          { value: 'all', label: 'Semua Kategori' },
+          ...(response.data || []).map((cat: any) => ({
+            value: cat.name,
+            label: cat.name
+          }))
+        ];
+        setCategories(categoryOptions);
+      } catch (error) {
+        console.error('❌ Error fetching categories:', error);
+      }
+    };
+
+    fetchProducts();
+    fetchCategories();
+  }, []);
+
+  const categoriesOld = [
     { value: 'all', label: 'Semua Kategori' },
     { value: 'Gorden Minimalis', label: 'Gorden Minimalis' },
     { value: 'Gorden Klasik', label: 'Gorden Klasik' },
@@ -89,7 +72,7 @@ export default function ProductListing() {
   // Filter products based on search query and category
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      product.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -132,11 +115,10 @@ export default function ProductListing() {
                   <button
                     key={category.value}
                     onClick={() => setSelectedCategory(category.value)}
-                    className={`px-4 py-2 rounded-lg transition-all ${
-                      selectedCategory === category.value
+                    className={`px-4 py-2 rounded-lg transition-all ${selectedCategory === category.value
                         ? 'bg-[#EB216A] text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     {category.label}
                   </button>

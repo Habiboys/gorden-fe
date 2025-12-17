@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -6,41 +7,131 @@ import {
 } from './ui/accordion';
 import { HelpCircle } from 'lucide-react';
 import { Button } from './ui/button';
-
-const faqs = [
-  {
-    question: 'Apakah pemasangan gorden gratis?',
-    answer:
-      'Ya, kami menyediakan layanan pemasangan gratis untuk semua pembelian produk gorden. Tim profesional kami akan datang ke lokasi Anda untuk memastikan pemasangan dilakukan dengan sempurna.',
-  },
-  {
-    question: 'Bagaimana cara menghitung kebutuhan gorden?',
-    answer:
-      'Anda dapat menggunakan kalkulator otomatis di website kami atau menghubungi tim kami untuk layanan survey gratis. Tim kami akan membantu mengukur dan menghitung kebutuhan gorden Anda secara akurat.',
-  },
-  {
-    question: 'Apakah ada garansi untuk produk dan pemasangan?',
-    answer:
-      'Tentu! Kami memberikan garansi 1 tahun untuk produk dan garansi pemasangan. Jika terdapat masalah dengan produk atau pemasangan dalam periode garansi, kami akan memperbaikinya tanpa biaya tambahan.',
-  },
-  {
-    question: 'Berapa lama proses pembuatan dan pemasangan?',
-    answer:
-      'Proses pembuatan memakan waktu 7-14 hari kerja tergantung pada kompleksitas pesanan. Setelah produk selesai, kami akan menghubungi Anda untuk mengatur jadwal pemasangan yang sesuai dengan waktu Anda.',
-  },
-  {
-    question: 'Area mana saja yang dilayani?',
-    answer:
-      'Kami melayani area Jabodetabek dan sekitarnya. Untuk area di luar Jabodetabek, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
-  },
-  {
-    question: 'Apakah bisa request custom desain?',
-    answer:
-      'Tentu saja! Kami menerima pesanan custom sesuai dengan kebutuhan dan preferensi Anda. Tim desainer kami akan membantu mewujudkan visi interior impian Anda.',
-  },
-];
+import { faqsApi } from '../utils/api';
 
 export function FAQ() {
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFaqs();
+  }, []);
+
+  const loadFaqs = async () => {
+    try {
+      const response = await faqsApi.getAll();
+      if (response.success && response.data.length > 0) {
+        // Filter only active FAQs
+        const activeFaqs = response.data.filter((f: any) => f.active !== false);
+        setFaqs(activeFaqs);
+      } else {
+        // Fallback to default FAQs
+        setFaqs([
+          {
+            id: '1',
+            question: 'Apakah pemasangan gorden gratis?',
+            answer:
+              'Ya, kami menyediakan layanan pemasangan gratis untuk semua pembelian produk gorden. Tim profesional kami akan datang ke lokasi Anda untuk memastikan pemasangan dilakukan dengan sempurna.',
+          },
+          {
+            id: '2',
+            question: 'Bagaimana cara menghitung kebutuhan gorden?',
+            answer:
+              'Anda dapat menggunakan kalkulator otomatis di website kami atau menghubungi tim kami untuk layanan survey gratis. Tim kami akan membantu mengukur dan menghitung kebutuhan gorden Anda secara akurat.',
+          },
+          {
+            id: '3',
+            question: 'Apakah ada garansi untuk produk dan pemasangan?',
+            answer:
+              'Tentu! Kami memberikan garansi 1 tahun untuk produk dan garansi pemasangan. Jika terdapat masalah dengan produk atau pemasangan dalam periode garansi, kami akan memperbaikinya tanpa biaya tambahan.',
+          },
+          {
+            id: '4',
+            question: 'Berapa lama proses pembuatan dan pemasangan?',
+            answer:
+              'Proses pembuatan memakan waktu 7-14 hari kerja tergantung pada kompleksitas pesanan. Setelah produk selesai, kami akan menghubungi Anda untuk mengatur jadwal pemasangan yang sesuai dengan waktu Anda.',
+          },
+          {
+            id: '5',
+            question: 'Area mana saja yang dilayani?',
+            answer:
+              'Kami melayani area Jabodetabek dan sekitarnya. Untuk area di luar Jabodetabek, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
+          },
+          {
+            id: '6',
+            question: 'Apakah bisa request custom desain?',
+            answer:
+              'Tentu saja! Kami menerima pesanan custom sesuai dengan kebutuhan dan preferensi Anda. Tim desainer kami akan membantu mewujudkan visi interior impian Anda.',
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading FAQs:', error);
+      // Use fallback FAQs
+      setFaqs([
+        {
+          id: '1',
+          question: 'Apakah pemasangan gorden gratis?',
+          answer:
+            'Ya, kami menyediakan layanan pemasangan gratis untuk semua pembelian produk gorden. Tim profesional kami akan datang ke lokasi Anda untuk memastikan pemasangan dilakukan dengan sempurna.',
+        },
+        {
+          id: '2',
+          question: 'Bagaimana cara menghitung kebutuhan gorden?',
+          answer:
+            'Anda dapat menggunakan kalkulator otomatis di website kami atau menghubungi tim kami untuk layanan survey gratis. Tim kami akan membantu mengukur dan menghitung kebutuhan gorden Anda secara akurat.',
+        },
+        {
+          id: '3',
+          question: 'Apakah ada garansi untuk produk dan pemasangan?',
+          answer:
+            'Tentu! Kami memberikan garansi 1 tahun untuk produk dan garansi pemasangan. Jika terdapat masalah dengan produk atau pemasangan dalam periode garansi, kami akan memperbaikinya tanpa biaya tambahan.',
+        },
+        {
+          id: '4',
+          question: 'Berapa lama proses pembuatan dan pemasangan?',
+          answer:
+            'Proses pembuatan memakan waktu 7-14 hari kerja tergantung pada kompleksitas pesanan. Setelah produk selesai, kami akan menghubungi Anda untuk mengatur jadwal pemasangan yang sesuai dengan waktu Anda.',
+        },
+        {
+          id: '5',
+          question: 'Area mana saja yang dilayani?',
+          answer:
+            'Kami melayani area Jabodetabek dan sekitarnya. Untuk area di luar Jabodetabek, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
+        },
+        {
+          id: '6',
+          question: 'Apakah bisa request custom desain?',
+          answer:
+            'Tentu saja! Kami menerima pesanan custom sesuai dengan kebutuhan dan preferensi Anda. Tim desainer kami akan membantu mewujudkan visi interior impian Anda.',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-1">
+              <div className="w-16 h-16 bg-gray-200 rounded-2xl mb-6 animate-pulse"></div>
+              <div className="h-12 bg-gray-200 rounded mb-4 animate-pulse"></div>
+              <div className="h-20 bg-gray-200 rounded mb-8 animate-pulse"></div>
+            </div>
+            <div className="lg:col-span-2 space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
       {/* Decorative Background Elements */}
@@ -82,7 +173,7 @@ export function FAQ() {
             <Accordion type="single" collapsible className="space-y-4">
               {faqs.map((faq, index) => (
                 <AccordionItem
-                  key={index}
+                  key={faq.id}
                   value={`item-${index}`}
                   className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-lg transition-all"
                 >

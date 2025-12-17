@@ -1,7 +1,7 @@
 
-  # Update Landing Page for Amagriya Gorden (Copy)
+  # Update Landing Page for Amagriya Gorden (Copy) (Copy)
 
-  This is a code bundle for Update Landing Page for Amagriya Gorden (Copy). The original project is available at https://www.figma.com/design/K0MTFX6eeNHiv4GDDdd8vj/Update-Landing-Page-for-Amagriya-Gorden--Copy-.
+  This is a code bundle for Update Landing Page for Amagriya Gorden (Copy) (Copy). The original project is available at https://www.figma.com/design/26ONmIV9XcobQfS4dA2BLW/Update-Landing-Page-for-Amagriya-Gorden--Copy---Copy-.
 
   ## Running the code
 

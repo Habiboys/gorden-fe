@@ -1,105 +1,30 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ProductGallery } from '../components/ProductGallery';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
-import { Textarea } from '../components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { 
-  ShoppingCart, 
-  Plus,
-  Minus,
-  ChevronRight,
-  MessageCircle,
-  Share2,
+import {
   Check,
-  Heart
+  ChevronRight,
+  Heart,
+  MessageCircle,
+  Minus,
+  Plus,
+  Share2,
+  ShoppingCart
 } from 'lucide-react';
-
-// Mock product data
-const product = {
-  id: '1',
-  name: 'Fabric Only Sharp point Solar Screw seri 4000',
-  subtitle: 'Ukur & Pasang Sendiri',
-  category: 'Gorden Custom',
-  subcategory: 'Fabric-4000-RP',
-  price: 223200,
-  originalPrice: 446000,
-  discount: 50,
-  priceUnit: 'm2',
-  images: [
-    'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjdXJ0YWlucyUyMGludGVyaW9yfGVufDF8fHx8MTc2NTA4NTY4NXww&ixlib=rb-4.1.0&q=80&w=1080',
-    'https://images.unsplash.com/photo-1617597190828-1bf579d485ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwY3VydGFpbnMlMjBob21lfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    'https://images.unsplash.com/photo-1762360411005-863ffdaa7691?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwZHJhcGVzJTIwZmFicmljfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    'https://images.unsplash.com/photo-1527776702328-f127392d764f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB3aW5kb3clMjBibGluZHN8ZW58MXx8fHwxNzY1MDg1Njg1fDA&ixlib=rb-4.1.0&q=80&w=1080',
-  ],
-  packages: [
-    { id: 'self', label: 'Ukur & Pasang Sendiri' },
-    { id: 'measure-self', label: 'Ukur Sendiri | Pasang Teknisi' },
-    { id: 'full-service', label: 'Ukur & Pasang Teknisi' }
-  ],
-  description: 'Gorden premium dengan kualitas terbaik. Material berkualitas tinggi dengan finishing sempurna dan jahitan rapi. Tersedia dalam berbagai pilihan warna yang elegant dan cocok untuk berbagai ruangan.',
-  features: [
-    'Material premium berkualitas tinggi',
-    'Jahitan rapi dan presisi',
-    'Tahan lama dan tidak mudah luntur',
-    'Mudah dibersihkan',
-    'Tersedia berbagai pilihan warna'
-  ],
-  howToOrder: [
-    'Pilih paket yang sesuai kebutuhan Anda',
-    'Tentukan jumlah meter persegi yang dibutuhkan',
-    'Tambahkan catatan khusus jika diperlukan',
-    'Klik tombol "Keranjang" untuk melanjutkan',
-    'Lakukan pembayaran sesuai metode yang tersedia',
-    'Tim kami akan menghubungi Anda untuk konfirmasi'
-  ]
-};
-
-// Related products data - same category
-const relatedProducts = [
-  {
-    id: 1,
-    name: 'Gorden Smokering Premium',
-    price: 'Rp 450.000',
-    originalPrice: 'Rp 650.000',
-    discount: '30%',
-    image: 'https://images.unsplash.com/photo-1754611362309-71297e9f42fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBjdXJ0YWlucyUyMGxpdmluZyUyMHJvb218ZW58MXx8fHwxNzY1MDc5ODg5fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    badge: 'Best Seller',
-  },
-  {
-    id: 2,
-    name: 'Smokering Blackout Luxury',
-    price: 'Rp 520.000',
-    image: 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjdXJ0YWlucyUyMGludGVyaW9yfGVufDF8fHx8MTc2NTA4NTY4NXww&ixlib=rb-4.1.0&q=80&w=1080',
-    badge: 'Populer',
-  },
-  {
-    id: 3,
-    name: 'Smokering Velvet Mewah',
-    price: 'Rp 580.000',
-    image: 'https://images.unsplash.com/photo-1762360411005-863ffdaa7691?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwZHJhcGVzJTIwZmFicmljfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 4,
-    name: 'Smokering Linen Natural',
-    price: 'Rp 480.000',
-    originalPrice: 'Rp 600.000',
-    discount: '20%',
-    image: 'https://images.unsplash.com/photo-1763718094072-239b21e9dc20?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbGFzc2ljJTIwd2luZG93JTIwdHJlYXRtZW50fGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: 5,
-    name: 'Smokering Jacquard Elegant',
-    price: 'Rp 620.000',
-    badge: 'New',
-    image: 'https://images.unsplash.com/photo-1754611362309-71297e9f42fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBjdXJ0YWlucyUyMGxpdmluZyUyMHJvb218ZW58MXx8fHwxNzY1MDc5ODg5fDA&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-];
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ProductGallery } from '../components/ProductGallery';
+import { SEO } from '../components/SEO';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Separator } from '../components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Textarea } from '../components/ui/textarea';
+import { productsApi } from '../utils/api';
 
 export default function ProductDetail() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [product, setProduct] = useState<any>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState('self');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
@@ -112,13 +37,95 @@ export default function ProductDetail() {
     }
   };
 
-  const subtotal = product.price * quantity;
+  const subtotal = product ? product.price * quantity : 0;
 
   // Get selected package label
-  const selectedPackageLabel = product.packages.find(pkg => pkg.id === selectedPackage)?.label || '';
+  const selectedPackageLabel = product ? product.packages.find(pkg => pkg.id === selectedPackage)?.label || '' : '';
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+
+      try {
+        console.log('🔄 Fetching product:', id);
+        const response = await productsApi.getById(id);
+        console.log('✅ Product fetched:', response);
+
+        // Transform backend data to match frontend expectations
+        const productData = response.data;
+        setProduct({
+          ...productData,
+          // Default values if not present
+          subtitle: productData.subtitle || 'Ukur & Pasang Sendiri',
+          subcategory: productData.subcategory || productData.category,
+          originalPrice: productData.comparePrice || productData.price * 2,
+          discount: productData.comparePrice ? Math.round((1 - productData.price / productData.comparePrice) * 100) : 0,
+          priceUnit: productData.priceUnit || 'm2',
+          packages: productData.packages || [
+            { id: 'self', label: 'Ukur & Pasang Sendiri' },
+            { id: 'measure-self', label: 'Ukur Sendiri | Pasang Teknisi' },
+            { id: 'full-service', label: 'Ukur & Pasang Teknisi' }
+          ],
+          features: productData.features || [
+            'Material premium berkualitas tinggi',
+            'Jahitan rapi dan presisi',
+            'Tahan lama dan tidak mudah luntur',
+            'Mudah dibersihkan',
+            'Tersedia berbagai pilihan warna'
+          ],
+          howToOrder: productData.howToOrder || [
+            'Pilih paket yang sesuai dengan kebutuhan Anda.',
+            'Tentukan jumlah meter persegi yang dibutuhkan.',
+            'Tambahkan catatan khusus jika ada permintaan spesial.',
+            'Klik tombol "Keranjang" untuk menambahkan ke keranjang.',
+            'Lakukan proses pembayaran sesuai metode yang tersedia.',
+            'Tim kami akan menghubungi Anda untuk konfirmasi detail pesanan.'
+          ]
+        });
+      } catch (error: any) {
+        console.error('❌ Error fetching product:', error);
+        alert('Error loading product: ' + error.message);
+        navigate('/products');
+      }
+    };
+
+    const fetchRelatedProducts = async () => {
+      if (!id) return;
+
+      try {
+        console.log('🔄 Fetching related products...');
+        const response = await productsApi.getAll({ limit: 5 });
+        console.log('✅ Related products fetched:', response);
+        setRelatedProducts(response.data || []);
+      } catch (error) {
+        console.error('❌ Error fetching related products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+    fetchRelatedProducts();
+  }, [id, navigate]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+  }
+
+  if (!product) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Product not found</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title={product.metaTitle || product.name}
+        description={product.metaDescription || product.description}
+        keywords={product.metaKeywords}
+        image={product.images?.[0] || product.image}
+        url={window.location.href}
+        type="product"
+      />
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-100 pt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -188,11 +195,10 @@ export default function ProductDetail() {
                     <button
                       key={pkg.id}
                       onClick={() => setSelectedPackage(pkg.id)}
-                      className={`w-full px-4 py-3 rounded-xl border-2 text-left text-sm transition-all ${
-                        selectedPackage === pkg.id
+                      className={`w-full px-4 py-3 rounded-xl border-2 text-left text-sm transition-all ${selectedPackage === pkg.id
                           ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
                           : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span>{pkg.label}</span>
@@ -293,14 +299,14 @@ export default function ProductDetail() {
         <div className="mt-12">
           <Tabs defaultValue="info" className="w-full">
             <TabsList className="w-full lg:w-auto bg-white border border-gray-100 p-1 rounded-xl">
-              <TabsTrigger 
-                value="info" 
+              <TabsTrigger
+                value="info"
                 className="flex-1 lg:flex-none data-[state=active]:bg-[#EB216A] data-[state=active]:text-white"
               >
                 Informasi
               </TabsTrigger>
-              <TabsTrigger 
-                value="order" 
+              <TabsTrigger
+                value="order"
                 className="flex-1 lg:flex-none data-[state=active]:bg-[#EB216A] data-[state=active]:text-white"
               >
                 Cara Pemesanan
@@ -337,13 +343,10 @@ export default function ProductDetail() {
             <TabsContent value="order" className="mt-6">
               <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8">
                 <h3 className="text-xl text-gray-900 mb-4">Cara Pemesanan</h3>
-                <ol className="space-y-4">
+                <ol className="list-decimal list-inside space-y-3 text-gray-700">
                   {product.howToOrder.map((step, index) => (
-                    <li key={index} className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-[#EB216A] text-white flex items-center justify-center flex-shrink-0">
-                        {index + 1}
-                      </div>
-                      <p className="text-gray-700 leading-relaxed pt-1">{step}</p>
+                    <li key={index} className="leading-relaxed">
+                      {step}
                     </li>
                   ))}
                 </ol>
@@ -372,7 +375,7 @@ export default function ProductDetail() {
                   {/* Image Section */}
                   <div className="relative aspect-square overflow-hidden bg-gray-100">
                     <img
-                      src={relatedProduct.image}
+                      src={relatedProduct.images?.[0] || relatedProduct.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=400'}
                       alt={relatedProduct.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
@@ -381,9 +384,9 @@ export default function ProductDetail() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     {/* Badge */}
-                    {relatedProduct.badge && (
+                    {(relatedProduct.badge || relatedProduct.featured || relatedProduct.bestSeller || relatedProduct.newArrival) && (
                       <Badge className="absolute top-3 left-3 bg-[#EB216A] text-white border-0 shadow-lg text-xs">
-                        {relatedProduct.badge}
+                        {relatedProduct.badge || (relatedProduct.bestSeller ? 'Best Seller' : relatedProduct.newArrival ? 'New' : 'Featured')}
                       </Badge>
                     )}
 
@@ -397,7 +400,7 @@ export default function ProductDetail() {
                       <Button
                         className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl text-xs lg:text-sm"
                         size="sm"
-                        onClick={() => navigate(`/products/${relatedProduct.id}`)}
+                        onClick={() => navigate(`/product/${relatedProduct.id}`)}
                       >
                         <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
                         <span className="hidden lg:inline">Lihat Detail</span>
@@ -415,28 +418,21 @@ export default function ProductDetail() {
                     {/* Price Section */}
                     <div className="flex items-end justify-between mt-auto">
                       <div className="flex flex-col gap-0.5 lg:gap-1">
-                        {relatedProduct.originalPrice ? (
+                        {relatedProduct.comparePrice && (
                           <>
                             <div className="flex items-center gap-1 lg:gap-2">
                               <span className="text-xs text-gray-400 line-through">
-                                {relatedProduct.originalPrice}
+                                Rp {relatedProduct.comparePrice.toLocaleString('id-ID')}
                               </span>
                               <span className="text-[10px] lg:text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">
-                                -{relatedProduct.discount}
+                                -{Math.round((1 - relatedProduct.price / relatedProduct.comparePrice) * 100)}%
                               </span>
                             </div>
-                            <span className="text-base lg:text-xl text-[#EB216A]">
-                              {relatedProduct.price}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="h-4 lg:h-5" />
-                            <span className="text-base lg:text-xl text-[#EB216A]">
-                              {relatedProduct.price}
-                            </span>
                           </>
                         )}
+                        <span className="text-base lg:text-xl text-[#EB216A]">
+                          Rp {relatedProduct.price.toLocaleString('id-ID')}
+                        </span>
                         <span className="text-[10px] lg:text-xs text-gray-500">
                           Per meter
                         </span>

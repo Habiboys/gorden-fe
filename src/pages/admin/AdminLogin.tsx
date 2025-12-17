@@ -1,36 +1,52 @@
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Card } from '../../components/ui/card';
+
+import { useAuth } from '../../context/AuthContext';
+import { authApi } from '../../utils/api';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Demo credentials
-    if (formData.email === 'admin@amagriya.com' && formData.password === 'admin123') {
-      // Set admin auth
-      localStorage.setItem('adminAuth', 'true');
-      localStorage.setItem('adminUser', JSON.stringify({
-        name: 'Admin User',
-        email: 'admin@amagriya.com',
-      }));
-      
-      // Redirect to admin dashboard
-      navigate('/admin');
-    } else {
-      setError('Email atau password salah!');
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (response.success) {
+        if (response.user.role !== 'admin' && response.user.role !== 'ADMIN') {
+          setError('Anda tidak memiliki akses admin!');
+          setIsLoading(false);
+          return;
+        }
+
+        login(response.token, response.user);
+        navigate('/admin');
+      } else {
+        setError(response.message || 'Login gagal');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Terjadi kesalahan saat login');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -104,9 +120,10 @@ export default function AdminLogin() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-[#EB216A] hover:bg-[#d11d5e] text-white h-12"
+              disabled={isLoading}
+              className="w-full bg-[#EB216A] hover:bg-[#d11d5e] text-white h-12 disabled:opacity-50"
             >
-              Login
+              {isLoading ? 'Sedang Masuk...' : 'Login'}
             </Button>
           </form>
 

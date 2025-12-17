@@ -1,129 +1,19 @@
-import { useState } from 'react';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { 
-  Camera, 
-  X,
-  MessageCircle,
+import {
+  Calendar,
+  Camera,
   MapPin,
-  Calendar
+  MessageCircle,
+  X
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
 } from '../components/ui/dialog';
-
-// Mock data galeri
-const galleryItems = [
-  {
-    id: '1',
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&h=600&fit=crop',
-    title: 'Apartemen Modern Jakarta Selatan',
-    type: 'Blackout Curtain',
-    category: 'Apartemen',
-    date: '15 Januari 2024',
-    location: 'Jakarta Selatan',
-  },
-  {
-    id: '2',
-    image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=800&h=600&fit=crop',
-    title: 'Rumah Minimalis Bintaro',
-    type: 'Vitras Roller Blind',
-    category: 'Rumah Tinggal',
-    date: '10 Januari 2024',
-    location: 'Bintaro, Tangerang',
-  },
-  {
-    id: '3',
-    image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=800&h=600&fit=crop',
-    title: 'Kantor Corporate Tower',
-    type: 'Vertical Blind',
-    category: 'Kantor',
-    date: '28 Desember 2023',
-    location: 'Sudirman, Jakarta',
-  },
-  {
-    id: '4',
-    image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=800&h=600&fit=crop',
-    title: 'Cafe Aesthetic Senopati',
-    type: 'Roman Shade',
-    category: 'Cafe / Resto',
-    date: '20 Desember 2023',
-    location: 'Senopati, Jakarta',
-  },
-  {
-    id: '5',
-    image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=800&h=600&fit=crop',
-    title: 'Rumah Klasik BSD',
-    type: 'Gorden Velvet Premium',
-    category: 'Rumah Tinggal',
-    date: '15 Desember 2023',
-    location: 'BSD City, Tangerang',
-  },
-  {
-    id: '6',
-    image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=800&h=600&fit=crop',
-    title: 'Apartemen Studio Kemang',
-    type: 'Dimout Curtain',
-    category: 'Apartemen',
-    date: '8 Desember 2023',
-    location: 'Kemang, Jakarta',
-  },
-  {
-    id: '7',
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&h=600&fit=crop',
-    title: 'Office Startup Menteng',
-    type: 'Blackout Roller Blind',
-    category: 'Kantor',
-    date: '1 Desember 2023',
-    location: 'Menteng, Jakarta',
-  },
-  {
-    id: '8',
-    image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=800&h=600&fit=crop',
-    title: 'Restaurant Fine Dining PIK',
-    type: 'Sheer Curtain',
-    category: 'Cafe / Resto',
-    date: '25 November 2023',
-    location: 'PIK, Jakarta Utara',
-  },
-  {
-    id: '9',
-    image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=800&h=600&fit=crop',
-    title: 'Rumah Mewah Pondok Indah',
-    type: 'Gorden Silk Luxury',
-    category: 'Rumah Tinggal',
-    date: '18 November 2023',
-    location: 'Pondok Indah, Jakarta',
-  },
-  {
-    id: '10',
-    image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=800&h=600&fit=crop',
-    title: 'Apartemen Compact Pancoran',
-    type: 'Vertical Blind',
-    category: 'Apartemen',
-    date: '10 November 2023',
-    location: 'Pancoran, Jakarta',
-  },
-  {
-    id: '11',
-    image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=800&h=600&fit=crop',
-    title: 'Kantor Law Firm Kuningan',
-    type: 'Blackout Curtain Premium',
-    category: 'Kantor',
-    date: '5 November 2023',
-    location: 'Kuningan, Jakarta',
-  },
-  {
-    id: '12',
-    image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=800&h=600&fit=crop',
-    title: 'Cafe Cozy Cikini',
-    type: 'Roman Shade',
-    category: 'Cafe / Resto',
-    date: '1 November 2023',
-    location: 'Cikini, Jakarta',
-  },
-];
+import { galleryApi } from '../utils/api';
 
 const categories = [
   { id: 'all', name: 'Semua' },
@@ -135,10 +25,46 @@ const categories = [
 
 export default function GalleryPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedImage, setSelectedImage] = useState<typeof galleryItems[0] | null>(null);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleImageClick = (item: typeof galleryItems[0]) => {
+  useEffect(() => {
+    loadGalleryItems();
+  }, []);
+
+  const loadGalleryItems = async () => {
+    try {
+      console.log('🔄 Loading gallery items for public page...');
+      const response = await galleryApi.getAll();
+      console.log('✅ Gallery API response:', response);
+
+      if (response.success && response.data && response.data.length > 0) {
+        console.log(`✅ Loaded ${response.data.length} gallery items from backend`);
+        // Map backend fields to frontend expectation
+        const mappedItems = response.data.map((item: any) => ({
+          ...item,
+          image: item.image_url,
+          category: item.category, // ensure category matches strictly if needed, backend sends string
+          type: item.type || item.installation_type, // fallback
+          date: item.date, // already dateonly string
+          location: item.location
+        }));
+        setGalleryItems(mappedItems);
+      } else {
+        console.log('ℹ️ No gallery items available yet. Check Admin Panel to add gallery items.');
+        setGalleryItems([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading gallery:', error);
+      setGalleryItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageClick = (item: any) => {
     setSelectedImage(item);
     setIsLightboxOpen(true);
   };
@@ -149,9 +75,32 @@ export default function GalleryPage() {
   };
 
   // Filter galeri berdasarkan kategori
-  const filteredGallery = selectedCategory === 'all' 
-    ? galleryItems 
+  const filteredGallery = selectedCategory === 'all'
+    ? galleryItems
     : galleryItems.filter(item => item.category === selectedCategory);
+
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen">
+        <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="h-8 bg-gray-200 rounded w-48 mx-auto mb-6 animate-pulse"></div>
+            <div className="h-16 bg-gray-200 rounded w-96 mx-auto mb-6 animate-pulse"></div>
+            <div className="h-6 bg-gray-200 rounded w-64 mx-auto animate-pulse"></div>
+          </div>
+        </section>
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-gray-200 rounded-2xl h-96 animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white">
@@ -160,17 +109,17 @@ export default function GalleryPage() {
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-4 py-2 rounded-full mb-6">
             <Camera className="w-4 h-4" />
             <span className="text-sm">Portofolio Kami</span>
           </div>
-          
+
           <h1 className="text-5xl lg:text-6xl text-gray-900 mb-6">
             Galeri Proyek Amagriya
           </h1>
-          
+
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Kumpulan dokumentasi pemasangan gorden dari berbagai klien.
           </p>
@@ -186,11 +135,10 @@ export default function GalleryPage() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-6 py-3 rounded-xl transition-all duration-300 ${
-                    selectedCategory === category.id
+                  className={`px-6 py-3 rounded-xl transition-all duration-300 ${selectedCategory === category.id
                       ? 'bg-[#EB216A] text-white shadow-lg'
                       : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   {category.name}
                 </button>
@@ -224,10 +172,10 @@ export default function GalleryPage() {
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  
+
                   {/* Gradient Overlay on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
+
                   {/* Category Badge */}
                   <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
                     {item.category}
@@ -244,7 +192,7 @@ export default function GalleryPage() {
                   <h3 className="text-lg text-gray-900 mb-2 group-hover:text-[#EB216A] transition-colors">
                     {item.title}
                   </h3>
-                  
+
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                     <MapPin className="w-4 h-4" />
                     <span>{item.location}</span>
@@ -281,15 +229,15 @@ export default function GalleryPage() {
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
               <MessageCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
-            
+
             <h2 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4">
               Ingin Pasang Gorden Seperti Ini?
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               Konsultasikan kebutuhan gorden Anda dengan tim profesional kami sekarang
             </p>
-            
-            <Button 
+
+            <Button
               size="lg"
               className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-xl text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-5 sm:py-6 shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
             >
@@ -297,7 +245,7 @@ export default function GalleryPage() {
               <span className="hidden sm:inline">Hubungi Kami Sekarang</span>
               <span className="sm:hidden">Hubungi Kami</span>
             </Button>
-            
+
             <p className="text-xs sm:text-sm text-gray-500 mt-6">
               Gratis konsultasi • Survey & pengukuran • Instalasi profesional
             </p>
@@ -307,7 +255,10 @@ export default function GalleryPage() {
 
       {/* Lightbox Modal */}
       <Dialog open={isLightboxOpen} onOpenChange={handleCloseLightbox}>
-        <DialogContent className="max-w-5xl p-0 overflow-hidden bg-transparent border-0">
+        <DialogContent className="max-w-5xl p-0 overflow-hidden bg-transparent border-0" aria-describedby="gallery-image-description">
+          <DialogDescription id="gallery-image-description" className="sr-only">
+            Tampilan detail gambar galeri dengan informasi lokasi, tipe pemasangan, dan tanggal
+          </DialogDescription>
           {selectedImage && (
             <div className="relative">
               {/* Close Button */}

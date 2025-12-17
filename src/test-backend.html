@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Backend Connection</title>
+    <style>
+        body {
+            font-family: system-ui;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button {
+            background: #EB216A;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #d11d5e; }
+        pre {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Backend Connection</h1>
+    <p>Klik tombol untuk test koneksi backend Amagriya Gorden</p>
+
+    <div id="results"></div>
+
+    <button onclick="testHealth()">1. Test Health Check</button>
+    <button onclick="testSeed()">2. Seed Database</button>
+    <button onclick="testGetProducts()">3. Get Products</button>
+    <button onclick="testCreateProduct()">4. Create Product</button>
+    <button onclick="testGetCategories()">5. Get Categories</button>
+    <button onclick="testSubmitLead()">6. Submit Calculator Lead</button>
+
+    <script type="module">
+        // Import from your utils
+        import { projectId, publicAnonKey } from './utils/supabase/info.js';
+        
+        window.API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-df4da301`;
+        window.API_KEY = publicAnonKey;
+        
+        console.log('API Base:', window.API_BASE);
+        console.log('API Key:', window.API_KEY);
+
+        window.apiCall = async function(endpoint, options = {}) {
+            const url = `${window.API_BASE}${endpoint}`;
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.API_KEY}`,
+                ...options.headers,
+            };
+
+            try {
+                const response = await fetch(url, { ...options, headers });
+                const data = await response.json();
+                return { success: response.ok, status: response.status, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        };
+
+        window.showResult = function(title, result) {
+            const div = document.createElement('div');
+            div.className = `test ${result.success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <p><strong>Status:</strong> ${result.success ? '✅ Success' : '❌ Failed'}</p>
+                ${result.status ? `<p><strong>HTTP Status:</strong> ${result.status}</p>` : ''}
+                <pre>${JSON.stringify(result.data || result.error, null, 2)}</pre>
+            `;
+            document.getElementById('results').prepend(div);
+        };
+
+        window.testHealth = async function() {
+            console.log('Testing health...');
+            const result = await window.apiCall('/health');
+            window.showResult('Health Check', result);
+        };
+
+        window.testSeed = async function() {
+            console.log('Seeding database...');
+            const result = await window.apiCall('/seed', { method: 'POST' });
+            window.showResult('Seed Database', result);
+        };
+
+        window.testGetProducts = async function() {
+            console.log('Getting products...');
+            const result = await window.apiCall('/products');
+            window.showResult('Get Products', result);
+        };
+
+        window.testCreateProduct = async function() {
+            console.log('Creating product...');
+            const result = await window.apiCall('/products', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Test Product ' + Date.now(),
+                    sku: 'TEST-' + Date.now(),
+                    category: 'Gorden Custom',
+                    price: 150000,
+                    stock: 10,
+                    description: 'This is a test product',
+                })
+            });
+            window.showResult('Create Product', result);
+        };
+
+        window.testGetCategories = async function() {
+            console.log('Getting categories...');
+            const result = await window.apiCall('/categories');
+            window.showResult('Get Categories', result);
+        };
+
+        window.testSubmitLead = async function() {
+            console.log('Submitting calculator lead...');
+            const result = await window.apiCall('/calculator-leads', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Test Customer',
+                    phone: '081234567890',
+                    email: 'test@email.com',
+                    calculatorType: 'Smokering',
+                    estimatedPrice: 2500000,
+                    calculation: {
+                        product: { name: 'Test Gorden', category: 'Blackout' },
+                        dimensions: { width: 3, height: 2.5 },
+                    }
+                })
+            });
+            window.showResult('Submit Calculator Lead', result);
+        };
+    </script>
+</body>
+</html>

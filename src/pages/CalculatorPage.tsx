@@ -24,9 +24,10 @@ import {
 import { ComponentSelectionModal } from '../components/ComponentSelectionModal';
 import { SingleComponentModal } from '../components/SingleComponentModal';
 import { CustomerInfoDialog } from '../components/CustomerInfoDialog';
+import { calculatorLeadsApi, calculatorComponentsApi } from '../utils/api';
 
-// Mock data produk untuk dipilih
-const products = [
+// Data will be loaded from backend - fallback to empty arrays
+let products: any[] = [
   {
     id: '1',
     name: 'Gorden Blackout Premium',
@@ -86,7 +87,7 @@ const products = [
 ];
 
 // Katalog komponen
-const relGordenOptions = [
+let relGordenOptions = [
   { id: 'rel-1', name: 'Rel Single Track Basic', price: 65000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
   { id: 'rel-2', name: 'Rel Single Track Premium', price: 95000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
   { id: 'rel-3', name: 'Rel Double Track Standard', price: 125000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop' },
@@ -95,27 +96,27 @@ const relGordenOptions = [
   { id: 'rel-6', name: 'Rel Motorized Premium', price: 750000, maxWidth: 600, description: 'Otomatis premium, untuk lebar hingga 6m', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop' },
 ];
 
-const tasselOptions = [
+let tasselOptions = [
   { id: 'tassel-1', name: 'Tassel Basic Polos', price: 25000, description: 'Simple & minimalis', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
   { id: 'tassel-2', name: 'Tassel Elegant Bordir', price: 45000, description: 'Dengan detail bordir', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
   { id: 'tassel-3', name: 'Tassel Premium Crystal', price: 75000, description: 'Dengan kristal swarovski', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop' },
   { id: 'tassel-4', name: 'Tassel Luxury Gold', price: 125000, description: 'Finishing emas 24k', image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=400&h=300&fit=crop' },
 ];
 
-const hookOptions = [
+let hookOptions = [
   { id: 'hook-1', name: 'Hook Plastik Standard', price: 2500, description: 'Ekonomis & kuat', image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=400&h=300&fit=crop' },
   { id: 'hook-2', name: 'Hook Metal Chrome', price: 4500, description: 'Tahan lama, finishing chrome', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop' },
   { id: 'hook-3', name: 'Hook Premium Stainless', price: 6500, description: 'Anti karat, premium quality', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
 ];
 
-const kainVitraseOptions = [
+let kainVitraseOptions = [
   { id: 'vitrase-1', name: 'Vitrase Sheer Polos', price: 45000, description: 'Tipis & transparan', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
   { id: 'vitrase-2', name: 'Vitrase Emboss Pattern', price: 65000, description: 'Dengan motif emboss', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop' },
   { id: 'vitrase-3', name: 'Vitrase Linen Look', price: 85000, description: 'Tekstur linen premium', image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=400&h=300&fit=crop' },
   { id: 'vitrase-4', name: 'Vitrase Premium Silk', price: 125000, description: 'Silk premium eksklusif', image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=400&h=300&fit=crop' },
 ];
 
-const relVitraseOptions = [
+let relVitraseOptions = [
   { id: 'rel-vit-1', name: 'Rel Vitrase Slim Basic', price: 55000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop' },
   { id: 'rel-vit-2', name: 'Rel Vitrase Standard', price: 75000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
   { id: 'rel-vit-3', name: 'Rel Vitrase Premium', price: 105000, maxWidth: 500, description: 'Untuk lebar hingga 5m', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
@@ -149,8 +150,12 @@ export default function CalculatorPage() {
   const [isCustomerInfoDialogOpen, setIsCustomerInfoDialogOpen] = useState(true);
   const [customerInfo, setCustomerInfo] = useState<{ name: string; phone: string } | null>(null);
 
+  // Components loading state
+  const [componentsLoading, setComponentsLoading] = useState(true);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
+
   const [calculatorType, setCalculatorType] = useState<CalculatorType>('smokering');
-  const [selectedProduct, setSelectedProduct] = useState(products[0]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [items, setItems] = useState<WindowItem[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -171,6 +176,68 @@ export default function CalculatorPage() {
   // Add item modal state
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [editingFormItemId, setEditingFormItemId] = useState<string | null>(null);
+
+  // Load components from backend on mount
+  useEffect(() => {
+    const loadComponents = async () => {
+      try {
+        setComponentsLoading(true);
+        console.log('🔄 Loading calculator components from backend...');
+        const response = await calculatorComponentsApi.getAll();
+        console.log('✅ Components loaded:', response);
+        
+        if (response.success && response.data) {
+          // Update component arrays
+          if (response.data.products && response.data.products.length > 0) {
+            products = response.data.products;
+          }
+          if (response.data.relGorden && response.data.relGorden.length > 0) {
+            relGordenOptions = response.data.relGorden;
+          }
+          if (response.data.tassel && response.data.tassel.length > 0) {
+            tasselOptions = response.data.tassel;
+          }
+          if (response.data.hook && response.data.hook.length > 0) {
+            hookOptions = response.data.hook;
+          }
+          if (response.data.kainVitrase && response.data.kainVitrase.length > 0) {
+            kainVitraseOptions = response.data.kainVitrase;
+          }
+          if (response.data.relVitrase && response.data.relVitrase.length > 0) {
+            relVitraseOptions = response.data.relVitrase;
+          }
+          
+          console.log('✅ Component arrays updated:', {
+            products: products.length,
+            relGorden: relGordenOptions.length,
+            tassel: tasselOptions.length,
+            hook: hookOptions.length,
+            kainVitrase: kainVitraseOptions.length,
+            relVitrase: relVitraseOptions.length,
+          });
+          
+          setComponentsLoaded(true);
+          
+          // Set default selected product after loading
+          if (products.length > 0) {
+            setSelectedProduct(products[0]);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading components:', error);
+        // Keep using fallback hardcoded data
+        console.log('⚠️ Using fallback hardcoded data');
+        // Set default product from fallback if available
+        if (products.length > 0) {
+          setSelectedProduct(products[0]);
+        }
+      } finally {
+        setComponentsLoading(false);
+      }
+    };
+    
+    loadComponents();
+  }, []);
 
   // Check if customer info exists in localStorage on mount
   useEffect(() => {
@@ -350,8 +417,8 @@ export default function CalculatorPage() {
       fabricMeters = ((widthInMeters / item.panels) * 2) * heightInMeters * item.panels;
     }
 
-    // Harga kain gorden
-    const gordenPrice = fabricMeters * selectedProduct.price * item.quantity;
+    // Harga kain gorden - check if selectedProduct exists
+    const gordenPrice = selectedProduct ? fabricMeters * selectedProduct.price * item.quantity : 0;
     
     // Komponen tambahan untuk paket lengkap (gunakan harga dari pilihan user atau 0)
     let relPrice = 0;
@@ -482,15 +549,80 @@ export default function CalculatorPage() {
     return `https://wa.me/${adminPhone}?text=${encodedMessage}`;
   };
 
-  const handleSendToWhatsApp = () => {
+  const handleSendToWhatsApp = async () => {
     if (items.length === 0) {
       alert('Mohon tambahkan minimal 1 item terlebih dahulu');
       return;
     }
-    
-    const whatsappUrl = generateWhatsAppMessage();
-    window.open(whatsappUrl, '_blank');
+
+    // Prepare lead data
+    const leadData = {
+      customerName: customerInfo?.name || 'Unknown',
+      customerPhone: customerInfo?.phone || 'Unknown',
+      calculatorType,
+      productName: selectedProduct.name,
+      productPrice: selectedProduct.price,
+      items: items.map(item => {
+        const details = calculateItemDetails(item);
+        return {
+          width: item.width,
+          height: item.height,
+          quantity: item.quantity,
+          relGorden: item.relGorden,
+          tassel: item.tassel,
+          hook: item.hook,
+          kainVitrase: item.kainVitrase,
+          relVitrase: item.relVitrase,
+          totalPrice: details.totalItem,
+        };
+      }),
+      grandTotal,
+      totalItems: items.length,
+      totalUnits: items.reduce((sum, item) => sum + item.quantity, 0),
+    };
+
+    try {
+      console.log('💾 Saving calculator lead to backend...', leadData);
+      
+      // Save to backend
+      const response = await calculatorLeadsApi.submit(leadData);
+      console.log('✅ Calculator lead saved:', response);
+      
+      // Open WhatsApp after successful save
+      const whatsappUrl = generateWhatsAppMessage();
+      window.open(whatsappUrl, '_blank');
+      
+      // Show success message
+      alert('✅ Data berhasil disimpan! Anda akan diarahkan ke WhatsApp.');
+      
+    } catch (error: any) {
+      console.error('❌ Error saving calculator lead:', error);
+      
+      // Still open WhatsApp even if save failed
+      const confirm = window.confirm(
+        'Gagal menyimpan data ke sistem. Lanjutkan ke WhatsApp?\n\n' + 
+        'Error: ' + error.message
+      );
+      
+      if (confirm) {
+        const whatsappUrl = generateWhatsAppMessage();
+        window.open(whatsappUrl, '_blank');
+      }
+    }
   };
+
+  // Show loading state while components are loading
+  if (componentsLoading) {
+    return (
+      <div className="bg-gradient-to-br from-pink-50 via-white to-pink-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-[#EB216A] mb-4"></div>
+          <p className="text-lg text-gray-900 mb-2">Memuat Kalkulator...</p>
+          <p className="text-sm text-gray-600">Mengambil data komponen dan harga terbaru</p>
+        </div>
+      </div>
+    );
+  }
 
   // If dialog is open or no customer info, only show the dialog
   if (isCustomerInfoDialogOpen || !customerInfo) {
@@ -505,7 +637,7 @@ export default function CalculatorPage() {
     );
   }
 
-  console.log('✅ SHOWING CALCULATOR - Customer info exists');
+  console.log('✅ SHOWING CALCULATOR - Customer info exists, Components loaded:', componentsLoaded);
 
   // Show full calculator content only after form is submitted
   return (

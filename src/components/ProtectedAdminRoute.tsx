@@ -1,10 +1,21 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export function ProtectedAdminRoute() {
-  const isAdminAuth = localStorage.getItem('adminAuth') === 'true';
+  const { isAdmin, loading } = useAuth();
+  const location = useLocation();
 
-  if (!isAdminAuth) {
-    return <Navigate to="/admin/login" replace />;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-[#EB216A]" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   return <Outlet />;
