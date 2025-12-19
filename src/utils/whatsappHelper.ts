@@ -2,7 +2,7 @@
 // Ubah nomor dan template pesan di sini untuk semua tombol "Chat Admin"
 
 // Nomor WhatsApp Admin (format: 62xxxxxxxxxx tanpa + atau spasi)
-export const ADMIN_WHATSAPP_NUMBER = '6281234567890';
+export const ADMIN_WHATSAPP_NUMBER = '6285142247464';
 
 // Template pesan
 export const whatsappTemplates = {
