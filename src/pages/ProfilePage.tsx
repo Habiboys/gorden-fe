@@ -1,4 +1,4 @@
-import { Camera, Edit2, Eye, EyeOff, Heart, Key, Loader2, LogOut, Mail, MapPin, Phone, ShoppingBag } from 'lucide-react';
+import { Camera, Edit2, Eye, EyeOff, Heart, Key, Loader2, LogOut, Mail, MapPin, MessageCircle, Phone, ShoppingBag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,13 +9,16 @@ import { Separator } from '../components/ui/separator';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { useWishlist } from '../context/WishlistContext';
 import { authApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
     const { user, isAuthenticated, logout } = useAuth();
     const { items: cartItems, getTotal } = useCart();
     const { confirm } = useConfirm();
+    const { wishlistCount, wishlistProducts, removeFromWishlist } = useWishlist();
     const [activeTab, setActiveTab] = useState('profile');
 
     // Change password states
@@ -149,7 +152,7 @@ export default function ProfilePage() {
                                     <div className="text-gray-500 text-xs">Pesanan</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-xl font-semibold text-gray-900">0</div>
+                                    <div className="text-xl font-semibold text-gray-900">{wishlistCount}</div>
                                     <div className="text-gray-500 text-xs">Wishlist</div>
                                 </div>
                             </div>
@@ -336,17 +339,58 @@ export default function ProfilePage() {
                             {activeTab === 'wishlist' && (
                                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-6">Wishlist Saya</h2>
-                                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                                        <Heart className="w-12 h-12 text-gray-300 mb-3" />
-                                        <h3 className="text-base font-medium text-gray-900 mb-1">Wishlist kosong</h3>
-                                        <p className="text-gray-500 text-sm mb-4">Simpan produk favorit Anda di sini</p>
-                                        <Button
-                                            className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
-                                            onClick={() => navigate('/products')}
-                                        >
-                                            Jelajahi Produk
-                                        </Button>
-                                    </div>
+                                    {wishlistProducts.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {wishlistProducts.map((product) => (
+                                                <div key={product.id} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
+                                                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                                                        <img
+                                                            src={getProductImageUrl(product.images)}
+                                                            alt={product.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+                                                            {product.name}
+                                                        </h3>
+                                                        <p className="text-[#EB216A] font-semibold mb-2">
+                                                            Rp {Number(product.price).toLocaleString('id-ID')}
+                                                        </p>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs"
+                                                                onClick={() => navigate(`/product/${product.id}`)}
+                                                            >
+                                                                Lihat Produk
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-red-500 border-red-200 hover:bg-red-50 text-xs"
+                                                                onClick={() => removeFromWishlist(product.id)}
+                                                            >
+                                                                Hapus
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                                            <Heart className="w-12 h-12 text-gray-300 mb-3" />
+                                            <h3 className="text-base font-medium text-gray-900 mb-1">Wishlist kosong</h3>
+                                            <p className="text-gray-500 text-sm mb-4">Simpan produk favorit Anda di sini</p>
+                                            <Button
+                                                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                                                onClick={() => navigate('/products')}
+                                            >
+                                                Jelajahi Produk
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -385,10 +429,17 @@ export default function ProfilePage() {
                                             </span>
                                         </div>
                                         <Button
-                                            className="w-full bg-[#EB216A] hover:bg-[#d11d5e] text-white"
-                                            onClick={() => navigate('/checkout')}
+                                            className="w-full bg-green-500 hover:bg-green-600 text-white"
+                                            onClick={() => {
+                                                const productList = cartItems.map(item => `- ${item.name} (${item.quantity}x)`).join('\n');
+                                                const message = encodeURIComponent(
+                                                    `Halo kak, saya ${user.name} ingin memesan:\n\n${productList}\n\nTotal: Rp ${getTotal().toLocaleString('id-ID')}`
+                                                );
+                                                window.open(`https://wa.me/6285142247464?text=${message}`, '_blank');
+                                            }}
                                         >
-                                            Checkout
+                                            <MessageCircle className="w-4 h-4 mr-2" />
+                                            Chat Admin
                                         </Button>
                                     </>
                                 ) : (

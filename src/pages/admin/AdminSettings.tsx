@@ -22,7 +22,7 @@ export default function AdminSettings() {
     siteEmail: 'info@amagriya.com',
     sitePhone: '081234567890',
     siteAddress: 'Jl. Sudirman No. 123, Jakarta Selatan',
-    whatsappNumber: '6281234567890',
+    whatsappNumber: '6285142247464',
     instagramUrl: 'https://instagram.com/amagriya',
     facebookUrl: 'https://facebook.com/amagriya',
     enableNotifications: true,

@@ -143,7 +143,7 @@ export default function AdminProducts() {
 
         if (newImages.length > 0) {
           setUploadedImages(prev => [...prev, ...newImages]);
-          toast.success(`✅ ${newImages.length} gambar berhasil diupload!`);
+          toast.success(`${newImages.length} gambar berhasil diupload!`);
         } else {
           console.error('Parsed 0 images from:', response);
           toast.error('Gagal memproses respon gambar.');

@@ -18,7 +18,7 @@ import { authApi } from '../utils/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isAdmin } = useAuth();
   const { settings } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -30,9 +30,14 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/', { replace: true });
+      // Check if user is admin
+      if (isAdmin) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isAdmin, navigate]);
 
   // Use dynamic logo from settings or fallback to default
   const logoSrc = settings.siteLogo || defaultLogo;
@@ -56,8 +61,12 @@ export default function LoginPage() {
         // Login context
         login(response.token, response.user);
 
-        // Redirect based on role
-        if (response.user.role === 'ADMIN' || response.user.role === 'admin') {
+        console.log('Login response user:', response.user);
+        console.log('User role:', response.user?.role);
+
+        // Redirect based on role (case-insensitive check)
+        const userRole = response.user?.role?.toUpperCase();
+        if (userRole === 'ADMIN') {
           navigate('/admin');
         } else {
           navigate('/');

@@ -135,7 +135,7 @@ export function CartSidebar() {
                             onClick={() => {
                                 // Open WhatsApp chat with admin
                                 const message = encodeURIComponent(`Halo, saya ingin bertanya tentang pesanan saya dengan ${getItemCount()} item senilai Rp ${getTotal().toLocaleString('id-ID')}`);
-                                window.open(`https://wa.me/6281234567890?text=${message}`, '_blank');
+                                window.open(`https://wa.me/6285142247464?text=${message}`, '_blank');
                             }}
                         >
                             <MessageCircle className="w-5 h-5 mr-2" />

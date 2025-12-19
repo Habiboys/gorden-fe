@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { 
-  Calculator, 
-  Plus, 
-  Trash2, 
+import {
+  Calculator,
   Check,
-  MessageCircle,
   ChevronDown,
-  Search,
+  MessageCircle,
   Package,
-  ArrowRight,
-  Settings,
-  Pencil
+  Pencil,
+  Plus,
+  Search,
+  Trash2
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CustomerInfoDialog } from '../components/CustomerInfoDialog';
+import { SingleComponentModal } from '../components/SingleComponentModal';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -21,10 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
-import { ComponentSelectionModal } from '../components/ComponentSelectionModal';
-import { SingleComponentModal } from '../components/SingleComponentModal';
-import { CustomerInfoDialog } from '../components/CustomerInfoDialog';
-import { calculatorLeadsApi, calculatorComponentsApi } from '../utils/api';
+import { calculatorComponentsApi, calculatorLeadsApi } from '../utils/api';
 
 // Data will be loaded from backend - fallback to empty arrays
 let products: any[] = [
@@ -159,7 +156,7 @@ export default function CalculatorPage() {
   const [items, setItems] = useState<WindowItem[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Form states
   const [itemType, setItemType] = useState<ItemType>('jendela');
   const [packageType, setPackageType] = useState<PackageType>('gorden-saja');
@@ -172,7 +169,7 @@ export default function CalculatorPage() {
   const [isComponentModalOpen, setIsComponentModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingComponentType, setEditingComponentType] = useState<'relGorden' | 'tassel' | 'hook' | 'kainVitrase' | 'relVitrase' | null>(null);
-  
+
   // Add item modal state
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [editingFormItemId, setEditingFormItemId] = useState<string | null>(null);
@@ -185,7 +182,7 @@ export default function CalculatorPage() {
         console.log('🔄 Loading calculator components from backend...');
         const response = await calculatorComponentsApi.getAll();
         console.log('✅ Components loaded:', response);
-        
+
         if (response.success && response.data) {
           // Update component arrays
           if (response.data.products && response.data.products.length > 0) {
@@ -206,7 +203,7 @@ export default function CalculatorPage() {
           if (response.data.relVitrase && response.data.relVitrase.length > 0) {
             relVitraseOptions = response.data.relVitrase;
           }
-          
+
           console.log('✅ Component arrays updated:', {
             products: products.length,
             relGorden: relGordenOptions.length,
@@ -215,9 +212,9 @@ export default function CalculatorPage() {
             kainVitrase: kainVitraseOptions.length,
             relVitrase: relVitraseOptions.length,
           });
-          
+
           setComponentsLoaded(true);
-          
+
           // Set default selected product after loading
           if (products.length > 0) {
             setSelectedProduct(products[0]);
@@ -235,7 +232,7 @@ export default function CalculatorPage() {
         setComponentsLoading(false);
       }
     };
-    
+
     loadComponents();
   }, []);
 
@@ -320,7 +317,7 @@ export default function CalculatorPage() {
 
       setItems([...items, newItem]);
     }
-    
+
     // Reset form
     setWidth('');
     setHeight('');
@@ -329,7 +326,7 @@ export default function CalculatorPage() {
     }
     setQuantity('1');
     setEditingFormItemId(null);
-    
+
     // Close modal
     setIsAddItemModalOpen(false);
   };
@@ -403,9 +400,9 @@ export default function CalculatorPage() {
   const calculateItemDetails = (item: WindowItem) => {
     const widthInMeters = item.width / 100;
     const heightInMeters = item.height / 100;
-    
+
     let fabricMeters = 0;
-    
+
     if (calculatorType === 'blind') {
       // Blind: lebar x tinggi saja (no multiplier)
       fabricMeters = widthInMeters * heightInMeters;
@@ -419,7 +416,7 @@ export default function CalculatorPage() {
 
     // Harga kain gorden - check if selectedProduct exists
     const gordenPrice = selectedProduct ? fabricMeters * selectedProduct.price * item.quantity : 0;
-    
+
     // Komponen tambahan untuk paket lengkap (gunakan harga dari pilihan user atau 0)
     let relPrice = 0;
     let tasselPrice = 0;
@@ -486,23 +483,23 @@ export default function CalculatorPage() {
 
   // Generate WhatsApp message
   const generateWhatsAppMessage = () => {
-    const adminPhone = '6281234567890'; // Ganti dengan nomor admin yang sebenarnya
-    
+    const adminPhone = '6285142247464'; // Ganti dengan nomor admin yang sebenarnya
+
     let message = `*ESTIMASI BIAYA GORDEN*\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-    
+
     // Jenis Kalkulator
     message += `📋 *Jenis Kalkulator:* ${calculatorType === 'smokering' ? 'Smokering' : calculatorType === 'kupu-kupu' ? 'Kupu-kupu' : 'Blind'}\n`;
     message += `🎨 *Produk Gorden:* ${selectedProduct.name}\n`;
     message += `💰 *Harga Kain:* Rp ${selectedProduct.price.toLocaleString('id-ID')}/meter\n\n`;
-    
+
     // Detail setiap item
     message += `📦 *DETAIL PESANAN*\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-    
+
     items.forEach((item, index) => {
       const details = calculateItemDetails(item);
-      
+
       message += `*Item ${index + 1}: ${item.type.charAt(0).toUpperCase() + item.type.slice(1)}*\n`;
       message += `• Ukuran: ${item.width} cm × ${item.height} cm\n`;
       if (calculatorType === 'kupu-kupu') {
@@ -510,10 +507,10 @@ export default function CalculatorPage() {
       }
       message += `• Jumlah: ${item.quantity}x\n`;
       message += `• Paket: ${item.packageType === 'gorden-lengkap' ? 'Lengkap' : 'Gorden Saja'}\n\n`;
-      
+
       message += `  *Rincian Biaya:*\n`;
       message += `  - Kain Gorden: Rp ${details.gordenPrice.toLocaleString('id-ID')}\n`;
-      
+
       if (item.packageType === 'gorden-lengkap') {
         if (item.components?.relGorden) {
           message += `  - ${item.components.relGorden.name}: Rp ${details.relPrice.toLocaleString('id-ID')}\n`;
@@ -531,20 +528,20 @@ export default function CalculatorPage() {
           message += `  - ${item.components.relVitrase.name}: Rp ${details.vitraseRelPrice.toLocaleString('id-ID')}\n`;
         }
       }
-      
+
       message += `  *Subtotal: Rp ${details.totalItem.toLocaleString('id-ID')}*\n\n`;
     });
-    
+
     // Grand Total
     message += `━━━━━━━━━━━━━━━━━━━━\n`;
     message += `💎 *TOTAL KESELURUHAN*\n`;
     message += `*Rp ${grandTotal.toLocaleString('id-ID')}*\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-    
+
     message += `📝 Total: ${items.length} item (${items.reduce((sum, item) => sum + item.quantity, 0)} unit)\n\n`;
     message += `_Estimasi berdasarkan kalkulasi ${calculatorType}. Harga final dapat berbeda tergantung detail pemesanan dan instalasi._\n\n`;
     message += `Mohon konfirmasi untuk pemesanan. Terima kasih! 🙏`;
-    
+
     const encodedMessage = encodeURIComponent(message);
     return `https://wa.me/${adminPhone}?text=${encodedMessage}`;
   };
@@ -583,27 +580,27 @@ export default function CalculatorPage() {
 
     try {
       console.log('💾 Saving calculator lead to backend...', leadData);
-      
+
       // Save to backend
       const response = await calculatorLeadsApi.submit(leadData);
       console.log('✅ Calculator lead saved:', response);
-      
+
       // Open WhatsApp after successful save
       const whatsappUrl = generateWhatsAppMessage();
       window.open(whatsappUrl, '_blank');
-      
+
       // Show success message
       alert('✅ Data berhasil disimpan! Anda akan diarahkan ke WhatsApp.');
-      
+
     } catch (error: any) {
       console.error('❌ Error saving calculator lead:', error);
-      
+
       // Still open WhatsApp even if save failed
       const confirm = window.confirm(
-        'Gagal menyimpan data ke sistem. Lanjutkan ke WhatsApp?\n\n' + 
+        'Gagal menyimpan data ke sistem. Lanjutkan ke WhatsApp?\n\n' +
         'Error: ' + error.message
       );
-      
+
       if (confirm) {
         const whatsappUrl = generateWhatsAppMessage();
         window.open(whatsappUrl, '_blank');
@@ -642,22 +639,22 @@ export default function CalculatorPage() {
   // Show full calculator content only after form is submitted
   return (
     <div className="bg-white">
-        {/* Header Section */}
-        <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
+      {/* Header Section */}
+      <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-4 py-2 rounded-full mb-6">
             <Calculator className="w-4 h-4" />
             <span className="text-sm">Hitung Otomatis</span>
           </div>
-          
+
           <h1 className="text-4xl sm:text-5xl lg:text-6xl text-gray-900 mb-6">
             Kalkulator Biaya Gorden
           </h1>
-          
+
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
             Hitung kebutuhan dan estimasi biaya secara otomatis.
           </p>
@@ -711,7 +708,7 @@ export default function CalculatorPage() {
       {/* Main Content */}
       <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           {/* Step 1: Calculator Type Selector */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
@@ -720,38 +717,35 @@ export default function CalculatorPage() {
               </div>
               <h2 className="text-xl sm:text-2xl text-gray-900">Pilih Jenis Kalkulator</h2>
             </div>
-            
+
             <div className="w-full overflow-x-auto">
               <div className="inline-flex bg-white rounded-2xl p-1.5 gap-1.5 border border-gray-200 shadow-md min-w-full sm:min-w-0">
                 <button
                   onClick={() => handleChangeCalculatorType('smokering')}
-                  className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap ${
-                    calculatorType === 'smokering'
-                      ? 'bg-[#EB216A] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap ${calculatorType === 'smokering'
+                    ? 'bg-[#EB216A] text-white shadow-lg'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   <span className="hidden sm:inline">Kalkulator Smokering</span>
                   <span className="sm:hidden">Smokering</span>
                 </button>
                 <button
                   onClick={() => handleChangeCalculatorType('kupu-kupu')}
-                  className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap ${
-                    calculatorType === 'kupu-kupu'
-                      ? 'bg-[#EB216A] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap ${calculatorType === 'kupu-kupu'
+                    ? 'bg-[#EB216A] text-white shadow-lg'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   <span className="hidden sm:inline">Kalkulator Kupu-kupu</span>
                   <span className="sm:hidden">Kupu-kupu</span>
                 </button>
                 <button
                   onClick={() => handleChangeCalculatorType('blind')}
-                  className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap ${
-                    calculatorType === 'blind'
-                      ? 'bg-[#EB216A] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap ${calculatorType === 'blind'
+                    ? 'bg-[#EB216A] text-white shadow-lg'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   <span className="hidden sm:inline">Kalkulator Blind</span>
                   <span className="sm:hidden">Blind</span>
@@ -815,7 +809,7 @@ export default function CalculatorPage() {
                 </div>
                 <h2 className="text-xl sm:text-2xl text-gray-900">Item yang Ditambahkan ({items.length})</h2>
               </div>
-              
+
               <Button
                 onClick={() => setIsAddItemModalOpen(true)}
                 className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-lg px-3 sm:px-4 py-4 shadow-lg hover:shadow-xl transition-all text-sm"
@@ -918,7 +912,7 @@ export default function CalculatorPage() {
               <div className="space-y-4 mb-6">
                 {items.map((item, index) => {
                   const details = calculateItemDetails(item);
-                  
+
                   return (
                     <div key={item.id} className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-gray-200 shadow-lg">
                       {/* Header */}
@@ -949,7 +943,7 @@ export default function CalculatorPage() {
                       {/* Rincian Komponen */}
                       <div className="space-y-2">
                         <h4 className="text-xs text-gray-500 uppercase tracking-wide mb-3">Rincian Komponen</h4>
-                        
+
                         {/* Kain Gorden */}
                         <div className="flex justify-between items-center py-2 border-b border-gray-100">
                           <div>
@@ -1152,7 +1146,7 @@ export default function CalculatorPage() {
 
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 mt-4">
                   <p className="text-xs sm:text-sm text-white/90 text-center">
-                    ℹ️ Harga di atas adalah estimasi berdasarkan kalkulasi {calculatorType}. 
+                    ℹ️ Harga di atas adalah estimasi berdasarkan kalkulasi {calculatorType}.
                     Harga final dapat berbeda tergantung detail pemesanan dan instalasi.
                   </p>
                 </div>
@@ -1204,11 +1198,10 @@ export default function CalculatorPage() {
                 <div
                   key={product.id}
                   onClick={() => handleSelectProduct(product)}
-                  className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                    selectedProduct.id === product.id
-                      ? 'border-[#EB216A] shadow-lg'
-                      : 'border-gray-200 hover:border-[#EB216A]/50 shadow-sm hover:shadow-md'
-                  }`}
+                  className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-300 ${selectedProduct.id === product.id
+                    ? 'border-[#EB216A] shadow-lg'
+                    : 'border-gray-200 hover:border-[#EB216A]/50 shadow-sm hover:shadow-md'
+                    }`}
                 >
                   {/* Selected Badge */}
                   {selectedProduct.id === product.id && (
@@ -1405,28 +1398,28 @@ export default function CalculatorPage() {
           }}
           title={
             editingComponentType === 'relGorden' ? 'Pilih Rel Gorden' :
-            editingComponentType === 'tassel' ? 'Pilih Tassel' :
-            editingComponentType === 'hook' ? 'Pilih Hook' :
-            editingComponentType === 'kainVitrase' ? 'Pilih Kain Vitrase' :
-            'Pilih Rel Vitrase'
+              editingComponentType === 'tassel' ? 'Pilih Tassel' :
+                editingComponentType === 'hook' ? 'Pilih Hook' :
+                  editingComponentType === 'kainVitrase' ? 'Pilih Kain Vitrase' :
+                    'Pilih Rel Vitrase'
           }
           description={
             editingComponentType === 'relGorden' ? 'Pilih jenis rel gorden yang sesuai dengan kebutuhan Anda' :
-            editingComponentType === 'tassel' ? 'Pilih tassel untuk mempercantik gorden Anda' :
-            editingComponentType === 'hook' ? 'Pilih jenis hook untuk gantungan gorden' :
-            editingComponentType === 'kainVitrase' ? 'Pilih kain vitrase untuk layer tipis' :
-            'Pilih rel vitrase untuk kain vitrase'
+              editingComponentType === 'tassel' ? 'Pilih tassel untuk mempercantik gorden Anda' :
+                editingComponentType === 'hook' ? 'Pilih jenis hook untuk gantungan gorden' :
+                  editingComponentType === 'kainVitrase' ? 'Pilih kain vitrase untuk layer tipis' :
+                    'Pilih rel vitrase untuk kain vitrase'
           }
           options={
-            editingComponentType === 'relGorden' 
+            editingComponentType === 'relGorden'
               ? getFilteredRelOptions(items.find(item => item.id === editingItemId)?.width || 0)
               : editingComponentType === 'tassel'
-              ? tasselOptions
-              : editingComponentType === 'hook'
-              ? hookOptions
-              : editingComponentType === 'kainVitrase'
-              ? kainVitraseOptions
-              : getFilteredRelVitraseOptions(items.find(item => item.id === editingItemId)?.width || 0)
+                ? tasselOptions
+                : editingComponentType === 'hook'
+                  ? hookOptions
+                  : editingComponentType === 'kainVitrase'
+                    ? kainVitraseOptions
+                    : getFilteredRelVitraseOptions(items.find(item => item.id === editingItemId)?.width || 0)
           }
           currentSelection={items.find(item => item.id === editingItemId)?.components?.[editingComponentType]}
           onSelect={(component) => {

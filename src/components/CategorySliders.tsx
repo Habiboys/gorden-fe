@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { ShoppingCart, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, ShoppingCart } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { productsApi, categoriesApi } from '../utils/api';
+import { productsApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 
 interface Product {
   id: number;
@@ -401,7 +402,7 @@ const allProducts: Product[] = [
     category: 'Produk Other',
   },
   {
-    id:46,
+    id: 46,
     name: 'Lantai Vynil Minimalis',
     price: 'Rp 320.000',
     image: 'https://images.unsplash.com/photo-1617597190828-1bf579d485ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwY3VydGFpbnMlMjBob21lfGVufDF8fHx8MTc2NTA4NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080',
@@ -643,7 +644,7 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
                 {/* Image Section */}
                 <div className="relative aspect-square overflow-hidden bg-gray-100">
                   <img
-                    src={product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=400'}
+                    src={getProductImageUrl(product.images || product.image)}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />

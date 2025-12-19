@@ -2,6 +2,7 @@ import { Heart, ShoppingCart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Badge } from './ui/badge';
@@ -25,6 +26,9 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
+
+  const inWishlist = isInWishlist(id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,6 +45,18 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
       price: Number(price),
       image: productImage,
     });
+  };
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    await toggleWishlist(id);
   };
 
   return (
@@ -67,16 +83,19 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
 
           {/* Wishlist Button */}
           <button
-            onClick={(e) => e.preventDefault()}
-            className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#EB216A] hover:text-white shadow-lg"
+            onClick={handleWishlistToggle}
+            className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${inWishlist
+                ? 'bg-[#EB216A] text-white'
+                : 'bg-white/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
+              }`}
           >
-            <Heart className="w-5 h-5" />
+            <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
           </button>
 
-          {/* Quick View Button - Shows on Hover */}
+          {/* Quick Add Button - Shows on Hover */}
           <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
             <Button
-              className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl"
+              className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl border-0"
               size="sm"
               onClick={handleAddToCart}
             >
@@ -101,10 +120,11 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
               <span className="text-xs text-gray-500">Per meter</span>
             </div>
             <button
-              onClick={(e) => e.preventDefault()}
-              className="text-gray-400 hover:text-[#EB216A] transition-colors"
+              onClick={handleWishlistToggle}
+              className={`transition-colors ${inWishlist ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'
+                }`}
             >
-              <Heart className="w-5 h-5" />
+              <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
             </button>
           </div>
         </div>

@@ -554,3 +554,21 @@ export const settingsApi = {
         body: JSON.stringify(settings),
     }),
 };
+
+// Wishlist API
+export const wishlistApi = {
+    getAll: () => apiCall('/wishlist'),
+
+    getCount: () => apiCall('/wishlist/count'),
+
+    check: (productId: string) => apiCall(`/wishlist/check/${productId}`),
+
+    add: (productId: string) => apiCall('/wishlist', {
+        method: 'POST',
+        body: JSON.stringify({ productId }),
+    }),
+
+    remove: (productId: string) => apiCall(`/wishlist/${productId}`, {
+        method: 'DELETE',
+    }),
+};
