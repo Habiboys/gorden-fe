@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { getProductImageUrl } from '../utils/imageHelper';
+import { chatAdminFromCart } from '../utils/whatsappHelper';
 import { Button } from './ui/button';
 
 export function CartSidebar() {
@@ -132,11 +133,7 @@ export function CartSidebar() {
                         </div>
                         <Button
                             className="w-full bg-green-500 hover:bg-green-600 text-white py-6 text-lg rounded-xl"
-                            onClick={() => {
-                                // Open WhatsApp chat with admin
-                                const message = encodeURIComponent(`Halo, saya ingin bertanya tentang pesanan saya dengan ${getItemCount()} item senilai Rp ${getTotal().toLocaleString('id-ID')}`);
-                                window.open(`https://wa.me/6285142247464?text=${message}`, '_blank');
-                            }}
+                            onClick={() => chatAdminFromCart(getItemCount(), `Rp ${getTotal().toLocaleString('id-ID')}`)}
                         >
                             <MessageCircle className="w-5 h-5 mr-2" />
                             Chat Admin

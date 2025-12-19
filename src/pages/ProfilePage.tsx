@@ -12,6 +12,7 @@ import { useConfirm } from '../context/ConfirmContext';
 import { useWishlist } from '../context/WishlistContext';
 import { authApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
+import { chatAdminFromProfile } from '../utils/whatsappHelper';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
@@ -432,10 +433,7 @@ export default function ProfilePage() {
                                             className="w-full bg-green-500 hover:bg-green-600 text-white"
                                             onClick={() => {
                                                 const productList = cartItems.map(item => `- ${item.name} (${item.quantity}x)`).join('\n');
-                                                const message = encodeURIComponent(
-                                                    `Halo kak, saya ${user.name} ingin memesan:\n\n${productList}\n\nTotal: Rp ${getTotal().toLocaleString('id-ID')}`
-                                                );
-                                                window.open(`https://wa.me/6285142247464?text=${message}`, '_blank');
+                                                chatAdminFromProfile(user.name, productList, `Rp ${getTotal().toLocaleString('id-ID')}`);
                                             }}
                                         >
                                             <MessageCircle className="w-4 h-4 mr-2" />
