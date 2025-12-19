@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { ProductGallery } from '../components/ProductGallery';
 import { SEO } from '../components/SEO';
 import { Badge } from '../components/ui/badge';
@@ -21,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { productsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
+import { chatAdminAboutProduct } from '../utils/whatsappHelper';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,10 +32,27 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPackage, setSelectedPackage] = useState('self');
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
+  const [inWishlist, setInWishlist] = useState(false); // Placeholder for wishlist state
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: `Lihat produk ${product.name} di Amagriya Gorden!`,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link produk disalin ke clipboard!');
+    }
+  };
   const handleAddToCart = () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -300,7 +319,8 @@ export default function ProductDetail() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-green-500 text-green-600 hover:bg-green-50"
+                    className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500"
+                    onClick={() => chatAdminAboutProduct(product.name, `Rp ${Number(product.price).toLocaleString('id-ID')}`)}
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
                     Chat Admin
@@ -309,6 +329,7 @@ export default function ProductDetail() {
                     size="lg"
                     variant="outline"
                     className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={handleShare}
                   >
                     <Share2 className="w-5 h-5 mr-2" />
                     Share

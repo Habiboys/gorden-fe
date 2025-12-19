@@ -542,6 +542,7 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredBtnId, setHoveredBtnId] = useState<string | null>(null);
 
   // Fetch products by category
   useEffect(() => {
@@ -666,15 +667,20 @@ function CategorySlider({ category, title, badge }: CategorySliderProps) {
 
                   {/* Quick View Button - Shows on Hover */}
                   <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                    <Button
-                      className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl text-xs lg:text-sm"
-                      size="sm"
+                    <button
+                      className="w-full shadow-xl text-xs lg:text-sm rounded-md py-2 px-3 font-medium flex items-center justify-center gap-1 lg:gap-2 transition-all"
+                      style={{
+                        backgroundColor: hoveredBtnId === product.id ? '#EB216A' : 'white',
+                        color: hoveredBtnId === product.id ? 'white' : '#EB216A'
+                      }}
+                      onMouseEnter={() => setHoveredBtnId(product.id)}
+                      onMouseLeave={() => setHoveredBtnId(null)}
                       onClick={() => navigate(`/product/${product.id}`)}
                     >
-                      <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+                      <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4" />
                       <span className="hidden lg:inline">Lihat Detail</span>
                       <span className="lg:hidden">Detail</span>
-                    </Button>
+                    </button>
                   </div>
                 </div>
 

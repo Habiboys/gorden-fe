@@ -1,4 +1,5 @@
 import { Heart, ShoppingCart } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -6,7 +7,6 @@ import { useWishlist } from '../context/WishlistContext';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Badge } from './ui/badge';
-import { Button } from './ui/button';
 
 interface ProductCardProps {
   id: string;
@@ -27,6 +27,7 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const [isHovered, setIsHovered] = useState(false);
 
   const inWishlist = isInWishlist(id);
 
@@ -85,8 +86,8 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
           <button
             onClick={handleWishlistToggle}
             className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${inWishlist
-                ? 'bg-[#EB216A] text-white'
-                : 'bg-white/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
+              ? 'bg-[#EB216A] text-white'
+              : 'bg-white/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
               }`}
           >
             <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
@@ -94,14 +95,19 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
 
           {/* Quick Add Button - Shows on Hover */}
           <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-            <Button
-              className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl border-0"
-              size="sm"
+            <button
+              className="w-full shadow-xl border-0 rounded-md py-2 px-3 text-sm font-medium flex items-center justify-center gap-2 transition-all"
+              style={{
+                backgroundColor: isHovered ? '#EB216A' : 'white',
+                color: isHovered ? 'white' : '#EB216A'
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
               onClick={handleAddToCart}
             >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Tambah ke Keranjang
-            </Button>
+              <ShoppingCart className="w-4 h-4" />
+              <span className="font-medium">Tambah ke Keranjang</span>
+            </button>
           </div>
         </div>
 

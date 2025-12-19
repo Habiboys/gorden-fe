@@ -6,12 +6,12 @@ import { getProductImageUrl } from '../utils/imageHelper';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { SectionHeader } from './SectionHeader';
 import { Badge } from './ui/badge';
-import { Button } from './ui/button';
 
 
 export function TopProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredBtnId, setHoveredBtnId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -121,14 +121,19 @@ export function TopProducts() {
 
                   {/* Quick View Button - Shows on Hover */}
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                    <Button
-                      className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl"
-                      size="sm"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      className="w-full shadow-xl rounded-md py-2 px-3 text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                      style={{
+                        backgroundColor: hoveredBtnId === product.id ? '#EB216A' : 'white',
+                        color: hoveredBtnId === product.id ? 'white' : '#EB216A'
+                      }}
+                      onMouseEnter={() => setHoveredBtnId(product.id)}
+                      onMouseLeave={() => setHoveredBtnId(null)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Tambah ke Keranjang
-                    </Button>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span className="font-medium">Tambah ke Keranjang</span>
+                    </button>
                   </div>
                 </div>
 
