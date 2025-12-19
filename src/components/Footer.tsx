@@ -103,7 +103,7 @@ export function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
           <p>&copy; {new Date().getFullYear()} {settings.siteName || "Amagriya Gorden"}. All rights reserved.</p>
           <a
-            href="/admin/login"
+            href="/admin"
             className="text-xs text-gray-600 hover:text-gray-500 transition-colors mt-2 inline-block"
           >
             Admin

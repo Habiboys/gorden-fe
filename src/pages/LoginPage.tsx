@@ -7,7 +7,7 @@ import {
   Lock,
   Mail
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
@@ -18,7 +18,7 @@ import { authApi } from '../utils/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -26,6 +26,13 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Use dynamic logo from settings or fallback to default
   const logoSrc = settings.siteLogo || defaultLogo;
@@ -56,11 +63,23 @@ export default function LoginPage() {
           navigate('/');
         }
       } else {
-        setError(response.message || 'Login gagal');
+        // Check if email needs verification
+        if (response.requiresVerification) {
+          navigate('/verification-pending', {
+            state: { email: response.email || email }
+          });
+        } else {
+          setError(response.message || 'Login gagal');
+        }
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || 'Terjadi kesalahan saat login');
+      // Check if error response indicates verification required
+      if (err.message && err.message.includes('belum diverifikasi')) {
+        navigate('/verification-pending', { state: { email } });
+      } else {
+        setError(err.message || 'Terjadi kesalahan saat login');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -94,21 +113,6 @@ export default function LoginPage() {
           <p className="text-gray-600">
             Selamat datang kembali! Silakan masuk.
           </p>
-
-          {/* Admin Login Hint */}
-          <div className="mt-4 bg-[#EB216A]/5 border border-[#EB216A]/20 rounded-xl p-4">
-            <p className="text-xs text-gray-600 mb-2">
-              <span className="text-[#EB216A]">💡 Login Admin:</span>
-            </p>
-            <div className="space-y-1">
-              <p className="text-xs text-gray-700">
-                <span className="text-gray-500">Email:</span> <code className="bg-white px-2 py-0.5 rounded text-[#EB216A]">admin@amagriya.com</code>
-              </p>
-              <p className="text-xs text-gray-700">
-                <span className="text-gray-500">Password:</span> <code className="bg-white px-2 py-0.5 rounded text-[#EB216A]">admin123</code>
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Login Form */}

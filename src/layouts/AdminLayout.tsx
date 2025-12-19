@@ -1,3 +1,4 @@
+import defaultLogo from 'figma:asset/b13089223dffdf43231fd2882ccaadb8c454e1f0.png';
 import {
   BookOpen,
   Box,
@@ -37,10 +38,12 @@ const navigation = [
 ];
 
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmContext';
 
 export function AdminLayout() {
   const { logout } = useAuth();
   const { settings } = useSettings();
+  const { confirm } = useConfirm();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -52,15 +55,19 @@ export function AdminLayout() {
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = () => {
-    if (confirm('Yakin ingin logout?')) {
-      logout(); // Call logout from AuthContext
-      navigate('/admin/login'); // Navigate to admin login page
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: 'Logout',
+      description: 'Yakin ingin keluar dari akun admin?',
+      confirmText: 'Ya, Keluar',
+      cancelText: 'Batal',
+      variant: 'destructive'
+    });
+
+    if (confirmed) {
+      logout();
       toast.success('Berhasil logout. Sampai jumpa!');
-      // Use setTimeout to ensure toast is shown before navigation
-      setTimeout(() => {
-        navigate('/'); // Navigate to the public home page after a delay
-      }, 500);
+      navigate('/');
     }
   };
 
@@ -89,9 +96,11 @@ export function AdminLayout() {
                 className="h-8 w-auto object-contain"
               />
             ) : (
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: settings.brandColor || '#EB216A' }}>
-                <span className="text-white text-lg">A</span>
-              </div>
+              <img
+                src={defaultLogo}
+                alt="Logo"
+                className="h-8 w-auto object-contain"
+              />
             )}
             <span className="text-xl text-gray-900">Admin</span>
           </Link>

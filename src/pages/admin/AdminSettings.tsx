@@ -1,4 +1,4 @@
-import { Loader2, Save, Upload, X } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -208,82 +208,6 @@ export default function AdminSettings() {
             </div>
           </Card>
 
-          <Card className="p-6 border-gray-200">
-            <h3 className="text-lg text-gray-900 mb-6">Logo & Branding</h3>
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label>Logo Website</Label>
-                <div className="flex items-center gap-4">
-                  {settings.siteLogo ? (
-                    <div className="relative">
-                      <img
-                        src={settings.siteLogo}
-                        alt="Site Logo"
-                        className="w-20 h-20 object-contain bg-gray-100 rounded-lg border border-gray-200"
-                      />
-                      <button
-                        onClick={handleRemoveLogo}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-20 h-20 bg-[#EB216A] rounded-lg flex items-center justify-center">
-                      <span className="text-white text-2xl">A</span>
-                    </div>
-                  )}
-                  <div>
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <Button
-                      variant="outline"
-                      className="border-gray-300"
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={uploadingLogo}
-                    >
-                      {uploadingLogo ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-4 h-4 mr-2" />
-                          Upload Logo
-                        </>
-                      )}
-                    </Button>
-                    <p className="text-xs text-gray-500 mt-2">PNG, JPG, atau SVG. Maks 2MB.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="brandColor">Brand Color</Label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    id="brandColor"
-                    type="color"
-                    value={settings.brandColor}
-                    onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
-                    className="w-20 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={settings.brandColor}
-                    onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
-                    className="flex-1"
-                    placeholder="#EB216A"
-                  />
-                </div>
-              </div>
-            </div>
-          </Card>
         </TabsContent>
 
         {/* Contact Settings */}

@@ -4,19 +4,23 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  Loader2,
   Lock,
   Mail,
   User
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
+import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { authApi } from '../utils/api';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,12 +31,21 @@ export default function RegisterPage() {
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Use dynamic logo from settings or fallback to default
   const logoSrc = settings.siteLogo || defaultLogo;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
     // Validation
     if (!agreedToTerms) {
@@ -45,18 +58,38 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.name && formData.email && formData.password) {
-      // Set user auth
-      localStorage.setItem('userAuth', 'true');
-      localStorage.setItem('user', JSON.stringify({
+    if (formData.password.length < 8) {
+      setError('Password minimal 8 karakter!');
+      return;
+    }
+
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('Semua field harus diisi!');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call backend API
+      const response = await authApi.register({
         name: formData.name,
         email: formData.email,
-      }));
+        password: formData.password
+      });
 
-      // Navigate to home
-      navigate('/');
-    } else {
-      setError('Semua field harus diisi!');
+      // Registration successful - redirect to verification pending page
+      if (response.success) {
+        navigate('/verification-pending', {
+          state: { email: formData.email }
+        });
+      } else {
+        setError(response.message || 'Gagal mendaftar. Silakan coba lagi.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal mendaftar. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -244,10 +277,20 @@ export default function RegisterPage() {
             {/* Register Button */}
             <Button
               type="submit"
-              className="w-full bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-xl py-6 shadow-lg hover:shadow-xl transition-all group"
+              disabled={isLoading}
+              className="w-full bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-xl py-6 shadow-lg hover:shadow-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Daftar Sekarang
-              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Mendaftar...
+                </>
+              ) : (
+                <>
+                  Daftar Sekarang
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </Button>
           </form>
 

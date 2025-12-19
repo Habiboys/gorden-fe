@@ -43,6 +43,15 @@ export const authApi = {
         body: JSON.stringify(userData),
     }),
     me: () => apiCall('/auth/me'),
+    verifyEmail: (token: string) => apiCall(`/auth/verify-email/${token}`),
+    resendVerification: (email: string) => apiCall('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+    }),
+    changePassword: (data: { currentPassword: string; newPassword: string }) => apiCall('/auth/change-password', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
 };
 
 // Products API

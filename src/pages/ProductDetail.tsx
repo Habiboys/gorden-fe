@@ -17,17 +17,40 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { productsApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState('self');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    if (!product) return;
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      image: getProductImageUrl(product.images || product.image),
+      packageType: selectedPackage === 'self' ? 'Ukur & Pasang Sendiri' : 'Termasuk Pasang',
+      notes: notes,
+    }, quantity);
+  };
 
   const handleQuantityChange = (type: 'increment' | 'decrement') => {
     if (type === 'increment') {
@@ -196,8 +219,8 @@ export default function ProductDetail() {
                       key={pkg.id}
                       onClick={() => setSelectedPackage(pkg.id)}
                       className={`w-full px-4 py-3 rounded-xl border-2 text-left text-sm transition-all ${selectedPackage === pkg.id
-                          ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
-                          : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                        ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
+                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
                         }`}
                     >
                       <div className="flex items-center justify-between">
@@ -267,6 +290,7 @@ export default function ProductDetail() {
                 <Button
                   size="lg"
                   className="w-full bg-[#EB216A] hover:bg-[#d11d5e] text-white py-6 shadow-lg hover:shadow-xl transition-all"
+                  onClick={handleAddToCart}
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   Keranjang
@@ -375,7 +399,7 @@ export default function ProductDetail() {
                   {/* Image Section */}
                   <div className="relative aspect-square overflow-hidden bg-gray-100">
                     <img
-                      src={relatedProduct.images?.[0] || relatedProduct.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=400'}
+                      src={getProductImageUrl(relatedProduct.images)}
                       alt={relatedProduct.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
