@@ -22,7 +22,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
-import { documentsApi } from '../../utils/api';
+import { documentsApi, productsApi } from '../../utils/api';
 
 const statusConfig = {
   draft: { label: 'Draft', color: 'bg-gray-500', icon: Clock },
@@ -39,6 +39,7 @@ const typeConfig = {
 
 interface QuotationItem {
   id: string;
+  productId?: string;
   name: string;
   price: number;
   discount: number;
@@ -62,12 +63,27 @@ export default function AdminDocuments() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [showProductPicker, setShowProductPicker] = useState<string | null>(null); // windowId when open
   const { confirm } = useConfirm();
 
-  // Fetch documents from API
+  // Fetch documents and products from API
   useEffect(() => {
     fetchDocuments();
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await productsApi.getAll();
+      if (response.success) {
+        setProducts(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -187,6 +203,32 @@ export default function AdminDocuments() {
       return w;
     }));
   };
+
+  const addProductToWindow = (windowId: string, product: any) => {
+    setWindows(windows.map(w => {
+      if (w.id === windowId) {
+        const price = parseFloat(product.price_self_measure || product.price || 0);
+        const newItem: QuotationItem = {
+          id: `${windowId}-${Date.now()}`,
+          productId: product.id,
+          name: product.name,
+          price: price,
+          discount: 0,
+          quantity: 1
+        };
+        return { ...w, items: [...w.items, newItem] };
+      }
+      return w;
+    }));
+    setShowProductPicker(null);
+    setProductSearchTerm('');
+  };
+
+  // Filter products based on search
+  const filteredProducts = products.filter(p =>
+    p.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    p.category?.toLowerCase?.()?.includes(productSearchTerm.toLowerCase())
+  );
 
   const removeItemFromWindow = (windowId: string, itemId: string) => {
     setWindows(windows.map(w => {
@@ -685,17 +727,73 @@ export default function AdminDocuments() {
                       </table>
                     </div>
 
-                    {/* Add Item Button */}
-                    <div className="p-3 bg-gray-50 border-t border-gray-200">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addItemToWindow(window.id)}
-                        className="w-full border-dashed border-gray-300"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Tambah Item
-                      </Button>
+                    {/* Add Item Section */}
+                    <div className="p-3 bg-gray-50 border-t border-gray-200 space-y-3">
+                      {/* Product Picker */}
+                      {showProductPicker === window.id ? (
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <Input
+                              type="text"
+                              placeholder="Cari produk..."
+                              value={productSearchTerm}
+                              onChange={(e) => setProductSearchTerm(e.target.value)}
+                              className="pl-10"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+                            {filteredProducts.length > 0 ? (
+                              filteredProducts.slice(0, 10).map((product) => (
+                                <button
+                                  key={product.id}
+                                  onClick={() => addProductToWindow(window.id, product)}
+                                  className="w-full px-3 py-2 text-left hover:bg-pink-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                                >
+                                  <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                                  <p className="text-xs text-gray-500">
+                                    Rp{parseFloat(product.price_self_measure || product.price || 0).toLocaleString('id-ID')}
+                                    {product.category && ` • ${typeof product.category === 'object' ? product.category.name : product.category}`}
+                                  </p>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                Tidak ada produk ditemukan
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setShowProductPicker(null); setProductSearchTerm(''); }}
+                              className="flex-1 border-gray-300"
+                            >
+                              Batal
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { addItemToWindow(window.id); setShowProductPicker(null); }}
+                              className="flex-1 border-gray-300"
+                            >
+                              + Input Manual
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowProductPicker(window.id)}
+                          className="w-full border-dashed border-[#EB216A] text-[#EB216A] hover:bg-pink-50"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Tambah Produk
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

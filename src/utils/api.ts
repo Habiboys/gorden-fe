@@ -519,6 +519,8 @@ export const uploadApi = {
 export const calculatorComponentsApi = {
     getAll: () => apiCall('/calculator-components'),
 
+    getGrouped: () => apiCall('/calculator-components/grouped'),
+
     getByType: (type: string) => apiCall(`/calculator-components/${type}`),
 
     getById: (id: string) => apiCall(`/calculator-components/detail/${id}`),

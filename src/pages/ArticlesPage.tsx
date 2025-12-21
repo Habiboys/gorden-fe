@@ -39,7 +39,8 @@ export default function ArticlesPage() {
           publishDate: new Date(article.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
           readTime: '5 menit',
           categoryLabel: article.category === 'tips' ? 'Tips & Trik' : article.category === 'inspiration' ? 'Inspirasi Desain' : 'Artikel',
-          excerpt: article.excerpt || (article.content ? article.content.substring(0, 100) + '...' : '')
+          excerpt: article.excerpt || (article.content ? article.content.substring(0, 100) + '...' : ''),
+          featured: article.is_featured || false
         }));
         setArticles(mappedArticles);
       } else {

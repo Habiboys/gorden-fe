@@ -1,100 +1,101 @@
-import { useParams, Link } from 'react-router-dom';
-import { Calendar, Clock, ArrowLeft, Share2, Facebook, Twitter, MessageCircle, Eye } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { ArrowLeft, Calendar, Clock, Eye, Facebook, Loader2, MessageCircle, Share2, Twitter } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { Badge } from '../components/ui/badge';
-
-// Mock data - same as ArticlesPage
-const mockArticles = [
-  {
-    id: 1,
-    title: '10 Tips Memilih Gorden yang Tepat untuk Rumah Minimalis',
-    slug: '10-tips-memilih-gorden-rumah-minimalis',
-    excerpt: 'Rumah minimalis membutuhkan gorden yang tepat untuk menciptakan kesan elegan dan tidak berlebihan. Simak tips lengkapnya di sini.',
-    category: 'tips',
-    categoryLabel: 'Tips & Trik',
-    author: 'Admin Amagriya',
-    publishDate: '15 Januari 2024',
-    readTime: '5 menit',
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200',
-    featured: true,
-    views: 1250,
-    content: `
-      <p>Rumah minimalis kini menjadi pilihan banyak orang karena desainnya yang simpel namun elegan. Salah satu elemen penting yang dapat mempercantik rumah minimalis adalah pemilihan gorden yang tepat.</p>
-      
-      <h2>1. Pilih Warna Netral</h2>
-      <p>Untuk rumah minimalis, warna netral seperti putih, abu-abu, atau krem adalah pilihan terbaik. Warna-warna ini memberikan kesan bersih dan tidak ramai, sesuai dengan konsep minimalis.</p>
-      
-      <h2>2. Perhatikan Material</h2>
-      <p>Material gorden yang ringan seperti linen atau katun cocok untuk rumah minimalis. Hindari material yang terlalu tebal atau berkilau yang dapat mengganggu kesan simpel.</p>
-      
-      <h2>3. Model Smokering untuk Kesan Modern</h2>
-      <p>Gorden model smokering memberikan lipatan yang rapi dan teratur, sangat cocok untuk rumah minimalis modern. Model ini juga mudah dibuka-tutup.</p>
-      
-      <h2>4. Ukuran yang Pas</h2>
-      <p>Pastikan ukuran gorden sesuai dengan jendela. Gorden yang terlalu panjang atau pendek dapat mengganggu estetika ruangan minimalis Anda.</p>
-      
-      <h2>5. Pertimbangkan Fungsi Blackout</h2>
-      <p>Untuk kamar tidur di rumah minimalis, pertimbangkan gorden blackout yang dapat memblokir cahaya sepenuhnya untuk tidur yang lebih berkualitas.</p>
-      
-      <h2>6. Kombinasi dengan Vitrase</h2>
-      <p>Kombinasi gorden tebal dengan vitrase tipis memberikan fleksibilitas dalam mengatur pencahayaan sambil tetap menjaga privasi.</p>
-      
-      <h2>7. Hindari Motif yang Ramai</h2>
-      <p>Konsep minimalis mengedepankan kesederhanaan. Pilih gorden polos atau dengan motif geometris simple yang tidak terlalu mencolok.</p>
-      
-      <h2>8. Perhatikan Sistem Rel</h2>
-      <p>Pilih rel gorden yang simpel dan tidak terlalu dekoratif. Rel aluminium dengan warna netral adalah pilihan yang tepat.</p>
-      
-      <h2>9. Sesuaikan dengan Pencahayaan Ruangan</h2>
-      <p>Jika ruangan kurang cahaya, pilih gorden dengan warna terang dan material tipis. Sebaliknya, untuk ruangan yang terlalu terang, gorden gelap dapat membantu.</p>
-      
-      <h2>10. Budget yang Realistis</h2>
-      <p>Tentukan budget sejak awal. Gorden berkualitas tidak selalu mahal, yang penting adalah pemilihan yang tepat sesuai kebutuhan.</p>
-      
-      <h2>Kesimpulan</h2>
-      <p>Memilih gorden untuk rumah minimalis memang memerlukan pertimbangan khusus. Dengan mengikuti 10 tips di atas, Anda dapat menemukan gorden yang sempurna untuk menciptakan rumah minimalis impian Anda.</p>
-      
-      <p>Butuh bantuan dalam memilih gorden? Tim Amagriya Gorden siap membantu Anda menemukan solusi terbaik. Hubungi kami untuk konsultasi gratis!</p>
-    `
-  },
-  {
-    id: 2,
-    title: 'Warna Gorden Terbaik untuk Ruang Tamu Modern',
-    slug: 'warna-gorden-terbaik-ruang-tamu-modern',
-    excerpt: 'Pemilihan warna gorden dapat mengubah suasana ruang tamu Anda. Pelajari kombinasi warna yang sempurna untuk ruang tamu modern.',
-    category: 'inspiration',
-    categoryLabel: 'Inspirasi Desain',
-    author: 'Admin Amagriya',
-    publishDate: '12 Januari 2024',
-    readTime: '7 menit',
-    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1200',
-    featured: true,
-    views: 980,
-    content: `
-      <p>Ruang tamu adalah wajah rumah Anda. Pemilihan warna gorden yang tepat dapat menciptakan atmosfer yang sempurna untuk menerima tamu dan bersantai bersama keluarga.</p>
-      
-      <h2>Warna Abu-abu: Elegan dan Timeless</h2>
-      <p>Abu-abu adalah warna yang sangat versatile dan cocok untuk berbagai gaya interior modern. Warna ini memberikan kesan sophisticated tanpa terlihat terlalu formal.</p>
-      
-      <h2>Putih Gading: Clean dan Bright</h2>
-      <p>Putih gading atau off-white memberikan kesan bersih dan membuat ruangan terasa lebih luas dan terang. Sempurna untuk ruang tamu berukuran kecil hingga sedang.</p>
-      
-      <h2>Navy Blue: Bold dan Sophisticated</h2>
-      <p>Untuk tampilan yang lebih berani, navy blue adalah pilihan tepat. Warna ini memberikan depth dan karakter pada ruang tamu modern Anda.</p>
-      
-      <h2>Kombinasi Warna</h2>
-      <p>Jangan takut untuk mengkombinasikan warna! Gorden abu-abu dengan aksen emas, atau putih dengan detail silver dapat menciptakan focal point yang menarik.</p>
-      
-      <p>Kunjungi showroom Amagriya Gorden untuk melihat berbagai pilihan warna dan mendapatkan sample gratis!</p>
-    `
-  },
-];
+import { Button } from '../components/ui/button';
+import { articlesApi } from '../utils/api';
 
 export default function ArticleDetailPage() {
   const { slug } = useParams();
-  const article = mockArticles.find(a => a.slug === slug);
+  const [article, setArticle] = useState<any>(null);
+  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  if (!article) {
+  useEffect(() => {
+    loadArticle();
+  }, [slug]);
+
+  const loadArticle = async () => {
+    if (!slug) return;
+
+    setLoading(true);
+    setError(false);
+
+    try {
+      const response = await articlesApi.getBySlug(slug);
+      if (response.success && response.data) {
+        const articleData = {
+          ...response.data,
+          image: response.data.image_url,
+          publishDate: new Date(response.data.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+          readTime: '5 menit',
+          categoryLabel: getCategoryLabel(response.data.category),
+          views: response.data.view_count || 0,
+          featured: response.data.is_featured || false
+        };
+        setArticle(articleData);
+
+        // Load related articles
+        loadRelatedArticles(response.data.category, response.data.id);
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      console.error('Error loading article:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRelatedArticles = async (category: string, currentId: string) => {
+    try {
+      const response = await articlesApi.getAll({ category, limit: 4 });
+      if (response.success && response.data) {
+        const related = response.data
+          .filter((a: any) => a.id !== currentId)
+          .slice(0, 3)
+          .map((a: any) => ({
+            ...a,
+            image: a.image_url,
+            publishDate: new Date(a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+            categoryLabel: getCategoryLabel(a.category)
+          }));
+        setRelatedArticles(related);
+      }
+    } catch (err) {
+      console.error('Error loading related articles:', err);
+    }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      'tips': 'Tips & Trik',
+      'inspiration': 'Inspirasi Desain',
+      'inspirasi': 'Inspirasi Desain',
+      'guide': 'Panduan',
+      'trend': 'Tren Terkini',
+      'tutorial': 'Tutorial',
+      'perawatan': 'Perawatan'
+    };
+    return labels[category] || 'Artikel';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white pt-32 pb-20">
+        <div className="flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[#EB216A] mx-auto mb-4" />
+            <p className="text-gray-600">Memuat artikel...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !article) {
     return (
       <div className="min-h-screen bg-white pt-32 pb-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -109,15 +110,11 @@ export default function ArticleDetailPage() {
     );
   }
 
-  const relatedArticles = mockArticles
-    .filter(a => a.id !== article.id && a.category === article.category)
-    .slice(0, 3);
-
   const handleShare = (platform: string) => {
     const url = window.location.href;
     const text = article.title;
-    
-    switch(platform) {
+
+    switch (platform) {
       case 'facebook':
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
         break;
@@ -134,13 +131,17 @@ export default function ArticleDetailPage() {
     <div className="min-h-screen bg-white">
       {/* Hero Image */}
       <div className="relative h-[60vh] bg-gray-900">
-        <img
-          src={article.image}
-          alt={article.title}
-          className="w-full h-full object-cover opacity-80"
-        />
+        {article.image ? (
+          <img
+            src={article.image}
+            alt={article.title}
+            className="w-full h-full object-cover opacity-80"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#EB216A] to-purple-600" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-        
+
         {/* Back Button */}
         <Link
           to="/articles"
@@ -172,7 +173,7 @@ export default function ArticleDetailPage() {
                 <Eye className="w-4 h-4" />
                 {article.views} views
               </span>
-              <span>Oleh {article.author}</span>
+              <span>Oleh {article.author || 'Admin Amagriya'}</span>
             </div>
           </div>
         </div>
@@ -184,8 +185,15 @@ export default function ArticleDetailPage() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Main Content */}
             <div className="flex-1">
+              {/* Article Excerpt */}
+              {article.excerpt && (
+                <p className="text-xl text-gray-600 mb-8 leading-relaxed italic border-l-4 border-[#EB216A] pl-4">
+                  {article.excerpt}
+                </p>
+              )}
+
               {/* Article Body */}
-              <div 
+              <div
                 className="prose prose-lg max-w-none
                   prose-headings:text-gray-900 prose-headings:font-serif
                   prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
@@ -194,23 +202,23 @@ export default function ArticleDetailPage() {
                   prose-strong:text-gray-900
                   prose-a:text-[#EB216A] prose-a:no-underline hover:prose-a:underline
                 "
-                dangerouslySetInnerHTML={{ __html: article.content }}
+                dangerouslySetInnerHTML={{ __html: article.content || '' }}
               />
 
               {/* Tags */}
               <div className="mt-12 pt-8 border-t border-gray-200">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="border-gray-300 text-gray-700">
-                    gorden minimalis
+                    gorden
                   </Badge>
                   <Badge variant="outline" className="border-gray-300 text-gray-700">
-                    tips interior
+                    interior
                   </Badge>
                   <Badge variant="outline" className="border-gray-300 text-gray-700">
                     dekorasi rumah
                   </Badge>
                   <Badge variant="outline" className="border-gray-300 text-gray-700">
-                    {article.categoryLabel.toLowerCase()}
+                    {article.categoryLabel?.toLowerCase()}
                   </Badge>
                 </div>
               </div>
@@ -266,7 +274,7 @@ export default function ArticleDetailPage() {
                 <div className="w-16 h-16 bg-[#EB216A] rounded-full flex items-center justify-center text-white text-xl mb-4">
                   A
                 </div>
-                <h3 className="text-lg text-gray-900 mb-2">{article.author}</h3>
+                <h3 className="text-lg text-gray-900 mb-2">{article.author || 'Admin Amagriya'}</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Tim ahli Amagriya Gorden yang berpengalaman dalam desain interior dan solusi gorden.
                 </p>
@@ -300,11 +308,15 @@ export default function ArticleDetailPage() {
                   className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-[#EB216A]/20 hover:shadow-lg transition-all"
                 >
                   <div className="relative h-40 overflow-hidden">
-                    <img
-                      src={related.image}
-                      alt={related.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
+                    {related.image ? (
+                      <img
+                        src={related.image}
+                        alt={related.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-pink-100 to-purple-100" />
+                    )}
                   </div>
                   <div className="p-4">
                     <h3 className="text-sm text-gray-900 mb-2 line-clamp-2 group-hover:text-[#EB216A] transition-colors">
@@ -324,3 +336,4 @@ export default function ArticleDetailPage() {
     </div>
   );
 }
+

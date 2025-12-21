@@ -22,113 +22,27 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { calculatorComponentsApi, calculatorLeadsApi } from '../utils/api';
-
-// Data will be loaded from backend - fallback to empty arrays
-let products: any[] = [
-  {
-    id: '1',
-    name: 'Gorden Blackout Premium',
-    price: 125000,
-    image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop',
-    category: 'Blackout',
-  },
-  {
-    id: '2',
-    name: 'Gorden Sheer Elegant',
-    price: 95000,
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop',
-    category: 'Sheer',
-  },
-  {
-    id: '3',
-    name: 'Gorden Dimout Modern',
-    price: 110000,
-    image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop',
-    category: 'Dimout',
-  },
-  {
-    id: '4',
-    name: 'Gorden Linen Natural',
-    price: 135000,
-    image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=400&h=300&fit=crop',
-    category: 'Linen',
-  },
-  {
-    id: '5',
-    name: 'Gorden Velvet Luxury',
-    price: 185000,
-    image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=400&h=300&fit=crop',
-    category: 'Velvet',
-  },
-  {
-    id: '6',
-    name: 'Gorden Cotton Classic',
-    price: 105000,
-    image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop',
-    category: 'Cotton',
-  },
-  {
-    id: '7',
-    name: 'Gorden Silk Premium',
-    price: 225000,
-    image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop',
-    category: 'Silk',
-  },
-  {
-    id: '8',
-    name: 'Gorden Polyester Economy',
-    price: 75000,
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop',
-    category: 'Polyester',
-  },
-];
-
-// Katalog komponen
-let relGordenOptions = [
-  { id: 'rel-1', name: 'Rel Single Track Basic', price: 65000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
-  { id: 'rel-2', name: 'Rel Single Track Premium', price: 95000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
-  { id: 'rel-3', name: 'Rel Double Track Standard', price: 125000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop' },
-  { id: 'rel-4', name: 'Rel Double Track Premium', price: 165000, maxWidth: 500, description: 'Untuk lebar hingga 5m', image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=400&h=300&fit=crop' },
-  { id: 'rel-5', name: 'Rel Motorized Basic', price: 450000, maxWidth: 400, description: 'Otomatis, untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=400&h=300&fit=crop' },
-  { id: 'rel-6', name: 'Rel Motorized Premium', price: 750000, maxWidth: 600, description: 'Otomatis premium, untuk lebar hingga 6m', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop' },
-];
-
-let tasselOptions = [
-  { id: 'tassel-1', name: 'Tassel Basic Polos', price: 25000, description: 'Simple & minimalis', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
-  { id: 'tassel-2', name: 'Tassel Elegant Bordir', price: 45000, description: 'Dengan detail bordir', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
-  { id: 'tassel-3', name: 'Tassel Premium Crystal', price: 75000, description: 'Dengan kristal swarovski', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop' },
-  { id: 'tassel-4', name: 'Tassel Luxury Gold', price: 125000, description: 'Finishing emas 24k', image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=400&h=300&fit=crop' },
-];
-
-let hookOptions = [
-  { id: 'hook-1', name: 'Hook Plastik Standard', price: 2500, description: 'Ekonomis & kuat', image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=400&h=300&fit=crop' },
-  { id: 'hook-2', name: 'Hook Metal Chrome', price: 4500, description: 'Tahan lama, finishing chrome', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop' },
-  { id: 'hook-3', name: 'Hook Premium Stainless', price: 6500, description: 'Anti karat, premium quality', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
-];
-
-let kainVitraseOptions = [
-  { id: 'vitrase-1', name: 'Vitrase Sheer Polos', price: 45000, description: 'Tipis & transparan', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
-  { id: 'vitrase-2', name: 'Vitrase Emboss Pattern', price: 65000, description: 'Dengan motif emboss', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400&h=300&fit=crop' },
-  { id: 'vitrase-3', name: 'Vitrase Linen Look', price: 85000, description: 'Tekstur linen premium', image: 'https://images.unsplash.com/photo-1618220179428-22790b461013?w=400&h=300&fit=crop' },
-  { id: 'vitrase-4', name: 'Vitrase Premium Silk', price: 125000, description: 'Silk premium eksklusif', image: 'https://images.unsplash.com/photo-1604709177225-055f99402ea3?w=400&h=300&fit=crop' },
-];
-
-let relVitraseOptions = [
-  { id: 'rel-vit-1', name: 'Rel Vitrase Slim Basic', price: 55000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400&h=300&fit=crop' },
-  { id: 'rel-vit-2', name: 'Rel Vitrase Standard', price: 75000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400&h=300&fit=crop' },
-  { id: 'rel-vit-3', name: 'Rel Vitrase Premium', price: 105000, maxWidth: 500, description: 'Untuk lebar hingga 5m', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=300&fit=crop' },
-];
+import { getProductImageUrl } from '../utils/imageHelper';
 
 type CalculatorType = 'smokering' | 'kupu-kupu' | 'blind';
 type ItemType = 'pintu' | 'jendela';
 type PackageType = 'gorden-saja' | 'gorden-lengkap';
 
+interface ComponentOption {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  maxWidth?: number;
+}
+
 interface ComponentSelections {
-  relGorden?: typeof relGordenOptions[0];
-  tassel?: typeof tasselOptions[0];
-  hook?: typeof hookOptions[0];
-  kainVitrase?: typeof kainVitraseOptions[0];
-  relVitrase?: typeof relVitraseOptions[0];
+  relGorden?: ComponentOption;
+  tassel?: ComponentOption;
+  hook?: ComponentOption;
+  kainVitrase?: ComponentOption;
+  relVitrase?: ComponentOption;
 }
 
 interface WindowItem {
@@ -150,6 +64,14 @@ export default function CalculatorPage() {
   // Components loading state
   const [componentsLoading, setComponentsLoading] = useState(true);
   const [componentsLoaded, setComponentsLoaded] = useState(false);
+
+  // Component data from database (empty by default, no fallback)
+  const [products, setProducts] = useState<any[]>([]);
+  const [relGordenOptions, setRelGordenOptions] = useState<ComponentOption[]>([]);
+  const [tasselOptions, setTasselOptions] = useState<ComponentOption[]>([]);
+  const [hookOptions, setHookOptions] = useState<ComponentOption[]>([]);
+  const [kainVitraseOptions, setKainVitraseOptions] = useState<ComponentOption[]>([]);
+  const [relVitraseOptions, setRelVitraseOptions] = useState<ComponentOption[]>([]);
 
   const [calculatorType, setCalculatorType] = useState<CalculatorType>('smokering');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -180,51 +102,44 @@ export default function CalculatorPage() {
       try {
         setComponentsLoading(true);
         console.log('🔄 Loading calculator components from backend...');
-        const response = await calculatorComponentsApi.getAll();
-        console.log('✅ Components loaded:', response);
+        const response = await calculatorComponentsApi.getGrouped();
+        console.log('Components loaded:', response);
 
         if (response.success && response.data) {
-          // Update component arrays
+          // Update component state with data from API
           if (response.data.products && response.data.products.length > 0) {
-            products = response.data.products;
+            setProducts(response.data.products);
+            setSelectedProduct(response.data.products[0]);
           }
           if (response.data.relGorden && response.data.relGorden.length > 0) {
-            relGordenOptions = response.data.relGorden;
+            setRelGordenOptions(response.data.relGorden);
           }
           if (response.data.tassel && response.data.tassel.length > 0) {
-            tasselOptions = response.data.tassel;
+            setTasselOptions(response.data.tassel);
           }
           if (response.data.hook && response.data.hook.length > 0) {
-            hookOptions = response.data.hook;
+            setHookOptions(response.data.hook);
           }
           if (response.data.kainVitrase && response.data.kainVitrase.length > 0) {
-            kainVitraseOptions = response.data.kainVitrase;
+            setKainVitraseOptions(response.data.kainVitrase);
           }
           if (response.data.relVitrase && response.data.relVitrase.length > 0) {
-            relVitraseOptions = response.data.relVitrase;
+            setRelVitraseOptions(response.data.relVitrase);
           }
 
-          console.log('✅ Component arrays updated:', {
-            products: products.length,
-            relGorden: relGordenOptions.length,
-            tassel: tasselOptions.length,
-            hook: hookOptions.length,
-            kainVitrase: kainVitraseOptions.length,
-            relVitrase: relVitraseOptions.length,
-          });
-
+          console.log('✅ Components state updated from API');
           setComponentsLoaded(true);
-
-          // Set default selected product after loading
+        } else {
+          // No data from API, keep using fallback
+          console.log('⚠️ No data from API, using fallback');
           if (products.length > 0) {
             setSelectedProduct(products[0]);
           }
         }
       } catch (error) {
         console.error('❌ Error loading components:', error);
-        // Keep using fallback hardcoded data
+        // Keep using fallback data
         console.log('⚠️ Using fallback hardcoded data');
-        // Set default product from fallback if available
         if (products.length > 0) {
           setSelectedProduct(products[0]);
         }
@@ -764,42 +679,43 @@ export default function CalculatorPage() {
             </div>
 
             {/* Selected Product Display */}
-            <div className="bg-white rounded-xl p-3 sm:p-4 border-2 border-[#EB216A] shadow-lg">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <img
-                      src={selectedProduct.image}
-                      alt={selectedProduct.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <Badge className="bg-[#EB216A]/10 text-[#EB216A] border-0 mb-1 text-xs">
-                      {selectedProduct.category}
-                    </Badge>
-                    <h3 className="text-base sm:text-lg text-gray-900 mb-0.5 truncate">{selectedProduct.name}</h3>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-lg sm:text-xl text-[#EB216A]">
-                        Rp {selectedProduct.price.toLocaleString('id-ID')}
-                      </span>
-                      <span className="text-xs text-gray-500">/ meter</span>
+            {selectedProduct && (
+              <div className="bg-white rounded-xl p-3 sm:p-4 border-2 border-[#EB216A] shadow-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      <img
+                        src={getProductImageUrl(selectedProduct.images || selectedProduct.image)}
+                        alt={selectedProduct.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Badge className="bg-[#EB216A]/10 text-[#EB216A] border-0 mb-1 text-xs">
+                        {selectedProduct.category}
+                      </Badge>
+                      <h3 className="text-base sm:text-lg text-gray-900 mb-0.5 truncate">{selectedProduct.name}</h3>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-lg sm:text-xl text-[#EB216A]">
+                          Rp {selectedProduct.price?.toLocaleString('id-ID') || '0'}
+                        </span>
+                        <span className="text-xs text-gray-500">/ meter</span>
+                      </div>
                     </div>
                   </div>
+
+                  <Button
+                    onClick={() => setIsProductModalOpen(true)}
+                    variant="outline"
+                    className="border-2 border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white rounded-lg px-4 py-4 w-full sm:w-auto text-sm"
+                  >
+                    <Package className="w-4 h-4 mr-1.5" />
+                    Ganti Produk
+                  </Button>
                 </div>
-
-                <Button
-                  onClick={() => setIsProductModalOpen(true)}
-                  variant="outline"
-                  className="border-2 border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white rounded-lg px-4 py-4 w-full sm:w-auto text-sm"
-                >
-                  <Package className="w-4 h-4 mr-1.5" />
-                  Ganti Produk
-                </Button>
               </div>
-            </div>
+            )}
           </div>
-
           {/* Step 3: Add Items */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -1213,7 +1129,7 @@ export default function CalculatorPage() {
                   {/* Image */}
                   <div className="relative h-32 overflow-hidden bg-gray-100">
                     <img
-                      src={product.image}
+                      src={getProductImageUrl(product.images || product.image)}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />

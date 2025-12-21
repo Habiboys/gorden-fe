@@ -71,9 +71,14 @@ export default function ProductListing() {
 
   // Filter products based on search query and category
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    // Get category name - handle if category is an object or string
+    const categoryName = typeof product.category === 'object' && product.category
+      ? (product.category.name || '')
+      : (product.category || '');
+
+    const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(categoryName).toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || categoryName === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -116,8 +121,8 @@ export default function ProductListing() {
                     key={category.value}
                     onClick={() => setSelectedCategory(category.value)}
                     className={`px-4 py-2 rounded-lg transition-all ${selectedCategory === category.value
-                        ? 'bg-[#EB216A] text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-[#EB216A] text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                   >
                     {category.label}

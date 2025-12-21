@@ -33,12 +33,11 @@ import { Textarea } from '../../components/ui/textarea';
 import { calculatorComponentsApi } from '../../utils/api';
 
 const componentTypes = [
-  { value: 'product', label: 'Produk Gorden', icon: Package },
-  { value: 'relGorden', label: 'Rel Gorden', icon: Box },
+  { value: 'rel_gorden', label: 'Rel Gorden', icon: Box },
   { value: 'tassel', label: 'Tassel', icon: Package },
   { value: 'hook', label: 'Hook', icon: Package },
-  { value: 'kainVitrase', label: 'Kain Vitrase', icon: Package },
-  { value: 'relVitrase', label: 'Rel Vitrase', icon: Box },
+  { value: 'vitrase_kain', label: 'Kain Vitrase', icon: Package },
+  { value: 'vitrase_rel', label: 'Rel Vitrase', icon: Box },
 ];
 
 export default function AdminCalculatorComponents() {
@@ -59,7 +58,7 @@ export default function AdminCalculatorComponents() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    type: 'product',
+    type: 'rel_gorden',
     price: '',
     maxWidth: '',
     description: '',
@@ -103,7 +102,7 @@ export default function AdminCalculatorComponents() {
       setEditingComponent(null);
       setFormData({
         name: '',
-        type: 'product',
+        type: 'rel_gorden',
         price: '',
         maxWidth: '',
         description: '',
@@ -182,15 +181,10 @@ export default function AdminCalculatorComponents() {
     }
 
     const seedComponents = [
-      // Products
-      { name: 'Gorden Blackout Premium', type: 'product', price: 125000, image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400', description: 'Kain gorden blackout berkualitas premium' },
-      { name: 'Gorden Sheer Elegant', type: 'product', price: 95000, image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400', description: 'Gorden sheer tipis dan elegan' },
-      { name: 'Gorden Dimout Modern', type: 'product', price: 110000, image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400', description: 'Gorden dimout modern' },
-
       // Rel Gorden
-      { name: 'Rel Single Track Basic', type: 'relGorden', price: 65000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400' },
-      { name: 'Rel Single Track Premium', type: 'relGorden', price: 95000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400' },
-      { name: 'Rel Double Track Standard', type: 'relGorden', price: 125000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400' },
+      { name: 'Rel Single Track Basic', type: 'rel_gorden', price: 65000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400' },
+      { name: 'Rel Single Track Premium', type: 'rel_gorden', price: 95000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400' },
+      { name: 'Rel Double Track Standard', type: 'rel_gorden', price: 125000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400' },
 
       // Tassel
       { name: 'Tassel Basic Polos', type: 'tassel', price: 25000, description: 'Simple & minimalis', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400' },
@@ -201,12 +195,12 @@ export default function AdminCalculatorComponents() {
       { name: 'Hook Metal Chrome', type: 'hook', price: 4500, description: 'Tahan lama, finishing chrome', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400' },
 
       // Kain Vitrase
-      { name: 'Vitrase Sheer Polos', type: 'kainVitrase', price: 45000, description: 'Tipis & transparan', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400' },
-      { name: 'Vitrase Emboss Pattern', type: 'kainVitrase', price: 65000, description: 'Dengan motif emboss', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400' },
+      { name: 'Vitrase Sheer Polos', type: 'vitrase_kain', price: 45000, description: 'Tipis & transparan', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400' },
+      { name: 'Vitrase Emboss Pattern', type: 'vitrase_kain', price: 65000, description: 'Dengan motif emboss', image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=400' },
 
       // Rel Vitrase
-      { name: 'Rel Vitrase Slim Basic', type: 'relVitrase', price: 55000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400' },
-      { name: 'Rel Vitrase Standard', type: 'relVitrase', price: 75000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400' },
+      { name: 'Rel Vitrase Slim Basic', type: 'vitrase_rel', price: 55000, maxWidth: 300, description: 'Untuk lebar hingga 3m', image: 'https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=400' },
+      { name: 'Rel Vitrase Standard', type: 'vitrase_rel', price: 75000, maxWidth: 400, description: 'Untuk lebar hingga 4m', image: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?w=400' },
     ];
 
     try {
