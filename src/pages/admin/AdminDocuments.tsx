@@ -115,15 +115,10 @@ export default function AdminDocuments() {
   const [windows, setWindows] = useState<QuotationWindow[]>([
     {
       id: '1',
-      title: '1 Pintu',
-      size: 'Ukuran 200cm x 270cm',
-      fabricType: 'Gorden Langkap',
-      items: [
-        { id: '1-1', name: 'Gorden Custom Smokering - Blackout OPHELIA Series (Pic Order)', price: 1090000, discount: 20, quantity: 1 },
-        { id: '1-2', name: 'Rel Standar Motif Ulir Lengkap +End Cup +Bracket [Hitam]', price: 119000, discount: 20, quantity: 1 },
-        { id: '1-3', name: 'Tassel Tali Pengait Gorden Crystal Standar - ALL SIZE', price: 18000, discount: 19, quantity: 2 },
-        { id: '1-4', name: 'Hook / Pengait Tali Gorden Model Minimalis - Coklat', price: 12000, discount: 19, quantity: 2 },
-      ]
+      title: 'Jendela 1',
+      size: '',
+      fabricType: '',
+      items: []
     }
   ]);
 
@@ -188,21 +183,7 @@ export default function AdminDocuments() {
     setWindows(windows.filter(w => w.id !== windowId));
   };
 
-  const addItemToWindow = (windowId: string) => {
-    setWindows(windows.map(w => {
-      if (w.id === windowId) {
-        const newItem: QuotationItem = {
-          id: `${windowId}-${Date.now()}`,
-          name: '',
-          price: 0,
-          discount: 0,
-          quantity: 1
-        };
-        return { ...w, items: [...w.items, newItem] };
-      }
-      return w;
-    }));
-  };
+
 
   const addProductToWindow = (windowId: string, product: any) => {
     setWindows(windows.map(w => {
@@ -266,8 +247,15 @@ export default function AdminDocuments() {
   };
 
   const calculateItemTotal = (item: QuotationItem) => {
-    const discountedPrice = item.price * (1 - item.discount / 100);
-    return discountedPrice * item.quantity;
+    const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+    const discount = typeof item.discount === 'string' ? parseFloat(item.discount) : item.discount;
+    const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity;
+
+    // Safety check
+    if (isNaN(price)) return 0;
+
+    const discountedPrice = price * (1 - (discount || 0) / 100);
+    return discountedPrice * (quantity || 1);
   };
 
   const calculateTotal = () => {
@@ -321,9 +309,9 @@ export default function AdminDocuments() {
         });
         setWindows([{
           id: '1',
-          title: '1 Pintu',
-          size: 'Ukuran 200cm x 270cm',
-          fabricType: 'Gorden Langkap',
+          title: 'Jendela 1',
+          size: '',
+          fabricType: '',
           items: []
         }]);
       }
@@ -394,7 +382,7 @@ export default function AdminDocuments() {
             <div>
               <p className="text-sm text-gray-600">Total Nilai</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{(documents.reduce((sum, d) => sum + (parseFloat(d.total_amount) || 0), 0) / 1000000).toFixed(1)}M
+                Rp{documents.reduce((sum, d) => sum + (parseFloat(d.total_amount) || 0), 0).toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
@@ -674,21 +662,12 @@ export default function AdminDocuments() {
                             <tr key={item.id} className="border-b border-gray-100">
                               <td className="px-4 py-3 text-sm text-gray-600">{itemIndex + 1}</td>
                               <td className="px-4 py-3">
-                                <Input
-                                  value={item.name}
-                                  onChange={(e) => updateItem(window.id, item.id, 'name', e.target.value)}
-                                  placeholder="Nama produk/item"
-                                  className="text-sm"
-                                />
+                                <p className="text-sm text-gray-900">{item.name}</p>
                               </td>
                               <td className="px-4 py-3">
-                                <Input
-                                  type="number"
-                                  value={item.price}
-                                  onChange={(e) => updateItem(window.id, item.id, 'price', parseFloat(e.target.value) || 0)}
-                                  placeholder="0"
-                                  className="text-sm"
-                                />
+                                <p className="text-sm text-gray-900">
+                                  Rp{item.price.toLocaleString('id-ID')}
+                                </p>
                               </td>
                               <td className="px-4 py-3">
                                 <Input
@@ -769,17 +748,9 @@ export default function AdminDocuments() {
                               size="sm"
                               variant="outline"
                               onClick={() => { setShowProductPicker(null); setProductSearchTerm(''); }}
-                              className="flex-1 border-gray-300"
+                              className="w-full border-gray-300"
                             >
                               Batal
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => { addItemToWindow(window.id); setShowProductPicker(null); }}
-                              className="flex-1 border-gray-300"
-                            >
-                              + Input Manual
                             </Button>
                           </div>
                         </div>

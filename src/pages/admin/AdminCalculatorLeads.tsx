@@ -235,7 +235,21 @@ export default function AdminCalculatorLeads() {
         console.log('🔄 Fetching calculator leads from backend...');
         const response = await calculatorLeadsApi.getAll();
         console.log('✅ Calculator leads fetched:', response);
-        setLeads(response.data || []);
+
+        // Parse calculation_data if it's a string (JSON)
+        const parsedLeads = (response.data || []).map((lead: any) => {
+          if (lead.calculation_data && typeof lead.calculation_data === 'string') {
+            try {
+              lead.calculation_data = JSON.parse(lead.calculation_data);
+            } catch (e) {
+              console.warn('Failed to parse calculation_data for lead:', lead.id);
+            }
+          }
+          return lead;
+        });
+        console.log('📊 Parsed leads:', parsedLeads);
+
+        setLeads(parsedLeads);
       } catch (error) {
         console.error('❌ Error fetching calculator leads:', error);
 
@@ -350,21 +364,25 @@ export default function AdminCalculatorLeads() {
 
   // Convert calculator lead to quotation format
   const convertToQuotation = (lead: any) => {
+    const calculation = lead.calculation || {};
+    const components = calculation.components || [];
+    const installation = calculation.installation || {};
+
     const items = [
-      ...lead.calculation.components.map((comp: any, idx: number) => ({
+      ...components.map((comp: any, idx: number) => ({
         id: `1-${idx + 1}`,
-        name: `${comp.name} - ${comp.type}`,
-        price: comp.pricePerUnit,
+        name: `${comp.name || 'Item'} - ${comp.type || ''}`,
+        price: comp.pricePerUnit || 0,
         discount: 0,
-        quantity: comp.quantity
+        quantity: comp.quantity || 1
       })),
-      {
+      ...(installation.type ? [{
         id: '1-install',
-        name: lead.calculation.installation.type,
-        price: lead.calculation.installation.price,
+        name: installation.type,
+        price: installation.price || 0,
         discount: 0,
         quantity: 1
-      }
+      }] : [])
     ];
 
     return {
@@ -596,18 +614,24 @@ export default function AdminCalculatorLeads() {
                     </td>
                     <td className="px-6 py-4">
                       <Badge className="bg-purple-100 text-purple-700 border-0">
-                        {lead.calculatorType}
+                        {lead.calculatorType || lead.calculator_type || 'Unknown'}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-900">
-                        Rp{(lead.grandTotal || lead.estimatedPrice).toLocaleString('id-ID')}
+                        Rp{(lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0).toLocaleString('id-ID')}
                       </p>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge className={`${statusConfig[lead.status as keyof typeof statusConfig].color} text-white border-0`}>
-                        {statusConfig[lead.status as keyof typeof statusConfig].label}
-                      </Badge>
+                      {(statusConfig as any)[lead.status] ? (
+                        <Badge className={`${(statusConfig as any)[lead.status].color} text-white border-0`}>
+                          {(statusConfig as any)[lead.status].label}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-gray-500 text-white border-0">
+                          {lead.status || 'NEW'}
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -704,27 +728,96 @@ export default function AdminCalculatorLeads() {
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Tipe Kalkulator</p>
                     <Badge className="bg-purple-100 text-purple-700 border-0">
-                      {selectedLead.calculatorType}
+                      {selectedLead.calculatorType || selectedLead.calculator_type || selectedLead.calculation_data?.calculatorType?.name || 'Unknown'}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600 mb-1">Produk</p>
-                    <p className="text-sm text-gray-900">{selectedLead.productName}</p>
+                    <p className="text-xs text-gray-600 mb-1">Kain</p>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.productName || selectedLead.calculation_data?.fabric?.name || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Total Item</p>
-                    <p className="text-sm text-gray-900">{selectedLead.totalItems || 0} item ({selectedLead.totalUnits || 0} unit)</p>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.calculation_data?.items?.length || selectedLead.totalItems || 0} item
+                      ({selectedLead.calculation_data?.items?.reduce((s: number, i: any) => s + (i.quantity || 0), 0) || selectedLead.totalUnits || 0} unit)
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Items List */}
+              {/* New Format - calculation_data.items */}
+              {selectedLead.calculation_data?.items && selectedLead.calculation_data.items.length > 0 && (
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 p-4 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="w-5 h-5 text-gray-600" />
+                      <h3 className="text-base text-gray-900">Detail Item Kalkulasi</h3>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    {selectedLead.calculation_data.items.map((item: any, index: number) => (
+                      <div key={index} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 mb-1">
+                              Item #{index + 1} - {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} ({item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'})
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Ukuran: {item.dimensions?.width || item.width}cm × {item.dimensions?.height || item.height}cm | Qty: {item.quantity}
+                            </p>
+                          </div>
+                          <p className="text-sm font-bold text-[#EB216A]">
+                            Rp{(item.subtotal || 0).toLocaleString('id-ID')}
+                          </p>
+                        </div>
+
+                        {/* Fabric Info */}
+                        <div className="bg-white rounded p-3 border border-gray-100">
+                          <p className="text-xs text-gray-600 mb-1">Kain</p>
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm text-gray-900">{selectedLead.calculation_data?.fabric?.name || 'N/A'}</p>
+                            <p className="text-sm text-gray-600">
+                              {item.fabricMeters?.toFixed(2) || 0}m × Rp{(selectedLead.calculation_data?.fabric?.price || 0).toLocaleString('id-ID')} = Rp{(item.fabricPrice || 0).toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Dynamic Components */}
+                        {item.components && item.components.length > 0 && (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {item.components.map((comp: any, compIdx: number) => (
+                              <div key={compIdx} className="bg-white rounded p-2 border border-gray-100">
+                                <p className="text-xs text-gray-600 mb-1">{comp.label}</p>
+                                <p className="text-sm text-gray-900">{comp.productName}</p>
+                                <p className="text-xs text-gray-500">×{comp.qty} - Rp{(comp.productPrice || 0).toLocaleString('id-ID')}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-[#EB216A] text-white p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-base">Total Estimasi Harga</p>
+                      <p className="text-xl font-bold">
+                        Rp{(selectedLead.calculation_data?.grandTotal || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Old Format - Items List (legacy) */}
               {selectedLead.items && selectedLead.items.length > 0 && (
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <div className="bg-gray-50 p-4 border-b border-gray-200">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-gray-600" />
-                      <h3 className="text-base text-gray-900">Detail Pesanan</h3>
+                      <h3 className="text-base text-gray-900">Detail Pesanan (Legacy)</h3>
                     </div>
                   </div>
                   <div className="p-4 space-y-4">
@@ -740,7 +833,7 @@ export default function AdminCalculatorLeads() {
                             </p>
                           </div>
                           <p className="text-sm text-[#EB216A]">
-                            Rp{item.totalPrice?.toLocaleString('id-ID')}
+                            Rp{(item.totalPrice || 0).toLocaleString('id-ID')}
                           </p>
                         </div>
 
@@ -763,18 +856,6 @@ export default function AdminCalculatorLeads() {
                               <p className="text-gray-900">{item.hook.name}</p>
                             </div>
                           )}
-                          {item.kainVitrase && (
-                            <div className="bg-blue-50 rounded p-2">
-                              <p className="text-gray-600 mb-1">Kain Vitrase:</p>
-                              <p className="text-gray-900">{item.kainVitrase.name}</p>
-                            </div>
-                          )}
-                          {item.relVitrase && (
-                            <div className="bg-blue-50 rounded p-2">
-                              <p className="text-gray-600 mb-1">Rel Vitrase:</p>
-                              <p className="text-gray-900">{item.relVitrase.name}</p>
-                            </div>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -784,7 +865,7 @@ export default function AdminCalculatorLeads() {
                     <div className="flex items-center justify-between">
                       <p className="text-base">Total Estimasi Harga</p>
                       <p className="text-xl">
-                        Rp{(selectedLead.grandTotal || selectedLead.estimatedPrice).toLocaleString('id-ID')}
+                        Rp{(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
                       </p>
                     </div>
                   </div>
@@ -916,7 +997,7 @@ export default function AdminCalculatorLeads() {
                             </td>
                             <td className="px-4 py-4 text-right">
                               <p className="text-lg">
-                                Rp{(selectedLead.grandTotal || selectedLead.estimatedPrice).toLocaleString('id-ID')}
+                                Rp{(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
                               </p>
                             </td>
                           </tr>

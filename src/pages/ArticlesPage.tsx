@@ -30,18 +30,32 @@ export default function ArticlesPage() {
       const params: any = {};
       if (selectedCategory !== 'all') params.category = selectedCategory;
       if (searchQuery) params.search = searchQuery;
+      // Enforce published status for public page
+      params.status = 'PUBLISHED';
 
       const response = await articlesApi.getAll(params);
       if (response.success && response.data && response.data.length > 0) {
-        const mappedArticles = response.data.map((article: any) => ({
-          ...article,
-          image: article.image_url,
-          publishDate: new Date(article.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-          readTime: '5 menit',
-          categoryLabel: article.category === 'tips' ? 'Tips & Trik' : article.category === 'inspiration' ? 'Inspirasi Desain' : 'Artikel',
-          excerpt: article.excerpt || (article.content ? article.content.substring(0, 100) + '...' : ''),
-          featured: article.is_featured || false
-        }));
+        // Force client-side filtering for PUBLISHED only
+        const publishedOnly = response.data.filter((a: any) => a.status === 'PUBLISHED' || a.status === 'published');
+
+        const mappedArticles = publishedOnly.map((article: any) => {
+          // Handle case sensitivity for valid JSON date field
+          const dateRaw = article.createdAt || article.created_at || article.updatedAt || article.updated_at;
+
+          return {
+            ...article,
+            image: article.image_url || article.image,
+            publishDate: (() => {
+              if (!dateRaw) return '-';
+              const date = new Date(dateRaw);
+              return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            })(),
+            readTime: '5 menit',
+            categoryLabel: article.category === 'tips' ? 'Tips & Trik' : article.category === 'inspiration' ? 'Inspirasi Desain' : 'Artikel',
+            excerpt: article.excerpt || (article.content ? article.content.substring(0, 100) + '...' : ''),
+            featured: article.is_featured || false
+          };
+        });
         setArticles(mappedArticles);
       } else {
         console.log('ℹ️ No articles available yet. Admin can add articles via Admin Panel.');

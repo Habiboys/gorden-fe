@@ -1,7 +1,6 @@
 import { Heart, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { getProductImageUrl } from '../utils/imageHelper';
@@ -23,8 +22,6 @@ interface ProductCardProps {
 
 export function ProductCard({ id, name, price, image, images, featured, bestSeller, newArrival }: ProductCardProps) {
   const productImage = getProductImageUrl(images || image);
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
@@ -34,11 +31,6 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
 
     addToCart({
       id,
@@ -51,11 +43,6 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
 
     await toggleWishlist(id);
   };

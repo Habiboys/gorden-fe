@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from './ui/button';
-import { SectionHeader } from './SectionHeader';
 import { galleryApi } from '../utils/api';
+import { SectionHeader } from './SectionHeader';
+import { Button } from './ui/button';
 
 export function Gallery() {
   const [galleryImages, setGalleryImages] = useState<any[]>([]);
@@ -17,7 +17,7 @@ export function Gallery() {
       console.log('🔄 Loading featured gallery for homepage...');
       const response = await galleryApi.getAll({ featured: true });
       console.log('✅ Featured gallery response:', response);
-      
+
       if (response.success && response.data && response.data.length > 0) {
         // Get first 6 items for homepage
         console.log(`📊 Loaded ${response.data.length} featured gallery items`);
@@ -72,9 +72,10 @@ export function Gallery() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           {galleryImages.map((item, index) => {
-            const imageUrl = typeof item === 'string' ? item : item.image;
+            // Backend returns image_url, but some legacy might have image
+            const imageUrl = typeof item === 'string' ? item : (item.image_url || item.image);
             const title = typeof item === 'string' ? `Gallery ${index + 1}` : item.title;
-            
+
             return (
               <div
                 key={index}

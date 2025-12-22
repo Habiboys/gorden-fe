@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
 
 export interface CartItem {
     id: string;
@@ -31,7 +30,6 @@ const CART_STORAGE_KEY = 'gorden_cart';
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [items, setItems] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
-    const { isAuthenticated } = useAuth();
 
     // Load cart from localStorage on mount
     useEffect(() => {
@@ -51,10 +49,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [items]);
 
     const addToCart = (item: Omit<CartItem, 'quantity'>, quantity: number = 1): boolean => {
-        // Check if user is logged in
-        if (!isAuthenticated) {
-            return false; // Indicate that login is required
-        }
+        // Allow guest to add to cart (stored in localStorage)
 
         setItems(prevItems => {
             const existingItem = prevItems.find(i => i.id === item.id);

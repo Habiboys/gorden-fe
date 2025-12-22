@@ -636,7 +636,7 @@ export default function AdminCategories() {
               <Switch
                 id="has-max-length"
                 checked={subFormData.has_max_length}
-                onCheckedChange={(checked) => setSubFormData({ ...subFormData, has_max_length: checked })}
+                onCheckedChange={(checked: boolean) => setSubFormData({ ...subFormData, has_max_length: checked })}
               />
             </div>
           </div>
@@ -707,7 +707,7 @@ export default function AdminCategories() {
               <Switch
                 id="edit-has-max-length"
                 checked={subFormData.has_max_length}
-                onCheckedChange={(checked) => setSubFormData({ ...subFormData, has_max_length: checked })}
+                onCheckedChange={(checked: boolean) => setSubFormData({ ...subFormData, has_max_length: checked })}
               />
             </div>
           </div>

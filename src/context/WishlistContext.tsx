@@ -46,9 +46,22 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
 
     const refreshWishlist = useCallback(async () => {
         if (!isAuthenticated) {
-            setWishlistItems([]);
-            setWishlistProducts([]);
-            setWishlistCount(0);
+            // Load from localStorage for guest
+            try {
+                const savedWishlist = localStorage.getItem('gorden_wishlist_items');
+                if (savedWishlist) {
+                    const productIds = JSON.parse(savedWishlist);
+                    setWishlistItems(productIds);
+                    setWishlistCount(productIds.length);
+                    // Note: We can't easily get full product details without API call here
+                    // For now we just store IDs locally
+                } else {
+                    setWishlistItems([]);
+                    setWishlistCount(0);
+                }
+            } catch (e) {
+                console.error('Error loading local wishlist:', e);
+            }
             return;
         }
 
@@ -79,7 +92,19 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
 
     const addToWishlist = useCallback(async (productId: string) => {
         if (!isAuthenticated) {
-            toast.error('Silakan login untuk menambahkan ke wishlist');
+            // Guest mode - LocalStorage
+            try {
+                const currentItems = [...wishlistItems];
+                if (!currentItems.includes(productId)) {
+                    const newItems = [...currentItems, productId];
+                    localStorage.setItem('gorden_wishlist_items', JSON.stringify(newItems));
+                    setWishlistItems(newItems);
+                    setWishlistCount(newItems.length);
+                    toast.success('Ditambahkan ke wishlist');
+                }
+            } catch (e) {
+                console.error('Error saving local wishlist:', e);
+            }
             return;
         }
 
@@ -97,9 +122,23 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
         } catch (error: any) {
             toast.error(error.message || 'Gagal menambahkan ke wishlist');
         }
-    }, [isAuthenticated, refreshWishlist]);
+    }, [isAuthenticated, refreshWishlist, wishlistItems]);
 
     const removeFromWishlist = useCallback(async (productId: string) => {
+        if (!isAuthenticated) {
+            // Guest mode - LocalStorage
+            try {
+                const newItems = wishlistItems.filter(id => id !== productId);
+                localStorage.setItem('gorden_wishlist_items', JSON.stringify(newItems));
+                setWishlistItems(newItems);
+                setWishlistCount(newItems.length);
+                toast.success('Dihapus dari wishlist');
+            } catch (e) {
+                console.error('Error updating local wishlist:', e);
+            }
+            return;
+        }
+
         try {
             const response = await wishlistApi.remove(productId);
             if (response.success) {
@@ -113,7 +152,7 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
         } catch (error: any) {
             toast.error(error.message || 'Gagal menghapus dari wishlist');
         }
-    }, []);
+    }, [isAuthenticated, wishlistItems]);
 
     const toggleWishlist = useCallback(async (productId: string) => {
         if (isInWishlist(productId)) {

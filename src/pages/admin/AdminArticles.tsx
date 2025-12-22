@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -36,6 +37,7 @@ const categoryOptions = [
 ];
 
 export default function AdminArticles() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -247,7 +249,7 @@ export default function AdminArticles() {
           <p className="text-gray-600 mt-1">Kelola konten artikel dan blog</p>
         </div>
         <Button
-          onClick={() => handleOpenModal()}
+          onClick={() => navigate('/admin/articles/new')}
           className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -397,7 +399,12 @@ export default function AdminArticles() {
 
                 <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
                   <Calendar className="w-3 h-3" />
-                  {article.publishDate || (article.created_at ? new Date(article.created_at).toLocaleDateString() : '-')}
+                  {(() => {
+                    const dateRaw = article.publishDate || article.createdAt || article.created_at || article.updatedAt || article.updated_at;
+                    if (!dateRaw) return '-';
+                    const date = new Date(dateRaw);
+                    return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                  })()}
                 </div>
 
                 {/* Actions */}
@@ -406,7 +413,7 @@ export default function AdminArticles() {
                     size="sm"
                     variant="outline"
                     className="flex-1 border-blue-300 text-blue-600 hover:bg-blue-50"
-                    onClick={() => handleOpenModal(article)}
+                    onClick={() => navigate(`/admin/articles/${article.id}/edit`)}
                   >
                     <Edit className="w-4 h-4 mr-1" />
                     Edit

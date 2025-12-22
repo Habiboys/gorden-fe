@@ -27,7 +27,7 @@ const navigation = [
   { name: 'Produk', href: '/admin/products', icon: Package },
   { name: 'Kategori', href: '/admin/categories', icon: FolderTree },
   { name: 'Kalkulator Leads', href: '/admin/calculator-leads', icon: Calculator },
-  { name: 'Komponen Kalkulator', href: '/admin/calculator-components', icon: Box },
+  { name: 'Jenis Kalkulator', href: '/admin/calculator-types', icon: Box },
   { name: 'Dokumen', href: '/admin/documents', icon: FileText },
   { name: 'Artikel', href: '/admin/articles', icon: BookOpen },
   { name: 'Galeri', href: '/admin/gallery', icon: Camera },

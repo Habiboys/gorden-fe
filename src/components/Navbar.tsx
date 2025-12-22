@@ -31,7 +31,8 @@ export function Navbar() {
     { name: 'Program Referal', path: '/referral' },
     { name: 'Kalkulator', path: '/calculator' },
     { name: 'Galeri', path: '/gallery' },
-    { name: 'Artikel', path: '/articles' }
+    { name: 'Artikel', path: '/articles' },
+    { name: 'Kontak', path: '/contact' }
   ];
 
   useEffect(() => {
@@ -211,30 +212,8 @@ export function Navbar() {
                 )}
               </div>
             ) : (
-              /* Login/Register buttons when not logged in */
-              <>
-                <Link to="/login">
-                  <Button
-                    variant="outline"
-                    className={`hidden lg:flex px-5 py-2 rounded-full text-sm transition-all ${isSolidNav
-                      ? 'bg-transparent border-gray-300 text-gray-700 hover:bg-gray-50'
-                      : 'bg-transparent border-white/40 text-white hover:bg-white/10'
-                      }`}
-                  >
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button
-                    className={`hidden lg:flex px-6 py-2 rounded-full text-sm transition-all ${isSolidNav
-                      ? 'bg-[#EB216A] hover:bg-[#d11d5e] text-white'
-                      : 'bg-white text-[#EB216A] hover:bg-white/90'
-                      }`}
-                  >
-                    Daftar
-                  </Button>
-                </Link>
-              </>
+              /* Login/Register buttons hidden as per request */
+              null
             )}
 
             {/* Mobile menu button */}
@@ -332,37 +311,14 @@ export function Navbar() {
                     </Button>
                   </>
                 ) : (
-                  <>
-                    <Link to="/login" className="block">
-                      <Button
-                        variant="outline"
-                        className={`w-full rounded-full transition-colors ${isSolidNav
-                          ? 'bg-transparent border-gray-300 text-gray-700 hover:bg-gray-50'
-                          : 'bg-transparent border-white/40 text-white hover:bg-white/10'
-                          }`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Login
-                      </Button>
-                    </Link>
-                    <Link to="/register" className="block">
-                      <Button
-                        className={`w-full rounded-full transition-colors ${isSolidNav
-                          ? 'bg-[#EB216A] hover:bg-[#d11d5e] text-white'
-                          : 'bg-white text-[#EB216A] hover:bg-white/90'
-                          }`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Daftar
-                      </Button>
-                    </Link>
-                  </>
+                  /* Login/Register buttons hidden in mobile menu too */
+                  null
                 )}
               </div>
             </div>
           </div>
         )}
       </div>
-    </nav>
+    </nav >
   );
 }

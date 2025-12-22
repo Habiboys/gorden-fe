@@ -18,8 +18,8 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
-import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { productsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { chatAdminAboutProduct } from '../utils/whatsappHelper';
@@ -27,7 +27,6 @@ import { chatAdminAboutProduct } from '../utils/whatsappHelper';
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -35,7 +34,7 @@ export default function ProductDetail() {
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
-  const [inWishlist, setInWishlist] = useState(false); // Placeholder for wishlist state
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -54,11 +53,6 @@ export default function ProductDetail() {
     }
   };
   const handleAddToCart = () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
     if (!product) return;
 
     addToCart({
@@ -334,6 +328,21 @@ export default function ProductDetail() {
                     <Share2 className="w-5 h-5 mr-2" />
                     Share
                   </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className={`border-gray-300 ${isInWishlist(product.id) ? 'text-[#EB216A] border-[#EB216A] bg-[#EB216A]/5' : 'text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => {
+                      if (isInWishlist(product.id)) {
+                        removeFromWishlist(product.id);
+                      } else {
+                        addToWishlist(product.id);
+                      }
+                    }}
+                  >
+                    <Heart className={`w-5 h-5 mr-2 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                    Wishlist
+                  </Button>
                 </div>
               </div>
             </div>
@@ -436,8 +445,20 @@ export default function ProductDetail() {
                     )}
 
                     {/* Wishlist Button */}
-                    <button className="absolute top-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#EB216A] hover:text-white shadow-lg">
-                      <Heart className="w-4 h-4 lg:w-5 lg:h-5" />
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isInWishlist(relatedProduct.id)) {
+                          removeFromWishlist(relatedProduct.id);
+                        } else {
+                          addToWishlist(relatedProduct.id);
+                        }
+                      }}
+                      className={`absolute top-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isInWishlist(relatedProduct.id) ? 'text-[#EB216A] opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
+                        }`}
+                    >
+                      <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(relatedProduct.id) ? 'fill-current' : ''}`} />
                     </button>
 
                     {/* Quick View Button - Shows on Hover */}

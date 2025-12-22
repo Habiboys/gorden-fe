@@ -28,7 +28,12 @@ export default function ArticleDetailPage() {
         const articleData = {
           ...response.data,
           image: response.data.image_url,
-          publishDate: new Date(response.data.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+          publishDate: (() => {
+            const dateRaw = response.data.createdAt || response.data.created_at || response.data.updatedAt || response.data.updated_at;
+            if (!dateRaw) return '-';
+            const date = new Date(dateRaw);
+            return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+          })(),
           readTime: '5 menit',
           categoryLabel: getCategoryLabel(response.data.category),
           views: response.data.view_count || 0,
@@ -208,15 +213,11 @@ export default function ArticleDetailPage() {
               {/* Tags */}
               <div className="mt-12 pt-8 border-t border-gray-200">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="border-gray-300 text-gray-700">
-                    gorden
-                  </Badge>
-                  <Badge variant="outline" className="border-gray-300 text-gray-700">
-                    interior
-                  </Badge>
-                  <Badge variant="outline" className="border-gray-300 text-gray-700">
-                    dekorasi rumah
-                  </Badge>
+                  {article.tags && article.tags.split(',').map((tag: string, index: number) => (
+                    <Badge key={index} variant="outline" className="border-gray-300 text-gray-700">
+                      {tag.trim()}
+                    </Badge>
+                  ))}
                   <Badge variant="outline" className="border-gray-300 text-gray-700">
                     {article.categoryLabel?.toLowerCase()}
                   </Badge>

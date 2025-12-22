@@ -56,10 +56,20 @@ export const authApi = {
 
 // Products API
 export const productsApi = {
-    getAll: (params?: { category?: string; featured?: boolean; limit?: number }) => {
+    getAll: (params?: {
+        category?: string;
+        category_id?: number;
+        featured?: boolean;
+        new_arrival?: string;
+        best_seller?: string;
+        limit?: number
+    }) => {
         const queryParams = new URLSearchParams();
         if (params?.category) queryParams.append('category', params.category);
+        if (params?.category_id) queryParams.append('category_id', params.category_id.toString());
         if (params?.featured) queryParams.append('featured', 'true');
+        if (params?.new_arrival) queryParams.append('new_arrival', params.new_arrival);
+        if (params?.best_seller) queryParams.append('best_seller', params.best_seller);
         if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const query = queryParams.toString();
@@ -158,7 +168,9 @@ export const articlesApi = {
         return apiCall(`/articles${query ? `?${query}` : ''}`);
     },
 
-    getBySlug: (slug: string) => apiCall(`/articles/${slug}`),
+    getBySlug: (slug: string) => apiCall(`/articles/slug/${slug}`),
+
+    getById: (id: string) => apiCall(`/articles/${id}`),
 
     create: (article: any) => apiCall('/articles', {
         method: 'POST',
@@ -548,7 +560,7 @@ export const uploadApi = {
     }),
 };
 
-// Calculator Components API
+// Calculator Components API (legacy - to be deprecated)
 export const calculatorComponentsApi = {
     getAll: () => apiCall('/calculator-components'),
 
@@ -578,6 +590,50 @@ export const calculatorComponentsApi = {
     }),
 };
 
+// Calculator Types API (new flexible system)
+export const calculatorTypesApi = {
+    // Public - get active types for user calculator
+    getTypes: () => apiCall('/calculator/types'),
+
+    // Get products by subcategory for calculator selection
+    getProductsBySubcategory: (subcategoryId: number) =>
+        apiCall(`/calculator/products/subcategory/${subcategoryId}`),
+
+    // Admin - get all types including inactive
+    getAllTypes: () => apiCall('/calculator/types/all'),
+
+    getTypeById: (id: number) => apiCall(`/calculator/types/${id}`),
+
+    createType: (typeData: any) => apiCall('/calculator/types', {
+        method: 'POST',
+        body: JSON.stringify(typeData),
+    }),
+
+    updateType: (id: number, typeData: any) => apiCall(`/calculator/types/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(typeData),
+    }),
+
+    deleteType: (id: number) => apiCall(`/calculator/types/${id}`, {
+        method: 'DELETE',
+    }),
+
+    // Components management
+    addComponent: (componentData: any) => apiCall('/calculator/components', {
+        method: 'POST',
+        body: JSON.stringify(componentData),
+    }),
+
+    updateComponent: (id: number, componentData: any) => apiCall(`/calculator/components/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(componentData),
+    }),
+
+    deleteComponent: (id: number) => apiCall(`/calculator/components/${id}`, {
+        method: 'DELETE',
+    }),
+};
+
 // Site Settings API
 export const settingsApi = {
     getAll: () => apiCall('/settings'),
@@ -604,6 +660,32 @@ export const wishlistApi = {
     }),
 
     remove: (productId: string) => apiCall(`/wishlist/${productId}`, {
+        method: 'DELETE',
+    }),
+};
+
+// Contact API
+export const contactApi = {
+    getAll: (params?: any) => {
+        const queryParams = new URLSearchParams();
+        if (params?.status) queryParams.append('status', params.status);
+        if (params?.search) queryParams.append('search', params.search);
+
+        const query = queryParams.toString();
+        return apiCall(`/contacts${query ? `?${query}` : ''}`);
+    },
+
+    create: (data: any) => apiCall('/contacts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+
+    updateStatus: (id: string, status: string) => apiCall(`/contacts/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+    }),
+
+    delete: (id: string) => apiCall(`/contacts/${id}`, {
         method: 'DELETE',
     }),
 };

@@ -13,6 +13,7 @@ import ArticleDetailPage from './pages/ArticleDetailPage';
 import ArticlesPage from './pages/ArticlesPage';
 import CalculatorPage from './pages/CalculatorPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import ContactPage from './pages/ContactPage';
 import GalleryPage from './pages/GalleryPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -23,9 +24,11 @@ import ReferralPage from './pages/ReferralPage';
 import RegisterPage from './pages/RegisterPage';
 import VerificationPendingPage from './pages/VerificationPendingPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import AdminArticleEdit from './pages/admin/AdminArticleEdit';
 import AdminArticles from './pages/admin/AdminArticles';
 import AdminCalculatorComponents from './pages/admin/AdminCalculatorComponents';
 import AdminCalculatorLeads from './pages/admin/AdminCalculatorLeads';
+import AdminCalculatorTypes from './pages/admin/AdminCalculatorTypes';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminContacts from './pages/admin/AdminContacts';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -87,6 +90,7 @@ export default function App() {
                       <Route path="/referral" element={<><Navbar /><ReferralPage /><Footer /></>} />
                       <Route path="/calculator" element={<><Navbar /><CalculatorPage /><Footer /></>} />
                       <Route path="/gallery" element={<><Navbar /><GalleryPage /><Footer /></>} />
+                      <Route path="/contact" element={<><Navbar /><ContactPage /><Footer /></>} />
                       <Route path="/articles" element={<><Navbar /><ArticlesPage /><Footer /></>} />
                       <Route path="/articles/:slug" element={<><Navbar /><ArticleDetailPage /><Footer /></>} />
                       <Route path="/login" element={<LoginPage />} />
@@ -106,8 +110,11 @@ export default function App() {
                           <Route path="settings" element={<AdminSettings />} />
                           <Route path="calculator-leads" element={<AdminCalculatorLeads />} />
                           <Route path="calculator-components" element={<AdminCalculatorComponents />} />
+                          <Route path="calculator-types" element={<AdminCalculatorTypes />} />
                           <Route path="documents" element={<AdminDocuments />} />
                           <Route path="articles" element={<AdminArticles />} />
+                          <Route path="articles/new" element={<AdminArticleEdit />} />
+                          <Route path="articles/:id/edit" element={<AdminArticleEdit />} />
                           <Route path="gallery" element={<AdminGallery />} />
                           <Route path="faqs" element={<AdminFAQ />} />
                           <Route path="contacts" element={<AdminContacts />} />
