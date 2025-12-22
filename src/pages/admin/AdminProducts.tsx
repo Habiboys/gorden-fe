@@ -30,7 +30,7 @@ import {
 } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
-import { categoriesApi, productsApi, uploadApi } from '../../utils/api';
+import { categoriesApi, productsApi, subcategoriesApi, uploadApi } from '../../utils/api';
 import { safelyParseImages } from '../../utils/imageHelper';
 
 export default function AdminProducts() {
@@ -49,6 +49,8 @@ export default function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [selectedSubcategoryHasMaxLength, setSelectedSubcategoryHasMaxLength] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { confirm } = useConfirm();
 
@@ -57,11 +59,13 @@ export default function AdminProducts() {
     name: '',
     sku: '',
     category: '',
+    subcategory: '',
     stock: 0,
     status: 'active',
     priceSelfMeasure: 0,
     priceSelfMeasureInstall: 0,
     priceMeasureInstall: 0,
+    maxLength: null as number | null,
     description: '',
     information: '',
     metaTitle: '',
@@ -167,11 +171,13 @@ export default function AdminProducts() {
       name: '',
       sku: '',
       category: '',
+      subcategory: '',
       stock: 0,
       status: 'active',
       priceSelfMeasure: 0,
       priceSelfMeasureInstall: 0,
       priceMeasureInstall: 0,
+      maxLength: null,
       description: '',
       information: '',
       metaTitle: '',
@@ -182,22 +188,42 @@ export default function AdminProducts() {
       bestSeller: false,
     });
     setUploadedImages([]);
+    setSubcategories([]);
+    setSelectedSubcategoryHasMaxLength(false);
     setActiveTab('basic');
     setIsProductModalOpen(true);
   };
 
-  const handleEdit = (product: any) => {
+  const handleEdit = async (product: any) => {
     setModalMode('edit');
     setSelectedProduct(product);
+
+    // Fetch subcategories for the product's category
+    if (product.Category?.id) {
+      try {
+        const response = await subcategoriesApi.getSubCategories(product.Category.id);
+        setSubcategories(response.data || []);
+      } catch (error) {
+        console.error('Error fetching subcategories:', error);
+        setSubcategories([]);
+      }
+    }
+
+    // Check if subcategory has max_length
+    const hasMaxLength = product.SubCategory?.has_max_length || false;
+    setSelectedSubcategoryHasMaxLength(hasMaxLength);
+
     setFormData({
       name: product.name || '',
       sku: product.sku || '',
-      category: product.Category?.name || '', // Helper to show name, but we need ID for save
+      category: product.Category?.name || '',
+      subcategory: product.SubCategory?.name || '',
       stock: product.stock || 0,
-      status: product.status === 'ACTIVE' ? 'active' : 'inactive', // Map backend UPPERCASE to frontend lowercase
+      status: product.status === 'ACTIVE' ? 'active' : 'inactive',
       priceSelfMeasure: product.price_self_measure || 0,
       priceSelfMeasureInstall: product.price_self_measure_install || 0,
       priceMeasureInstall: product.price_measure_install || 0,
+      maxLength: product.max_length || null,
       description: product.description || '',
       information: product.information || '',
       metaTitle: product.meta_title || '',
@@ -230,16 +256,22 @@ export default function AdminProducts() {
         return;
       }
 
-      const productData = {
+      // Find subcategory ID if selected
+      const selectedSubcategory = subcategories.find(s => s.name === formData.subcategory);
+
+      const productData: any = {
         name: formData.name,
         sku: formData.sku,
         category_id: selectedCategory.id,
+        subcategory_id: selectedSubcategory?.id || null,
         stock: formData.stock,
         status: formData.status === 'active' ? 'ACTIVE' : 'INACTIVE',
         price: formData.priceSelfMeasure, // Default price usually base price
         price_self_measure: formData.priceSelfMeasure,
-        price_self_measure_install: formData.priceSelfMeasureInstall,
-        price_measure_install: formData.priceMeasureInstall,
+        // Only include if value is greater than 0 (optional fields)
+        price_self_measure_install: formData.priceSelfMeasureInstall || null,
+        price_measure_install: formData.priceMeasureInstall || null,
+        max_length: formData.maxLength || null,
         description: formData.description,
         information: formData.information,
         meta_title: formData.metaTitle,
@@ -553,12 +585,28 @@ export default function AdminProducts() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label>Kategori *</Label>
                       <Select
                         value={formData.category}
-                        onValueChange={(value: string) => setFormData({ ...formData, category: value })}
+                        onValueChange={async (value: string) => {
+                          setFormData({ ...formData, category: value, subcategory: '' });
+                          setSelectedSubcategoryHasMaxLength(false);
+                          // Fetch subcategories for selected category
+                          const selectedCat = categories.find(c => c.name === value);
+                          if (selectedCat) {
+                            try {
+                              const response = await subcategoriesApi.getSubCategories(selectedCat.id);
+                              setSubcategories(response.data || []);
+                            } catch (error) {
+                              console.error('Error fetching subcategories:', error);
+                              setSubcategories([]);
+                            }
+                          } else {
+                            setSubcategories([]);
+                          }
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih kategori" />
@@ -572,6 +620,33 @@ export default function AdminProducts() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label>Sub Kategori</Label>
+                      <Select
+                        value={formData.subcategory}
+                        onValueChange={(value: string) => {
+                          setFormData({ ...formData, subcategory: value });
+                          // Check if selected subcategory has max_length requirement
+                          const selectedSub = subcategories.find(s => s.name === value);
+                          setSelectedSubcategoryHasMaxLength(selectedSub?.has_max_length || false);
+                        }}
+                        disabled={!formData.category || subcategories.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={!formData.category ? "Pilih kategori dulu" : subcategories.length === 0 ? "Tidak ada sub kategori" : "Pilih sub kategori"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subcategories.map((sub) => (
+                            <SelectItem key={sub.id} value={sub.name}>
+                              {sub.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label>Stok</Label>
                       <Input
@@ -597,6 +672,17 @@ export default function AdminProducts() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {selectedSubcategoryHasMaxLength && (
+                      <div className="space-y-2">
+                        <Label>Panjang Maksimal (cm) <span className="text-gray-400 text-xs">(Opsional)</span></Label>
+                        <Input
+                          type="number"
+                          value={formData.maxLength || ''}
+                          onChange={(e) => setFormData({ ...formData, maxLength: parseFloat(e.target.value) || null })}
+                          placeholder="Contoh: 300"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -650,7 +736,7 @@ export default function AdminProducts() {
                 <div className="space-y-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p className="text-sm text-blue-900">
-                      <strong>Info:</strong> Atur harga untuk setiap pilihan layanan yang tersedia di halaman detail produk.
+                      <strong>Info:</strong> Hanya harga "Ukur Sendiri" yang wajib diisi. Harga layanan teknisi bersifat opsional - kosongkan jika produk tidak menyediakan layanan tersebut.
                     </p>
                   </div>
 
@@ -691,7 +777,7 @@ export default function AdminProducts() {
                         <Badge className="bg-green-100 text-green-700 border-0">Standard</Badge>
                       </div>
                       <div className="space-y-2">
-                        <Label>Harga (per meter / unit) *</Label>
+                        <Label>Harga (per meter / unit) <span className="text-gray-400 text-xs">(Opsional)</span></Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">Rp</span>
                           <Input
@@ -716,7 +802,7 @@ export default function AdminProducts() {
                         <Badge className="bg-purple-100 text-purple-700 border-0">Premium</Badge>
                       </div>
                       <div className="space-y-2">
-                        <Label>Harga (per meter / unit) *</Label>
+                        <Label>Harga (per meter / unit) <span className="text-gray-400 text-xs">(Opsional)</span></Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">Rp</span>
                           <Input

@@ -112,6 +112,39 @@ export const categoriesApi = {
     }),
 };
 
+// SubCategories API
+export const subcategoriesApi = {
+    getAll: (categoryId?: number) => {
+        const queryParams = new URLSearchParams();
+        if (categoryId) queryParams.append('category_id', categoryId.toString());
+        const query = queryParams.toString();
+        return apiCall(`/subcategories${query ? `?${query}` : ''}`);
+    },
+
+    getSubCategories: (categoryId?: number) => {
+        const queryParams = new URLSearchParams();
+        if (categoryId) queryParams.append('category_id', categoryId.toString());
+        const query = queryParams.toString();
+        return apiCall(`/subcategories${query ? `?${query}` : ''}`);
+    },
+
+    getById: (id: number) => apiCall(`/subcategories/${id}`),
+
+    create: (subcategory: any) => apiCall('/subcategories', {
+        method: 'POST',
+        body: JSON.stringify(subcategory),
+    }),
+
+    update: (id: number, subcategory: any) => apiCall(`/subcategories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(subcategory),
+    }),
+
+    delete: (id: number) => apiCall(`/subcategories/${id}`, {
+        method: 'DELETE',
+    }),
+};
+
 // Articles API
 export const articlesApi = {
     getAll: (params?: { category?: string; featured?: boolean; limit?: number; search?: string }) => {
