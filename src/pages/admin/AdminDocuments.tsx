@@ -66,6 +66,7 @@ export default function AdminDocuments() {
   const [products, setProducts] = useState<any[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [showProductPicker, setShowProductPicker] = useState<string | null>(null); // windowId when open
+  const [docType, setDocType] = useState('QUOTATION');
   const { confirm } = useConfirm();
 
   // Fetch documents and products from API
@@ -276,7 +277,7 @@ export default function AdminDocuments() {
   const handleSubmit = async () => {
     try {
       const payload = {
-        type: 'QUOTATION',
+        type: docType,
         customer_name: formData.customerName,
         customer_phone: formData.customerPhone,
         customer_email: formData.customerEmail,
@@ -293,10 +294,11 @@ export default function AdminDocuments() {
 
       const response = await documentsApi.create(payload);
       if (response.success) {
-        toast.success('Surat penawaran berhasil dibuat!');
+        toast.success('Dokumen berhasil dibuat!');
         setShowCreateModal(false);
         fetchDocuments();
         // Reset form
+        setDocType('QUOTATION');
         setFormData({
           customerName: '',
           customerPhone: '',
@@ -334,7 +336,7 @@ export default function AdminDocuments() {
           className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Buat Surat Penawaran
+          Buat Dokumen
         </Button>
       </div>
 
@@ -530,8 +532,8 @@ export default function AdminDocuments() {
             {/* Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
               <div>
-                <h2 className="text-xl text-gray-900">Buat Surat Penawaran</h2>
-                <p className="text-sm text-gray-600 mt-1">Lengkapi form untuk membuat surat penawaran baru</p>
+                <h2 className="text-xl text-gray-900">Buat Dokumen Baru</h2>
+                <p className="text-sm text-gray-600 mt-1">Lengkapi form untuk membuat dokumen baru</p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -571,6 +573,17 @@ export default function AdminDocuments() {
                       onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
                       placeholder="email@example.com"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipe Dokumen</Label>
+                    <select
+                      value={docType}
+                      onChange={(e) => setDocType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#EB216A]"
+                    >
+                      <option value="QUOTATION">Surat Penawaran</option>
+                      <option value="INVOICE">Invoice</option>
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <Label>Kode Referral (Optional)</Label>

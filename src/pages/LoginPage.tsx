@@ -222,18 +222,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Register Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Belum punya akun?{' '}
-              <Link
-                to="/register"
-                className="text-[#EB216A] hover:text-[#d11d5e] transition-colors"
-              >
-                Daftar sekarang
-              </Link>
-            </p>
-          </div>
+          <div className="mt-6 text-center"></div>
         </div>
       </div>
     </div>

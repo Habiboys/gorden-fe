@@ -212,8 +212,16 @@ export function Navbar() {
                 )}
               </div>
             ) : (
-              /* Login/Register buttons hidden as per request */
-              null
+              <Link to="/login" className="hidden lg:block">
+                <Button
+                  className={`rounded-full px-6 transition-colors ${isSolidNav
+                    ? 'bg-[#EB216A] text-white hover:bg-[#d11d5e]'
+                    : 'bg-white text-[#EB216A] hover:bg-gray-100'
+                    }`}
+                >
+                  Masuk
+                </Button>
+              </Link>
             )}
 
             {/* Mobile menu button */}
@@ -311,8 +319,14 @@ export function Navbar() {
                     </Button>
                   </>
                 ) : (
-                  /* Login/Register buttons hidden in mobile menu too */
-                  null
+                  <Link to="/login" className="block">
+                    <Button
+                      className="w-full rounded-full bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Masuk
+                    </Button>
+                  </Link>
                 )}
               </div>
             </div>
