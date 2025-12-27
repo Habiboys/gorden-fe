@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
+import { useConfirm } from '../../context/ConfirmContext';
 import { contactsApi } from '../../utils/api';
 
 const statusOptions = [
@@ -35,6 +36,7 @@ const statusOptions = [
 
 export default function AdminContacts() {
   const [contacts, setContacts] = useState<any[]>([]);
+  const { confirm } = useConfirm();
   const [loading, setLoading] = useState(true);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -83,7 +85,15 @@ export default function AdminContacts() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus kontak ini?')) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus Kontak',
+      description: 'Apakah Anda yakin ingin menghapus kontak ini? Tindakan ini tidak dapat dibatalkan.',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      variant: 'destructive',
+    });
+
+    if (!isConfirmed) return;
 
     try {
       const response = await contactsApi.delete(id);
@@ -102,15 +112,27 @@ export default function AdminContacts() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    // Normalize status to lowercase for comparison
+    const s = (status || '').toLowerCase();
+
+    // Debug visual for empty status
+    if (!s) return <Badge variant="outline" className="text-red-500 border-red-200">No Status</Badge>;
+
+    switch (s) {
       case 'new':
-        return <Badge className="bg-blue-500">Baru</Badge>;
+      case 'open':
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Baru</Badge>;
       case 'replied':
-        return <Badge className="bg-green-500">Dibalas</Badge>;
+      case 'responded':
+      case 'read':
+        return <Badge className="bg-green-500 hover:bg-green-600">Dibalas</Badge>;
       case 'closed':
-        return <Badge className="bg-gray-500">Selesai</Badge>;
+      case 'done':
+      case 'finished':
+        return <Badge className="bg-gray-500 hover:bg-gray-600">Selesai</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        // Render raw status if not matched
+        return <Badge variant="outline" className="text-gray-600">{status || 'Unknown'}</Badge>;
     }
   };
 
@@ -178,11 +200,18 @@ export default function AdminContacts() {
               contacts.map((contact) => (
                 <TableRow key={contact.id}>
                   <TableCell className="text-sm text-gray-600">
-                    {new Date(contact.submittedAt).toLocaleDateString('id-ID', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {(() => {
+                      const dateVal = contact.createdAt || contact.created_at || contact.updatedAt;
+                      try {
+                        return dateVal ? new Date(dateVal).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        }) : '-';
+                      } catch (e) {
+                        return '-';
+                      }
+                    })()}
                   </TableCell>
                   <TableCell>{contact.name}</TableCell>
                   <TableCell>
@@ -268,13 +297,20 @@ export default function AdminContacts() {
                 <div className="text-right">
                   <div className="mb-2">{getStatusBadge(selectedContact.status)}</div>
                   <p className="text-xs text-gray-500">
-                    {new Date(selectedContact.submittedAt).toLocaleString('id-ID', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {(() => {
+                      const dateVal = selectedContact.createdAt || selectedContact.created_at || selectedContact.updatedAt;
+                      try {
+                        return dateVal ? new Date(dateVal).toLocaleString('id-ID', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }) : '-';
+                      } catch (e) {
+                        return '-';
+                      }
+                    })()}
                   </p>
                 </div>
               </div>
@@ -301,30 +337,31 @@ export default function AdminContacts() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant={selectedContact.status === 'replied' ? 'default' : 'outline'}
-                    onClick={() => handleUpdateStatus(selectedContact.id, 'replied')}
-                    className={selectedContact.status === 'replied' ? 'bg-green-500' : ''}
+                    variant={(selectedContact.status === 'RESPONDED' || selectedContact.status === 'replied') ? 'default' : 'outline'}
+                    onClick={() => handleUpdateStatus(selectedContact.id, 'RESPONDED')}
+                    className={(selectedContact.status === 'RESPONDED' || selectedContact.status === 'replied') ? 'bg-green-500' : ''}
                   >
                     Sudah Dibalas
                   </Button>
                   <Button
                     size="sm"
-                    variant={selectedContact.status === 'closed' ? 'default' : 'outline'}
-                    onClick={() => handleUpdateStatus(selectedContact.id, 'closed')}
-                    className={selectedContact.status === 'closed' ? 'bg-gray-500' : ''}
+                    variant={(selectedContact.status === 'READ' || selectedContact.status === 'closed') ? 'default' : 'outline'}
+                    onClick={() => handleUpdateStatus(selectedContact.id, 'READ')}
+                    className={(selectedContact.status === 'READ' || selectedContact.status === 'closed') ? 'bg-gray-500' : ''}
                   >
-                    Selesai
+                    Selesai (Read)
                   </Button>
                   <Button
                     size="sm"
-                    variant={selectedContact.status === 'new' ? 'default' : 'outline'}
-                    onClick={() => handleUpdateStatus(selectedContact.id, 'new')}
-                    className={selectedContact.status === 'new' ? 'bg-blue-500' : ''}
+                    variant={(selectedContact.status === 'NEW' || selectedContact.status === 'new') ? 'default' : 'outline'}
+                    onClick={() => handleUpdateStatus(selectedContact.id, 'NEW')}
+                    className={(selectedContact.status === 'NEW' || selectedContact.status === 'new') ? 'bg-blue-500' : ''}
                   >
                     Tandai Baru
                   </Button>
                 </div>
               </div>
+
 
               {/* Actions */}
               <div className="flex justify-end gap-2 pt-4 border-t">
@@ -347,7 +384,7 @@ export default function AdminContacts() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }
 

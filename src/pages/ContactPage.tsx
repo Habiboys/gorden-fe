@@ -22,12 +22,12 @@ export default function ContactPage() {
         setLoading(true);
 
         try {
-            // Backend doesn't have subject field, so prepend it to message
             const payload = {
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
-                message: `Subject: ${formData.subject}\n\n${formData.message}`,
+                subject: formData.subject,
+                message: formData.message,
                 status: 'NEW'
             };
 

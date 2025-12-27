@@ -24,6 +24,7 @@ import {
 } from '../components/ui/dialog';
 import { calculatorLeadsApi, calculatorTypesApi, productsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
+import { chatAdminFromCalculator } from '../utils/whatsappHelper';
 
 // Types
 interface CalculatorTypeFromDB {
@@ -330,53 +331,21 @@ export default function CalculatorPageV2() {
   // Calculate grand total
   const grandTotal = items.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
 
-  // Generate WhatsApp message
-  const generateWhatsAppMessage = () => {
-    if (!customerInfo || !selectedFabric || !currentType) return '';
-
-    let message = `*📋 Estimasi Kalkulator Gorden - ${currentType.name}*\n\n`;
-    message += `👤 Nama: ${customerInfo.name}\n`;
-    message += `📱 No. HP: ${customerInfo.phone}\n`;
-    message += `━━━━━━━━━━━━━━━\n\n`;
-
-    items.forEach((item, idx) => {
-      const prices = calculateItemPrice(item);
-      message += `*🏠 Item ${idx + 1}*\n`;
-      message += `📐 ${item.width}cm × ${item.height}cm\n`;
-      message += `🏷️ ${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - ${item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}\n`;
-      message += `📦 Jumlah: ${item.quantity} unit\n\n`;
-
-      message += `🧵 Kain: ${selectedFabric.name}\n`;
-      message += `   ${(prices as any).fabricMeters?.toFixed(2) || 0}m × Rp ${selectedFabric.price.toLocaleString('id-ID')}\n`;
-      message += `   = Rp ${prices.fabric.toLocaleString('id-ID')}\n\n`;
-
-      if (item.packageType === 'gorden-lengkap' && currentType.components) {
-        message += `🔧 Komponen:\n`;
-        currentType.components.forEach(comp => {
-          const selection = item.components[comp.id];
-          if (selection) {
-            const compPrice = calculateComponentPrice(item, comp, selection);
-            message += `   • ${comp.label}: ${selection.product.name} (×${selection.qty})\n`;
-            message += `     = Rp ${compPrice.toLocaleString('id-ID')}\n`;
-          }
-        });
-        message += `\n`;
-      }
-
-      message += `💰 Subtotal: *Rp ${prices.total.toLocaleString('id-ID')}*\n`;
-      message += `━━━━━━━━━━━━━━━\n\n`;
-    });
-
-    message += `\n*🎯 TOTAL ESTIMASI: Rp ${grandTotal.toLocaleString('id-ID')}*\n\n`;
-    message += `_Harga dapat berbeda tergantung kondisi aktual._`;
-
-    return encodeURIComponent(message);
-  };
-
   // Send to WhatsApp
   const handleSendWhatsApp = async () => {
-    const message = generateWhatsAppMessage();
-    const whatsappNumber = '6281234567890'; // TODO: Get from settings
+    if (!customerInfo || !selectedFabric || !currentType) return;
+
+    chatAdminFromCalculator({
+      customerInfo,
+      currentType,
+      selectedFabric,
+      items,
+      grandTotal,
+      baseUrl: window.location.origin,
+      calculateItemPrice,
+      calculateComponentPrice
+    });
+
 
     // Save lead with complete calculation data
     if (customerInfo && currentType) {
@@ -807,7 +776,7 @@ export default function CalculatorPageV2() {
 
               {/* Info Note */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-                <p>ℹ️ Harga di atas adalah estimasi berdasarkan kalkulasi {currentType?.name}. Harga final dapat berbeda tergantung detail pemesanan dan instalasi.</p>
+                <p>Harga di atas adalah estimasi berdasarkan kalkulasi {currentType?.name}. Harga final dapat berbeda tergantung detail pemesanan dan instalasi.</p>
               </div>
 
               {/* WhatsApp Button */}

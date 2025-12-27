@@ -65,6 +65,9 @@ export default function AdminProducts() {
     priceSelfMeasure: 0,
     priceSelfMeasureInstall: 0,
     priceMeasureInstall: 0,
+    minWidth: null as number | null,
+    maxWidth: null as number | null,
+    minLength: null as number | null,
     maxLength: null as number | null,
     description: '',
     information: '',
@@ -177,6 +180,9 @@ export default function AdminProducts() {
       priceSelfMeasure: 0,
       priceSelfMeasureInstall: 0,
       priceMeasureInstall: 0,
+      minWidth: null,
+      maxWidth: null,
+      minLength: null,
       maxLength: null,
       description: '',
       information: '',
@@ -223,6 +229,9 @@ export default function AdminProducts() {
       priceSelfMeasure: product.price_self_measure || 0,
       priceSelfMeasureInstall: product.price_self_measure_install || 0,
       priceMeasureInstall: product.price_measure_install || 0,
+      minWidth: product.min_width || null,
+      maxWidth: product.max_width || null,
+      minLength: product.min_length || null,
       maxLength: product.max_length || null,
       description: product.description || '',
       information: product.information || '',
@@ -271,6 +280,9 @@ export default function AdminProducts() {
         // Only include if value is greater than 0 (optional fields)
         price_self_measure_install: formData.priceSelfMeasureInstall || null,
         price_measure_install: formData.priceMeasureInstall || null,
+        min_width: formData.minWidth || null,
+        max_width: formData.maxWidth || null,
+        min_length: formData.minLength || null,
         max_length: formData.maxLength || null,
         description: formData.description,
         information: formData.information,
@@ -683,6 +695,43 @@ export default function AdminProducts() {
                         />
                       </div>
                     )}
+
+                    <div className="space-y-2">
+                      <Label>Panjang/Tinggi (cm)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          value={formData.minLength || ''}
+                          onChange={(e) => setFormData({ ...formData, minLength: parseFloat(e.target.value) || null })}
+                          placeholder="Min"
+                        />
+                        <span className="self-center">-</span>
+                        <Input
+                          type="number"
+                          value={formData.maxLength || ''}
+                          onChange={(e) => setFormData({ ...formData, maxLength: parseFloat(e.target.value) || null })}
+                          placeholder="Max"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Lebar (cm)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          value={formData.minWidth || ''}
+                          onChange={(e) => setFormData({ ...formData, minWidth: parseFloat(e.target.value) || null })}
+                          placeholder="Min"
+                        />
+                        <span className="self-center">-</span>
+                        <Input
+                          type="number"
+                          value={formData.maxWidth || ''}
+                          onChange={(e) => setFormData({ ...formData, maxWidth: parseFloat(e.target.value) || null })}
+                          placeholder="Max"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

@@ -377,6 +377,38 @@ export default function ProductDetail() {
 
                 <Separator />
 
+                {/* Dimensions */}
+                {(product.min_width || product.max_width || product.min_length || product.max_length) && (
+                  <div>
+                    <h3 className="text-xl text-gray-900 mb-4">Spesifikasi Ukuran</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(product.min_width || product.max_width) && (
+                        <div className="bg-gray-50 p-4 rounded-xl">
+                          <span className="text-sm text-gray-500 block mb-1">Lebar</span>
+                          <span className="text-gray-900 font-medium">
+                            {product.min_width ? `${product.min_width}` : ''}
+                            {product.min_width && product.max_width ? ' - ' : ''}
+                            {product.max_width ? `${product.max_width}` : ''} cm
+                          </span>
+                        </div>
+                      )}
+                      {(product.min_length || product.max_length) && (
+                        <div className="bg-gray-50 p-4 rounded-xl">
+                          <span className="text-sm text-gray-500 block mb-1">Panjang/Tinggi</span>
+                          <span className="text-gray-900 font-medium">
+                            {product.min_length ? `${product.min_length}` : ''}
+                            {product.min_length && product.max_length ? ' - ' : ''}
+                            {product.max_length ? `${product.max_length}` : ''} cm
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Separator only if dimensions exist */}
+                {(product.min_width || product.max_width || product.min_length || product.max_length) && <Separator />}
+
                 {/* Features */}
                 <div>
                   <h3 className="text-xl text-gray-900 mb-4">Keunggulan Produk</h3>

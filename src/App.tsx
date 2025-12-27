@@ -3,6 +3,7 @@ import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AutoBackendTest } from './components/AutoBackendTest';
 import { BackendTestPanel } from './components/BackendTestPanel';
+import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
 import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
@@ -32,6 +33,7 @@ import AdminCalculatorTypes from './pages/admin/AdminCalculatorTypes';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminContacts from './pages/admin/AdminContacts';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminDocumentCreate from './pages/admin/AdminDocumentCreate';
 import AdminDocuments from './pages/admin/AdminDocuments';
 import AdminFAQ from './pages/admin/AdminFAQ';
 import AdminGallery from './pages/admin/AdminGallery';
@@ -56,6 +58,7 @@ export default function App() {
                 <Router>
                   <ScrollToTop />
                   <CartSidebar />
+                  <FloatingWhatsApp />
                   <Toaster
                     position="top-right"
                     richColors
@@ -112,6 +115,7 @@ export default function App() {
                           <Route path="calculator-components" element={<AdminCalculatorComponents />} />
                           <Route path="calculator-types" element={<AdminCalculatorTypes />} />
                           <Route path="documents" element={<AdminDocuments />} />
+                          <Route path="documents/new" element={<AdminDocumentCreate />} />
                           <Route path="articles" element={<AdminArticles />} />
                           <Route path="articles/new" element={<AdminArticleEdit />} />
                           <Route path="articles/:id/edit" element={<AdminArticleEdit />} />

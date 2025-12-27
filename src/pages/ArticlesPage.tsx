@@ -58,7 +58,7 @@ export default function ArticlesPage() {
         });
         setArticles(mappedArticles);
       } else {
-        console.log('ℹ️ No articles available yet. Admin can add articles via Admin Panel.');
+        console.log('No articles available yet. Admin can add articles via Admin Panel.');
         setArticles([]);
       }
     } catch (error) {

@@ -154,17 +154,25 @@ export default function AdminGallery() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus item galeri ini?')) return;
+    const isConfirmed = await confirm({
+      title: 'Hapus Item Galeri',
+      description: 'Apakah Anda yakin ingin menghapus item galeri ini? Tindakan ini tidak dapat dibatalkan.',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      variant: 'destructive',
+    });
 
-    try {
-      const response = await galleryApi.delete(id);
-      if (response.success || response.message === 'Project deleted') {
-        toast.success('Item galeri berhasil dihapus');
-        loadGalleryItems();
+    if (isConfirmed) {
+      try {
+        const response = await galleryApi.delete(id);
+        if (response.success || response.message === 'Project deleted') {
+          toast.success('Item galeri berhasil dihapus');
+          loadGalleryItems();
+        }
+      } catch (error: any) {
+        console.error('Error deleting gallery item:', error);
+        toast.error(error.message || 'Gagal menghapus item galeri');
       }
-    } catch (error: any) {
-      console.error('Error deleting gallery item:', error);
-      toast.error(error.message || 'Gagal menghapus item galeri');
     }
   };
 

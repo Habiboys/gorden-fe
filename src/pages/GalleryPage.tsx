@@ -53,7 +53,7 @@ export default function GalleryPage() {
         }));
         setGalleryItems(mappedItems);
       } else {
-        console.log('ℹ️ No gallery items available yet. Check Admin Panel to add gallery items.');
+        console.log('No gallery items available yet. Check Admin Panel to add gallery items.');
         setGalleryItems([]);
       }
     } catch (error) {
@@ -136,8 +136,8 @@ export default function GalleryPage() {
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   className={`px-6 py-3 rounded-xl transition-all duration-300 ${selectedCategory === category.id
-                      ? 'bg-[#EB216A] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-[#EB216A] text-white shadow-lg'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   {category.name}

@@ -2,19 +2,22 @@ import {
     Download,
     Edit3,
     Eye,
+    FileCheck,
     FileText,
     Gift,
     Loader2,
+    MessageCircle,
     Plus,
     Printer,
     Save,
+    Search,
     Send,
     Trash2,
     X
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { documentsApi } from '../utils/api';
+import { documentsApi, productsApi } from '../utils/api';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -56,6 +59,12 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
     const [sendingEmail, setSendingEmail] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [converting, setConverting] = useState(false);
+
+    // Product picker state
+    const [products, setProducts] = useState<any[]>([]);
+    const [productSearchTerm, setProductSearchTerm] = useState('');
+    const [showProductPicker, setShowProductPicker] = useState<string | null>(null);
 
     // Get quotation data from doc.data or doc.quotationData
     let quotationData = doc?.data || doc?.quotationData || {};
@@ -127,13 +136,34 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
         setWindows(windows.filter(w => w.id !== windowId));
     };
 
-    const addItemToWindow = (windowId: string) => {
+    // Fetch products on mount
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await productsApi.getAll();
+                if (response.success) {
+                    setProducts(response.data || []);
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            }
+        };
+        fetchProducts();
+    }, []);
+
+    const filteredProducts = products.filter(p =>
+        p.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+        p.category?.toLowerCase?.()?.includes(productSearchTerm.toLowerCase())
+    );
+
+    const addProductToWindow = (windowId: string, product: any) => {
         setWindows(windows.map(w => {
             if (w.id === windowId) {
+                const price = parseFloat(product.price_self_measure || product.price || 0);
                 const newItem: QuotationItem = {
-                    id: `${windowId}-${Date.now()}`,
-                    name: '',
-                    price: 0,
+                    id: `${windowId} -${Date.now()} `,
+                    name: product.name,
+                    price: price,
                     discount: 0,
                     quantity: 1
                 };
@@ -141,6 +171,8 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
             }
             return w;
         }));
+        setShowProductPicker(null);
+        setProductSearchTerm('');
     };
 
     const removeItemFromWindow = (windowId: string, itemId: string) => {
@@ -250,7 +282,7 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
             setSendingEmail(true);
             const response = await documentsApi.sendEmail(doc.id);
             if (response.success) {
-                toast.success(`Email berhasil dikirim ke ${formData.customerEmail}`);
+                toast.success(`Email berhasil dikirim ke ${formData.customerEmail} `);
                 onRefresh?.();
             }
         } catch (error: any) {
@@ -279,11 +311,39 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
         window.print();
     };
 
+    const handleSendWhatsApp = () => {
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+        const pdfUrl = `${apiBaseUrl} /documents/${doc.id}/pdf`;
+        const message = `Halo kak,\n\nBerikut adalah dokumen ${doc?.type === 'INVOICE' ? 'Invoice' : 'Penawaran'} Anda:\n\n*No. Dokumen:* ${documentNumber}\n*Nama:* ${formData.customerName}\n*Total:* Rp ${calculateGrandTotal().toLocaleString('id-ID')}\n\n*Link Dokumen PDF:*\n${pdfUrl}\n\nTerima kasih telah mempercayakan kebutuhan gorden Anda kepada Amagriya Gorden.`;
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappNumber = formData.customerPhone?.replace(/^0/, '62').replace(/[^0-9]/g, '') || '';
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    const handleConvertToInvoice = async () => {
+        if (!confirm('Apakah Anda yakin ingin mengkonversi Penawaran ini menjadi Invoice?')) return;
+
+        try {
+            setConverting(true);
+            const response = await documentsApi.convertToInvoice(doc.id);
+            if (response.success) {
+                toast.success('Penawaran berhasil dikonversi ke Invoice!');
+                onClose();
+                onRefresh?.();
+            }
+        } catch (error: any) {
+            toast.error('Gagal mengkonversi: ' + error.message);
+        } finally {
+            setConverting(false);
+        }
+    };
+
     if (!doc) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl max-w-6xl w-full my-8">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] flex flex-col">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
                     <div className="flex items-center gap-4">
@@ -343,6 +403,28 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                             Email
                         </Button>
 
+                        <Button
+                            size="sm"
+                            className="text-white border-0"
+                            style={{ backgroundColor: '#25D366' }}
+                            onClick={handleSendWhatsApp}
+                        >
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            WhatsApp
+                        </Button>
+
+                        {doc?.type === 'QUOTATION' && (
+                            <Button
+                                size="sm"
+                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                                onClick={handleConvertToInvoice}
+                                disabled={converting}
+                            >
+                                {converting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FileCheck className="w-4 h-4 mr-1" />}
+                                Jadikan Invoice
+                            </Button>
+                        )}
+
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
                             <X className="w-5 h-5" />
                         </button>
@@ -353,30 +435,30 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                 <div className="border-b border-gray-100 px-6">
                     <div className="flex gap-4">
                         <button
-                            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'edit'
+                            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap ${activeTab === 'edit'
                                 ? 'border-[#EB216A] text-[#EB216A]'
                                 : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                             onClick={() => setActiveTab('edit')}
                         >
-                            <Edit3 className="w-4 h-4 inline mr-2" />
+                            <Edit3 className="w-4 h-4 mr-2 flex-shrink-0" />
                             Edit Dokumen
                         </button>
                         <button
-                            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'preview'
+                            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap ${activeTab === 'preview'
                                 ? 'border-[#EB216A] text-[#EB216A]'
                                 : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                             onClick={() => setActiveTab('preview')}
                         >
-                            <Eye className="w-4 h-4 inline mr-2" />
+                            <Eye className="w-4 h-4 mr-2 flex-shrink-0" />
                             Preview
                         </button>
                     </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
+                <div className="p-6 flex-1 overflow-y-auto">
                     {activeTab === 'edit' ? (
                         /* Edit Form */
                         <div className="space-y-6">
@@ -481,6 +563,7 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                                             <table className="w-full text-sm">
                                                 <thead>
                                                     <tr className="text-left text-gray-500">
+                                                        <th className="pb-2">#</th>
                                                         <th className="pb-2">Nama Item</th>
                                                         <th className="pb-2 w-28 text-right">Harga</th>
                                                         <th className="pb-2 w-20 text-center">Disc%</th>
@@ -490,30 +573,22 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
-                                                    {window.items.map((item) => (
+                                                    {window.items.map((item, idx) => (
                                                         <tr key={item.id}>
+                                                            <td className="py-2 pr-2 text-gray-500">{idx + 1}</td>
                                                             <td className="py-2 pr-2">
-                                                                <Input
-                                                                    value={item.name}
-                                                                    onChange={(e) => updateItem(window.id, item.id, 'name', e.target.value)}
-                                                                    placeholder="Nama item"
-                                                                    className="text-sm"
-                                                                />
+                                                                <p className="text-sm text-gray-900">{item.name}</p>
                                                             </td>
-                                                            <td className="py-2 px-1">
-                                                                <Input
-                                                                    type="number"
-                                                                    value={item.price}
-                                                                    onChange={(e) => updateItem(window.id, item.id, 'price', parseFloat(e.target.value) || 0)}
-                                                                    className="text-right text-sm"
-                                                                />
+                                                            <td className="py-2 px-1 text-right">
+                                                                <p className="text-sm text-gray-900">Rp{item.price.toLocaleString('id-ID')}</p>
                                                             </td>
                                                             <td className="py-2 px-1">
                                                                 <Input
                                                                     type="number"
                                                                     value={item.discount}
                                                                     onChange={(e) => updateItem(window.id, item.id, 'discount', parseFloat(e.target.value) || 0)}
-                                                                    className="text-center text-sm"
+                                                                    className="text-center text-sm h-8"
+                                                                    max="100"
                                                                 />
                                                             </td>
                                                             <td className="py-2 px-1">
@@ -521,7 +596,8 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                                                                     type="number"
                                                                     value={item.quantity}
                                                                     onChange={(e) => updateItem(window.id, item.id, 'quantity', parseInt(e.target.value) || 1)}
-                                                                    className="text-center text-sm"
+                                                                    className="text-center text-sm h-8"
+                                                                    min="1"
                                                                 />
                                                             </td>
                                                             <td className="py-2 px-1 text-right text-gray-900">
@@ -540,14 +616,63 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                                                 </tbody>
                                             </table>
 
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="mt-2 text-[#EB216A]"
-                                                onClick={() => addItemToWindow(window.id)}
-                                            >
-                                                <Plus className="w-4 h-4 mr-1" /> Tambah Item
-                                            </Button>
+                                            {/* Add Product Section */}
+                                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                                {showProductPicker === window.id ? (
+                                                    <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                                        <div className="relative">
+                                                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                            <Input
+                                                                type="text"
+                                                                placeholder="Cari produk..."
+                                                                value={productSearchTerm}
+                                                                onChange={(e) => setProductSearchTerm(e.target.value)}
+                                                                className="pl-10 h-9"
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                        <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-lg bg-white">
+                                                            {filteredProducts.length > 0 ? (
+                                                                filteredProducts.slice(0, 10).map((product) => (
+                                                                    <button
+                                                                        key={product.id}
+                                                                        onClick={() => addProductToWindow(window.id, product)}
+                                                                        className="w-full px-3 py-2 text-left hover:bg-pink-50 border-b border-gray-50 last:border-b-0 transition-colors"
+                                                                    >
+                                                                        <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            Rp{parseFloat(product.price_self_measure || product.price || 0).toLocaleString('id-ID')}
+                                                                            {product.category && ` • ${typeof product.category === 'object' ? product.category.name : product.category}`}
+                                                                        </p>
+                                                                    </button>
+                                                                ))
+                                                            ) : (
+                                                                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                                                    Tidak ada produk ditemukan
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => { setShowProductPicker(null); setProductSearchTerm(''); }}
+                                                            className="w-full h-8 text-gray-500 hover:text-gray-700"
+                                                        >
+                                                            Batal
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setShowProductPicker(window.id)}
+                                                        className="w-full border-2 border-dashed border-gray-200 text-gray-500 hover:border-[#EB216A] hover:text-[#EB216A] hover:bg-pink-50/50 h-9"
+                                                    >
+                                                        <Plus className="w-4 h-4 mr-2" />
+                                                        Tambah Produk
+                                                    </Button>
+                                                )}
+                                            </div>
 
                                             <div className="mt-3 pt-3 border-t border-gray-100 text-right">
                                                 <span className="text-gray-600">Subtotal: </span>

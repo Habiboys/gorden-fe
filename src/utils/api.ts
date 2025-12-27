@@ -282,6 +282,11 @@ export const documentsApi = {
     sendEmail: (id: string) => apiCall(`/documents/${id}/send`, {
         method: 'POST',
     }),
+
+    // Convert Quotation to Invoice
+    convertToInvoice: (id: string) => apiCall(`/documents/${id}/convert-to-invoice`, {
+        method: 'POST',
+    }),
 };
 
 // Referrals API
@@ -472,7 +477,7 @@ export const contactsApi = {
     }),
 
     updateStatus: (id: string, status: string) => apiCall(`/contacts/${id}/status`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ status }),
     }),
 

@@ -30,7 +30,7 @@ export function Gallery() {
           console.log(`✅ Loaded ${allResponse.data.length} gallery items for homepage`);
           setGalleryImages(allResponse.data.slice(0, 6));
         } else {
-          console.log('ℹ️ No gallery items available yet. Admin can add gallery items via Admin Panel.');
+          console.log('No gallery items available yet. Admin can add gallery items via Admin Panel.');
           setGalleryImages([]);
         }
       }

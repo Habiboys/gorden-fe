@@ -28,7 +28,7 @@ const defaultSettings: SiteSettings = {
     siteEmail: 'info@amagriya.com',
     sitePhone: '081234567890',
     siteAddress: 'Jl. Sudirman No. 123, Jakarta Selatan',
-    whatsappNumber: '6285142247464',
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER || '6285142247464',
     instagramUrl: 'https://instagram.com/amagriya',
     facebookUrl: 'https://facebook.com/amagriya',
     brandColor: '#EB216A',
