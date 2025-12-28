@@ -99,6 +99,28 @@ export const productsApi = {
     }),
 };
 
+// Product Variants API
+export const productVariantsApi = {
+    getByProduct: (productId: string) => apiCall(`/products/${productId}/variants`),
+
+    getMatching: (productId: string, width: number, height: number) =>
+        apiCall(`/products/${productId}/variants/match?width=${width}&height=${height}`),
+
+    create: (productId: string, variant: any) => apiCall(`/products/${productId}/variants`, {
+        method: 'POST',
+        body: JSON.stringify(variant),
+    }),
+
+    update: (id: string, variant: any) => apiCall(`/variants/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(variant),
+    }),
+
+    delete: (id: string) => apiCall(`/variants/${id}`, {
+        method: 'DELETE',
+    }),
+};
+
 // Categories API
 export const categoriesApi = {
     getAll: () => apiCall('/categories'),

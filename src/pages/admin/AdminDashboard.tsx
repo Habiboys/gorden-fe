@@ -1,10 +1,10 @@
 import {
   Calculator,
-  Camera,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Loader2,
-  Package,
-  Users
+  Package
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
@@ -33,7 +33,9 @@ interface DashboardStats {
   totalCategories: number;
   pendingLeads: number;
   pendingContacts: number;
+  pendingInvoices?: number;
   totalRevenue: number;
+  monthlyStats?: { month: string; revenue: number; orders: number }[];
 }
 
 interface Activity {
@@ -49,9 +51,15 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const totalPages = Math.ceil(activities.length / itemsPerPage);
+  const currentActivities = activities.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ); useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
@@ -74,10 +82,29 @@ export default function AdminDashboard() {
   // Stats cards configuration
   const statsCards = stats ? [
     {
+      name: 'Total Revenue',
+      value: `Rp ${(stats.totalRevenue || 0).toLocaleString('id-ID')}`,
+      icon: FileText,
+      color: 'bg-green-600'
+    },
+    {
+      name: 'Total Invoice',
+      value: stats.totalOrders.toString(),
+      icon: Package,
+      color: 'bg-blue-500'
+    },
+    {
       name: 'Total Produk',
       value: stats.totalProducts.toString(),
       icon: Package,
       color: 'bg-blue-500'
+    },
+    {
+      name: 'Tagihan Pending',
+      value: (stats.pendingInvoices || 0).toString(),
+      subtext: 'Menunggu Pembayaran',
+      icon: FileText,
+      color: 'bg-yellow-500'
     },
     {
       name: 'Total Leads Kalkulator',
@@ -86,25 +113,7 @@ export default function AdminDashboard() {
       icon: Calculator,
       bgColor: brandColor
     },
-    {
-      name: 'Total Galeri',
-      value: stats.totalGallery.toString(),
-      icon: Camera,
-      color: 'bg-purple-500'
-    },
-    {
-      name: 'Total Artikel',
-      value: stats.totalArticles.toString(),
-      icon: FileText,
-      color: 'bg-green-500'
-    },
-    {
-      name: 'Total Kontak',
-      value: stats.totalContacts.toString(),
-      subtext: stats.pendingContacts > 0 ? `${stats.pendingContacts} pending` : undefined,
-      icon: Users,
-      color: 'bg-orange-500'
-    },
+
   ] : [];
 
   if (loading) {
@@ -168,19 +177,20 @@ export default function AdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
         <Card className="p-6 border-gray-200">
-          <h3 className="text-lg text-gray-900 mb-6">Revenue Overview</h3>
+          <h3 className="text-lg text-gray-900 mb-6">Revenue Trend (6 Bulan Terakhir)</h3>
           <div className="h-[300px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={[]}>
+              <LineChart data={stats?.monthlyStats || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
+                <XAxis dataKey="month" stroke="#666" fontSize={12} />
+                <YAxis stroke="#666" fontSize={12} tickFormatter={(value) => `Rp${(value / 1000000).toFixed(0)}jt`} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',
                     border: '1px solid #e5e5e5',
                     borderRadius: '8px'
                   }}
+                  formatter={(value: number) => [`Rp ${value.toLocaleString('id-ID')}`, 'Revenue']}
                 />
                 <Legend />
                 <Line
@@ -189,23 +199,25 @@ export default function AdminDashboard() {
                   stroke={brandColor}
                   strokeWidth={2}
                   dot={{ fill: brandColor, r: 4 }}
-                  name="Revenue (Rp)"
+                  name="Revenue"
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-center text-gray-400 text-sm mt-4">Belum ada data revenue</p>
+          {(!stats?.monthlyStats || stats.monthlyStats.every(d => d.revenue === 0)) && (
+            <p className="text-center text-gray-400 text-sm mt-4">Belum ada data revenue signifikan</p>
+          )}
         </Card>
 
         {/* Orders Chart */}
         <Card className="p-6 border-gray-200">
-          <h3 className="text-lg text-gray-900 mb-6">Orders Overview</h3>
+          <h3 className="text-lg text-gray-900 mb-6">Invoice Created (6 Bulan Terakhir)</h3>
           <div className="h-[300px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[]}>
+              <BarChart data={stats?.monthlyStats || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
+                <XAxis dataKey="month" stroke="#666" fontSize={12} />
+                <YAxis stroke="#666" fontSize={12} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',
@@ -217,13 +229,15 @@ export default function AdminDashboard() {
                 <Bar
                   dataKey="orders"
                   fill={brandColor}
-                  radius={[8, 8, 0, 0]}
-                  name="Orders"
+                  radius={[4, 4, 0, 0]}
+                  name="Invoices"
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-center text-gray-400 text-sm mt-4">Belum ada data orders</p>
+          {(!stats?.monthlyStats || stats.monthlyStats.every(d => d.orders === 0)) && (
+            <p className="text-center text-gray-400 text-sm mt-4">Belum ada data invoice</p>
+          )}
         </Card>
       </div>
 
@@ -277,31 +291,58 @@ export default function AdminDashboard() {
           {/* Recent Activities */}
           <Card className="p-6 border-gray-200">
             <h3 className="text-lg text-gray-900 mb-4">Aktivitas Terbaru</h3>
-            {activities.length > 0 ? (
-              <div className="space-y-3">
-                {activities.map((activity, index) => (
-                  <div key={index} className="flex items-start justify-between py-2 border-b border-gray-100 last:border-0">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">{activity.action}</p>
-                      <p className="text-xs text-gray-500 truncate">{activity.item}</p>
+            <div className="space-y-3">
+              {currentActivities.length > 0 ? (
+                <>
+                  {currentActivities.map((activity, index) => (
+                    <div key={index} className="flex items-start justify-between py-2 border-b border-gray-100 last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 truncate">{activity.action}</p>
+                        <p className="text-xs text-gray-500 truncate">{activity.item}</p>
+                      </div>
+                      <div className="text-right ml-2 flex-shrink-0">
+                        <p className="text-xs text-gray-500">{activity.time}</p>
+                        <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${activity.type === 'success'
+                          ? 'bg-green-100 text-green-700'
+                          : activity.type === 'info'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                          {activity.type}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right ml-2 flex-shrink-0">
-                      <p className="text-xs text-gray-500">{activity.time}</p>
-                      <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${activity.type === 'success'
-                        ? 'bg-green-100 text-green-700'
-                        : activity.type === 'info'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                        {activity.type}
-                      </span>
+                  ))}
+
+                  {/* Pagination Controls */}
+                  {activities.length > itemsPerPage && (
+                    <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+                      <p className="text-xs text-gray-500">
+                        Hal {currentPage} dari {totalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">Belum ada aktivitas terbaru</p>
-            )}
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-500 text-sm">Belum ada aktivitas terbaru</p>
+              )}
+            </div>
           </Card>
         </div>
       )}

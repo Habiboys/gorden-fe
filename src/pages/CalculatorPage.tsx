@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
-import { calculatorLeadsApi, calculatorTypesApi, productsApi } from '../utils/api';
+import { calculatorLeadsApi, calculatorTypesApi, productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { chatAdminFromCalculator } from '../utils/whatsappHelper';
 
@@ -58,6 +58,7 @@ interface ProductOption {
   description?: string;
   image?: string;
   maxWidth?: number;
+  sibak?: number;
 }
 
 interface ComponentSelection {
@@ -78,6 +79,14 @@ interface CalculatorItem {
   panels: number;
   quantity: number;
   components: SelectedComponents;
+  selectedVariant?: {
+    id: string;
+    width: number;
+    height: number;
+    sibak: number;
+    price: number;
+    name: string;
+  };
 }
 
 export default function CalculatorPageV2() {
@@ -115,6 +124,15 @@ export default function CalculatorPageV2() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingComponentId, setEditingComponentId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Variant state
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [pendingProductForVariant, setPendingProductForVariant] = useState<ProductOption | null>(null);
+  const [availableVariants, setAvailableVariants] = useState<any[]>([]);
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const [variantSelectionMode, setVariantSelectionMode] = useState<'fabric' | 'component'>('component');
+  const [variantSearchQuery, setVariantSearchQuery] = useState('');
+  const [editingVariantItemId, setEditingVariantItemId] = useState<string | null>(null);
 
   // Load customer info from localStorage
   useEffect(() => {
@@ -171,7 +189,8 @@ export default function CalculatorPageV2() {
               price: p.price,
               description: p.description,
               image: p.images?.[0] || p.image,
-              maxWidth: p.max_length
+              maxWidth: p.max_length,
+              sibak: p.sibak
             }));
           }
         } catch (error) {
@@ -220,19 +239,22 @@ export default function CalculatorPageV2() {
     setPackageType('gorden-lengkap');
   };
 
-  // Add item
-  const handleAddItem = () => {
+  // Add item - then check for variants based on dimensions
+  const handleAddItem = async () => {
     if (!width || !height || !quantity) {
       alert('Lengkapi semua field!');
       return;
     }
 
+    const itemWidth = parseFloat(width);
+    const itemHeight = parseFloat(height);
+
     const newItem: CalculatorItem = {
       id: Date.now().toString(),
       itemType,
       packageType,
-      width: parseFloat(width),
-      height: parseFloat(height),
+      width: itemWidth,
+      height: itemHeight,
       panels: parseInt(panels),
       quantity: parseInt(quantity),
       components: {}
@@ -241,6 +263,37 @@ export default function CalculatorPageV2() {
     setItems([...items, newItem]);
     resetForm();
     setIsAddItemModalOpen(false);
+
+    // Check if selected fabric has variants - show picker based on dimensions
+    if (selectedFabric?.id) {
+      try {
+        const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
+        const variants = variantsRes.data || [];
+
+        if (variants.length > 0) {
+          // Filter variants that match the item dimensions (using recommended ranges)
+          const matchingVariants = variants.filter((v: any) => {
+            // If variant has recommended ranges, use those
+            if (v.recommended_min_width && v.recommended_max_width) {
+              return itemWidth >= v.recommended_min_width && itemWidth <= v.recommended_max_width;
+            }
+            // Otherwise show all variants
+            return true;
+          });
+
+          // If no matching variants, show all variants
+          const variantsToShow = matchingVariants.length > 0 ? matchingVariants : variants;
+
+          setEditingVariantItemId(newItem.id);
+          setPendingProductForVariant(selectedFabric);
+          setAvailableVariants(variantsToShow);
+          setVariantSelectionMode('fabric');
+          setIsVariantModalOpen(true);
+        }
+      } catch (error) {
+        console.error('Error checking variants:', error);
+      }
+    }
   };
 
   // Remove item
@@ -255,9 +308,40 @@ export default function CalculatorPageV2() {
     setIsComponentModalOpen(true);
   };
 
-  // Select component product
-  const handleSelectComponent = (product: ProductOption) => {
+  // Select fabric product - no variant check here, variants picked after adding item
+  const handleSelectFabric = (product: any) => {
+    setSelectedFabric(product);
+    setIsProductModalOpen(false);
+    setSearchQuery('');
+  };
+
+  // Select component product - now checks for variants first
+  const handleSelectComponent = async (product: ProductOption) => {
     if (!editingItemId || editingComponentId === null) return;
+
+    // Check if product has variants
+    setLoadingVariants(true);
+    try {
+      const variantsRes = await productVariantsApi.getByProduct(product.id);
+      const variants = variantsRes.data || [];
+
+      if (variants.length > 0) {
+        // Product has variants - show variant picker
+        setPendingProductForVariant(product);
+        setAvailableVariants(variants);
+        setIsComponentModalOpen(false);
+        setIsVariantModalOpen(true);
+        return;
+      }
+    } catch (error) {
+      console.error('Error fetching variants:', error);
+    } finally {
+      setLoadingVariants(false);
+    }
+
+    // No variants - proceed with normal selection
+    const sibakValue = product.sibak || 0;
+    const defaultQty = sibakValue > 0 ? sibakValue : 1;
 
     setItems(items.map(item => {
       if (item.id === editingItemId) {
@@ -268,7 +352,9 @@ export default function CalculatorPageV2() {
             ...item.components,
             [editingComponentId]: {
               product,
-              qty: existingSelection?.qty || 1
+              qty: existingSelection?.qty && existingSelection.product.id === product.id
+                ? existingSelection.qty
+                : defaultQty
             }
           }
         };
@@ -279,13 +365,72 @@ export default function CalculatorPageV2() {
     setIsComponentModalOpen(false);
   };
 
+  // Select variant for component or fabric (per-item)
+  const handleSelectVariant = (variant: any) => {
+    if (!pendingProductForVariant) return;
+
+    if (variantSelectionMode === 'fabric') {
+      // Store variant in the specific item
+      if (!editingVariantItemId) return;
+
+      const variantData = {
+        id: variant.id,
+        width: variant.width,
+        height: variant.height,
+        sibak: variant.sibak,
+        price: variant.price,
+        name: `${pendingProductForVariant.name} (${variant.width}x${variant.height}cm, Sibak ${variant.sibak})`,
+      };
+
+      setItems(items.map(item => {
+        if (item.id === editingVariantItemId) {
+          return { ...item, selectedVariant: variantData };
+        }
+        return item;
+      }));
+
+      setEditingVariantItemId(null);
+    } else {
+      // Setting component product
+      if (!editingItemId || editingComponentId === null) return;
+
+      const productWithVariant = {
+        ...pendingProductForVariant,
+        price: variant.price,
+        sibak: variant.sibak,
+        name: `${pendingProductForVariant.name} (${variant.width}x${variant.height}cm, Sibak ${variant.sibak})`,
+      };
+
+      setItems(items.map(item => {
+        if (item.id === editingItemId) {
+          return {
+            ...item,
+            components: {
+              ...item.components,
+              [editingComponentId]: {
+                product: productWithVariant as ProductOption,
+                qty: variant.sibak || 1
+              }
+            }
+          };
+        }
+        return item;
+      }));
+    }
+
+    setIsVariantModalOpen(false);
+    setPendingProductForVariant(null);
+    setAvailableVariants([]);
+  };
+
   // Calculate component price based on price_calculation type
   const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
     const widthM = item.width / 100;
     const basePrice = (() => {
       switch (comp.price_calculation) {
         case 'per_meter':
-          return widthM * selection.product.price * item.quantity;
+          // Min 1 meter rule: usage < 1m counts as 1m
+          return Math.max(1, widthM) * selection.product.price * item.quantity;
         case 'per_unit':
           return selection.product.price * item.quantity;
         case 'per_10_per_meter':
@@ -300,14 +445,18 @@ export default function CalculatorPageV2() {
 
   // Calculate item price
   const calculateItemPrice = (item: CalculatorItem) => {
-    if (!selectedFabric || !currentType) return { fabric: 0, components: 0, total: 0 };
+    if (!selectedFabric || !currentType) return { fabric: 0, fabricMeters: 0, components: 0, total: 0 };
 
     const widthM = item.width / 100;
     const heightM = item.height / 100;
 
+    // Use item's variant price if available, otherwise use base fabric price
+    const fabricPricePerMeter = item.selectedVariant?.price ?? selectedFabric.price;
+    const fabricName = item.selectedVariant?.name ?? selectedFabric.name;
+
     // Fabric calculation with multiplier
     const fabricMeters = widthM * currentType.fabric_multiplier * heightM;
-    const fabricPrice = fabricMeters * selectedFabric.price * item.quantity;
+    const fabricPrice = fabricMeters * fabricPricePerMeter * item.quantity;
 
     // Components calculation
     let componentsPrice = 0;
@@ -323,6 +472,8 @@ export default function CalculatorPageV2() {
     return {
       fabric: fabricPrice,
       fabricMeters,
+      fabricPricePerMeter,
+      fabricName,
       components: componentsPrice,
       total: fabricPrice + componentsPrice
     };
@@ -663,10 +814,36 @@ export default function CalculatorPageV2() {
 
                         {/* Fabric */}
                         <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                          <div>
-                            <p className="text-gray-900 font-medium">{selectedFabric?.name}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-gray-900 font-medium">{(prices as any).fabricName || selectedFabric?.name}</p>
+                              {selectedFabric && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
+                                  onClick={async () => {
+                                    try {
+                                      const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
+                                      const variants = variantsRes.data || [];
+                                      if (variants.length > 0) {
+                                        setEditingVariantItemId(item.id);
+                                        setPendingProductForVariant(selectedFabric);
+                                        setAvailableVariants(variants);
+                                        setVariantSelectionMode('fabric');
+                                        setIsVariantModalOpen(true);
+                                      }
+                                    } catch (error) {
+                                      console.error('Error loading variants:', error);
+                                    }
+                                  }}
+                                >
+                                  {item.selectedVariant ? 'Ganti Varian' : 'Pilih Varian'}
+                                </Button>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500">
-                              {(prices as any).fabricMeters?.toFixed(2) || 0}m × Rp {selectedFabric?.price?.toLocaleString('id-ID')} × {item.quantity}
+                              {(prices as any).fabricMeters?.toFixed(2) || 0}m × Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')} × {item.quantity}
                             </p>
                           </div>
                           <p className="text-lg font-semibold text-gray-900">
@@ -939,11 +1116,7 @@ export default function CalculatorPageV2() {
               {filteredProducts.map(product => (
                 <div
                   key={product.id}
-                  onClick={() => {
-                    setSelectedFabric(product);
-                    setIsProductModalOpen(false);
-                    setSearchQuery('');
-                  }}
+                  onClick={() => handleSelectFabric(product)}
                   className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.02] ${selectedFabric?.id === product.id
                     ? 'border-[#EB216A] bg-[#EB216A]/5 shadow-md'
                     : 'border-gray-200 hover:border-gray-300'
@@ -1027,6 +1200,95 @@ export default function CalculatorPageV2() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* Variant Picker Modal */}
+      <Dialog open={isVariantModalOpen} onOpenChange={(open: boolean) => { setIsVariantModalOpen(open); if (!open) setVariantSearchQuery(''); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Pilih Varian - {pendingProductForVariant?.name}</DialogTitle>
+          </DialogHeader>
+
+          {/* Search Input */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={variantSearchQuery}
+              onChange={(e) => setVariantSearchQuery(e.target.value)}
+              placeholder="Cari varian (lebar, tinggi, harga)..."
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {loadingVariants ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Memuat varian...</p>
+              </div>
+            ) : availableVariants.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Tidak ada varian tersedia.</p>
+              </div>
+            ) : (() => {
+              const filtered = availableVariants.filter((v: any) => {
+                if (!variantSearchQuery) return true;
+                const q = variantSearchQuery.toLowerCase();
+                return (
+                  String(v.width).includes(q) ||
+                  String(v.height).includes(q) ||
+                  String(v.sibak).includes(q) ||
+                  String(v.price).includes(q)
+                );
+              });
+
+              if (filtered.length === 0) {
+                return <p className="text-center py-8 text-gray-600">Tidak ada varian yang cocok.</p>;
+              }
+
+              return (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Lebar</th>
+                      <th className="px-4 py-3 text-left">Tinggi</th>
+                      <th className="px-4 py-3 text-left">Sibak</th>
+                      <th className="px-4 py-3 text-left">Harga</th>
+                      <th className="px-4 py-3 text-left">Cocok Untuk</th>
+                      <th className="px-4 py-3 text-right">Pilih</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filtered.map((v: any) => (
+                      <tr key={v.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">{v.width}cm</td>
+                        <td className="px-4 py-3">{v.height}cm</td>
+                        <td className="px-4 py-3">{v.sibak}</td>
+                        <td className="px-4 py-3 font-medium text-[#EB216A]">
+                          Rp {Number(v.price).toLocaleString('id-ID')}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {v.recommended_min_width && v.recommended_max_width ? (
+                            `Lebar ${v.recommended_min_width}-${v.recommended_max_width}cm`
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            size="sm"
+                            className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                            onClick={() => handleSelectVariant(v)}
+                          >
+                            Pilih
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div >
   );
 }

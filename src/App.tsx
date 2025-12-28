@@ -37,6 +37,7 @@ import AdminDocumentCreate from './pages/admin/AdminDocumentCreate';
 import AdminDocuments from './pages/admin/AdminDocuments';
 import AdminFAQ from './pages/admin/AdminFAQ';
 import AdminGallery from './pages/admin/AdminGallery';
+import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminReferrals from './pages/admin/AdminReferrals';
 import AdminSettings from './pages/admin/AdminSettings';
@@ -109,6 +110,8 @@ export default function App() {
                           <Route index element={<AdminDashboard />} />
                           <Route path="dashboard" element={<AdminDashboard />} />
                           <Route path="products" element={<AdminProducts />} />
+                          <Route path="products/add" element={<AdminProductForm />} />
+                          <Route path="products/edit/:id" element={<AdminProductForm />} />
                           <Route path="categories" element={<AdminCategories />} />
                           <Route path="settings" element={<AdminSettings />} />
                           <Route path="calculator-leads" element={<AdminCalculatorLeads />} />

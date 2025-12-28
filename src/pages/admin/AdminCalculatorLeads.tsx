@@ -21,6 +21,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useConfirm } from '../../context/ConfirmContext';
 import { calculatorLeadsApi } from '../../utils/api';
+import { exportToCSV } from '../../utils/exportHelper';
 
 // Mock data - nanti akan dari localStorage atau database
 const mockLeads = [
@@ -327,8 +328,26 @@ export default function AdminCalculatorLeads() {
   });
 
   const handleExportCSV = () => {
-    // Export logic here
-    toast.info('Export CSV functionality');
+    if (filteredLeads.length === 0) {
+      toast.error('Tidak ada data untuk diexport');
+      return;
+    }
+
+    const dataToExport = filteredLeads.map(lead => ({
+      'ID': lead.id,
+      'Tanggal': lead.createdAt ? new Date(lead.createdAt).toLocaleString('id-ID') : lead.submittedAt,
+      'Nama Customer': lead.customerName || lead.name,
+      'Telepon': lead.customerPhone || lead.phone,
+      'Email': lead.customerEmail || lead.email || '-',
+      'Tipe Kalkulator': lead.calculatorType || lead.calculator_type || 'Unknown',
+      'Estimasi Harga': lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0,
+      'Status': (statusConfig as any)[lead.status]?.label || lead.status,
+      'Total Item': lead.calculation_data?.items?.length || lead.totalItems || 0,
+      'Total Unit': lead.calculation_data?.items?.reduce((s: number, i: any) => s + (i.quantity || 0), 0) || lead.totalUnits || 0
+    }));
+
+    exportToCSV(dataToExport, `calculator-leads-${new Date().toISOString().split('T')[0]}`);
+    toast.success('Data berhasil didownload');
   };
 
   const handleSendQuote = (lead: any) => {
@@ -499,7 +518,7 @@ export default function AdminCalculatorLeads() {
             <div>
               <p className="text-sm text-gray-600">Total Estimasi</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{(leads.reduce((sum, l) => sum + (l.grandTotal || l.estimatedPrice || 0), 0) / 1000000).toFixed(1)}M
+                Rp{leads.reduce((sum, l) => sum + (l.grandTotal || l.estimatedPrice || 0), 0).toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">

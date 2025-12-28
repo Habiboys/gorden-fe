@@ -9,6 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -30,7 +31,8 @@ import {
 } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
-import { categoriesApi, productsApi, subcategoriesApi, uploadApi } from '../../utils/api';
+import { categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploadApi } from '../../utils/api';
+import { exportToCSV } from '../../utils/exportHelper';
 import { safelyParseImages } from '../../utils/imageHelper';
 
 export default function AdminProducts() {
@@ -53,6 +55,23 @@ export default function AdminProducts() {
   const [selectedSubcategoryHasMaxLength, setSelectedSubcategoryHasMaxLength] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { confirm } = useConfirm();
+  const navigate = useNavigate();
+
+  // Variants state
+  const [variants, setVariants] = useState<any[]>([]);
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [editingVariant, setEditingVariant] = useState<any>(null);
+  const [variantForm, setVariantForm] = useState({
+    width: 0,
+    wave: 0,
+    height: 0,
+    sibak: 1,
+    price: 0,
+    recommended_min_width: 0,
+    recommended_max_width: 0,
+    recommended_height: 0,
+  });
 
   // Form states
   const [formData, setFormData] = useState({
@@ -77,6 +96,7 @@ export default function AdminProducts() {
     featured: false,
     newArrival: false,
     bestSeller: false,
+    sibak: 0, // Added Sibak field
   });
 
   useEffect(() => {
@@ -124,7 +144,7 @@ export default function AdminProducts() {
 
     // Category filter
     if (categoryFilter && categoryFilter !== 'all') {
-      filtered = filtered.filter(product => product.category === categoryFilter);
+      filtered = filtered.filter(product => product.Category?.name === categoryFilter);
     }
 
     // Status filter
@@ -192,6 +212,7 @@ export default function AdminProducts() {
       featured: false,
       newArrival: false,
       bestSeller: false,
+      sibak: 0,
     });
     setUploadedImages([]);
     setSubcategories([]);
@@ -241,12 +262,25 @@ export default function AdminProducts() {
       featured: product.is_featured || false,
       newArrival: product.is_new_arrival || false,
       bestSeller: product.is_best_seller || false,
+      sibak: product.sibak || 0,
     });
     const parsedImages = safelyParseImages(product.images);
     console.log('Edit product:', product.name, 'Raw images:', product.images, 'Parsed:', parsedImages);
     setUploadedImages(parsedImages);
     setActiveTab('basic');
     setIsProductModalOpen(true);
+
+    // Load variants for this product
+    setLoadingVariants(true);
+    try {
+      const variantsRes = await productVariantsApi.getByProduct(product.id);
+      setVariants(variantsRes.data || []);
+    } catch (error) {
+      console.error('Error loading variants:', error);
+      setVariants([]);
+    } finally {
+      setLoadingVariants(false);
+    }
   };
 
   const handleSave = async () => {
@@ -292,6 +326,7 @@ export default function AdminProducts() {
         is_featured: formData.featured,
         is_new_arrival: formData.newArrival,
         is_best_seller: formData.bestSeller,
+        sibak: formData.sibak || null,
         images: uploadedImages,
       };
 
@@ -342,12 +377,42 @@ export default function AdminProducts() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filteredProducts.length === 0) {
+      toast.error('Tidak ada data untuk diexport');
+      return;
+    }
+
+    const dataToExport = filteredProducts.map(prod => ({
+      'ID': prod.id,
+      'Nama Produk': prod.name,
+      'SKU': prod.sku,
+      'Kategori': prod.Category?.name || prod.category_id || 'Uncategorized',
+      'Sub Kategori': prod.SubCategory?.name || '-',
+      'Stok': prod.stock,
+      'Status': prod.status,
+      'Harga (Ukur Sendiri)': prod.price_self_measure || prod.price || 0,
+      'Harga (Ukur + Pasang)': prod.price_self_measure_install || 0,
+      'Harga (Ukur + Pasang Teknisi)': prod.price_measure_install || 0,
+      'Dimensi Min': `${prod.min_width || '-'}x${prod.min_length || '-'}`,
+      'Dimensi Max': `${prod.max_width || '-'}x${prod.max_length || '-'}`,
+      'Deskripsi': prod.description || '-',
+      'Meta Title': prod.meta_title || '-',
+      'Featured': prod.is_featured ? 'Yes' : 'No',
+      'Created At': prod.created_at || prod.createdAt
+    }));
+
+    exportToCSV(dataToExport, `products-catalog-${new Date().toISOString().split('T')[0]}`);
+    toast.success('Katalog produk berhasil didownload');
+  };
+
   const tabs = [
     { id: 'basic', label: 'Informasi Dasar' },
     { id: 'pricing', label: 'Harga & Layanan' },
     { id: 'description', label: 'Deskripsi & Info' },
     { id: 'seo', label: 'SEO & Meta' },
     { id: 'advanced', label: 'Pengaturan Lanjutan' },
+    { id: 'variants', label: 'Varian Produk' },
   ];
 
   return (
@@ -358,13 +423,22 @@ export default function AdminProducts() {
           <h1 className="text-3xl text-gray-900">Produk</h1>
           <p className="text-gray-600 mt-1">Kelola semua produk Amagriya Gorden</p>
         </div>
-        <Button
-          className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
-          onClick={handleAdd}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Produk
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleExportCSV}
+          >
+            <Upload className="w-4 h-4 mr-2 rotate-180" /> {/* Reusing Upload icon rotated for Export/Download look if Download not imported? Download IS imported in other files but checked imports here... Upload is imported. Download is NOT. Use Upload rotated or add Download import. Let's add Download import later or reuse. Upload rotated 180 is basically Download. */}
+            Export CSV
+          </Button>
+          <Button
+            className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+            onClick={() => navigate('/admin/products/add')}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Produk
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -511,7 +585,7 @@ export default function AdminProducts() {
                             <Eye className="w-4 h-4 mr-2" />
                             Lihat Detail
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(product)}>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/products/edit/${product.id}`)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
@@ -731,6 +805,20 @@ export default function AdminProducts() {
                           placeholder="Max"
                         />
                       </div>
+                    </div>
+
+                    {/* Sibak Field - Added here */}
+                    <div className="space-y-2">
+                      <Label>Sibak (Multiplier)</Label>
+                      <Input
+                        type="number"
+                        value={formData.sibak || ''}
+                        onChange={(e) => setFormData({ ...formData, sibak: parseInt(e.target.value) || 0 })}
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Multiplier (e.g. 2 for pair).
+                      </p>
                     </div>
                   </div>
 
@@ -1043,6 +1131,130 @@ export default function AdminProducts() {
                   </div>
                 </div>
               )}
+
+              {/* Variants Tab */}
+              {activeTab === 'variants' && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-base text-gray-900">Varian Produk</h3>
+                      <p className="text-sm text-gray-600">Kelola varian dengan ukuran dan harga berbeda</p>
+                    </div>
+                    {modalMode === 'edit' && selectedProduct && (
+                      <Button
+                        onClick={() => {
+                          setEditingVariant(null);
+                          setVariantForm({ width: 60, wave: 6, height: 210, sibak: 1, price: 0, recommended_min_width: 0, recommended_max_width: 0, recommended_height: 210 });
+                          setIsVariantModalOpen(true);
+                        }}
+                        className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Varian
+                      </Button>
+                    )}
+                  </div>
+
+                  {modalMode === 'add' ? (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                      <p className="text-sm text-yellow-800">
+                        Simpan produk terlebih dahulu sebelum menambahkan varian.
+                      </p>
+                    </div>
+                  ) : loadingVariants ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-600">Memuat varian...</p>
+                    </div>
+                  ) : variants.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-xl">
+                      <p className="text-gray-600">Belum ada varian untuk produk ini.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left">Lebar</th>
+                            <th className="px-4 py-3 text-left">Gelombang</th>
+                            <th className="px-4 py-3 text-left">Tinggi</th>
+                            <th className="px-4 py-3 text-left">Sibak</th>
+                            <th className="px-4 py-3 text-left">Harga</th>
+                            <th className="px-4 py-3 text-left">Cocok Untuk</th>
+                            <th className="px-4 py-3 text-right">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {variants.map((v: any) => (
+                            <tr key={v.id}>
+                              <td className="px-4 py-3">{v.width}cm</td>
+                              <td className="px-4 py-3">{v.wave || '-'}</td>
+                              <td className="px-4 py-3">{v.height}cm</td>
+                              <td className="px-4 py-3">{v.sibak}</td>
+                              <td className="px-4 py-3">Rp {Number(v.price).toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-3 text-xs text-gray-600">
+                                {v.recommended_min_width && v.recommended_max_width ? (
+                                  `Lebar ${v.recommended_min_width}-${v.recommended_max_width}cm, Tinggi ${v.recommended_height || v.height}cm`
+                                ) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingVariant(v);
+                                      setVariantForm({
+                                        width: v.width,
+                                        wave: v.wave || 0,
+                                        height: v.height,
+                                        sibak: v.sibak,
+                                        price: v.price,
+                                        recommended_min_width: v.recommended_min_width || 0,
+                                        recommended_max_width: v.recommended_max_width || 0,
+                                        recommended_height: v.recommended_height || 0,
+                                      });
+                                      setIsVariantModalOpen(true);
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-600"
+                                    onClick={async () => {
+                                      const ok = await confirm({
+                                        title: 'Hapus Varian',
+                                        description: 'Yakin ingin menghapus varian ini?',
+                                        confirmText: 'Hapus',
+                                        cancelText: 'Batal',
+                                        variant: 'destructive',
+                                      });
+                                      if (ok) {
+                                        try {
+                                          await productVariantsApi.delete(v.id);
+                                          toast.success('Varian berhasil dihapus');
+                                          // Refresh variants
+                                          const res = await productVariantsApi.getByProduct(selectedProduct.id);
+                                          setVariants(res.data || []);
+                                        } catch (err) {
+                                          toast.error('Gagal menghapus varian');
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -1145,6 +1357,132 @@ export default function AdminProducts() {
                   <p className="text-gray-900 mt-2 whitespace-pre-line">{selectedProduct.information}</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Variant Form Modal */}
+      {isVariantModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg text-gray-900">
+                {editingVariant ? 'Edit Varian' : 'Tambah Varian Baru'}
+              </h3>
+              <button onClick={() => setIsVariantModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Lebar (cm)</Label>
+                  <Input
+                    type="number"
+                    value={variantForm.width}
+                    onChange={(e) => setVariantForm({ ...variantForm, width: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <Label>Gelombang</Label>
+                  <Input
+                    type="number"
+                    value={variantForm.wave}
+                    onChange={(e) => setVariantForm({ ...variantForm, wave: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <Label>Tinggi (cm)</Label>
+                  <Input
+                    type="number"
+                    value={variantForm.height}
+                    onChange={(e) => setVariantForm({ ...variantForm, height: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Sibak</Label>
+                  <Input
+                    type="number"
+                    value={variantForm.sibak}
+                    onChange={(e) => setVariantForm({ ...variantForm, sibak: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div>
+                  <Label>Harga (Rp)</Label>
+                  <Input
+                    type="number"
+                    value={variantForm.price}
+                    onChange={(e) => setVariantForm({ ...variantForm, price: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <Label className="mb-2 block">Cocok Untuk (Rekomendasi)</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs text-gray-500">Min Lebar</Label>
+                    <Input
+                      type="number"
+                      value={variantForm.recommended_min_width}
+                      onChange={(e) => setVariantForm({ ...variantForm, recommended_min_width: parseInt(e.target.value) || 0 })}
+                      placeholder="cm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Max Lebar</Label>
+                    <Input
+                      type="number"
+                      value={variantForm.recommended_max_width}
+                      onChange={(e) => setVariantForm({ ...variantForm, recommended_max_width: parseInt(e.target.value) || 0 })}
+                      placeholder="cm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Tinggi</Label>
+                    <Input
+                      type="number"
+                      value={variantForm.recommended_height}
+                      onChange={(e) => setVariantForm({ ...variantForm, recommended_height: parseInt(e.target.value) || 0 })}
+                      placeholder="cm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" className="flex-1" onClick={() => setIsVariantModalOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                className="flex-1 bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                onClick={async () => {
+                  try {
+                    if (editingVariant) {
+                      await productVariantsApi.update(editingVariant.id, variantForm);
+                      toast.success('Varian berhasil diupdate');
+                    } else {
+                      await productVariantsApi.create(selectedProduct.id, variantForm);
+                      toast.success('Varian berhasil ditambahkan');
+                    }
+                    // Refresh variants
+                    const res = await productVariantsApi.getByProduct(selectedProduct.id);
+                    setVariants(res.data || []);
+                    setIsVariantModalOpen(false);
+                  } catch (error) {
+                    console.error('Error saving variant:', error);
+                    toast.error('Gagal menyimpan varian');
+                  }
+                }}
+              >
+                {editingVariant ? 'Update' : 'Simpan'}
+              </Button>
             </div>
           </div>
         </div>

@@ -26,6 +26,10 @@ const statusConfig = {
   sent: { label: 'Terkirim', color: 'bg-blue-500', icon: Send },
   opened: { label: 'Dibuka', color: 'bg-green-500', icon: CheckCircle },
   paid: { label: 'Lunas', color: 'bg-purple-500', icon: CheckCircle },
+  pending: { label: 'Belum Bayar', color: 'bg-yellow-500', icon: Clock },
+  accepted: { label: 'Disetujui', color: 'bg-green-600', icon: CheckCircle },
+  rejected: { label: 'Ditolak', color: 'bg-red-500', icon: XCircle },
+  cancelled: { label: 'Dibatalkan', color: 'bg-red-500', icon: XCircle },
   expired: { label: 'Expired', color: 'bg-red-500', icon: XCircle }
 };
 

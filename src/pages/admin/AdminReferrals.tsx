@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { referralsApi } from '../../utils/api';
+import { exportToCSV } from '../../utils/exportHelper';
 
 interface Referrer {
   id: string;
@@ -179,6 +180,27 @@ export default function AdminReferrals() {
         </div>
         <Button
           className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+          onClick={() => {
+            if (filteredReferrals.length === 0) {
+              toast.error('Tidak ada data untuk diexport');
+              return;
+            }
+            const dataToExport = filteredReferrals.map(ref => ({
+              'ID': ref.id,
+              'Nama Referrer': ref.referrerName,
+              'Kode Referral': ref.referrerCode,
+              'Email': ref.referrerEmail,
+              'Bergabung': formatDate(ref.joinedAt),
+              'Total Referral': ref.totalReferrals,
+              'Sukses': ref.successfulReferrals,
+              'Total Komisi': ref.totalCommission,
+              'Komisi Pending': ref.pendingCommission,
+              'Komisi Dibayar': ref.paidCommission,
+              'Status': ref.status
+            }));
+            exportToCSV(dataToExport, `referrals-report-${new Date().toISOString().split('T')[0]}`);
+            toast.success('Laporan berhasil didownload');
+          }}
         >
           <Download className="w-4 h-4 mr-2" />
           Export Report
@@ -214,7 +236,7 @@ export default function AdminReferrals() {
             <div>
               <p className="text-sm text-gray-600">Total Komisi</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{(stats.totalCommission / 1000000).toFixed(1)}M
+                Rp{stats.totalCommission.toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -227,7 +249,7 @@ export default function AdminReferrals() {
             <div>
               <p className="text-sm text-gray-600">Pending Komisi</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{(stats.pendingCommission / 1000000).toFixed(1)}M
+                Rp{stats.pendingCommission.toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">

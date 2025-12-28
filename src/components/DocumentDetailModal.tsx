@@ -51,6 +51,10 @@ const statusConfig = {
     sent: { label: 'Terkirim', color: 'bg-blue-500', nextStatus: 'OPENED', nextLabel: 'Dibuka' },
     opened: { label: 'Dibuka', color: 'bg-green-500', nextStatus: 'PAID', nextLabel: 'Lunas' },
     paid: { label: 'Lunas', color: 'bg-purple-500', nextStatus: null, nextLabel: null },
+    pending: { label: 'Belum Bayar', color: 'bg-yellow-500', nextStatus: 'PAID', nextLabel: 'Bayar' },
+    accepted: { label: 'Disetujui', color: 'bg-green-600', nextStatus: null, nextLabel: null },
+    rejected: { label: 'Ditolak', color: 'bg-red-500', nextStatus: null, nextLabel: null },
+    cancelled: { label: 'Dibatalkan', color: 'bg-red-500', nextStatus: null, nextLabel: null },
 };
 
 export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailModalProps) {
@@ -368,10 +372,20 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                                 onChange={(e) => handleUpdateStatus(e.target.value)}
                                 disabled={updatingStatus}
                             >
-                                <option value="DRAFT">Draft</option>
-                                <option value="SENT">Terkirim</option>
-                                <option value="PAID">Lunas</option>
-                                <option value="CANCELLED">Dibatalkan</option>
+                                {doc?.type === 'QUOTATION' ? (
+                                    <>
+                                        <option value="DRAFT">Draft</option>
+                                        <option value="SENT">Terkirim</option>
+                                        <option value="ACCEPTED">Disetujui</option>
+                                        <option value="REJECTED">Ditolak</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="PENDING">Belum Bayar</option>
+                                        <option value="PAID">Lunas</option>
+                                        <option value="CANCELLED">Dibatalkan</option>
+                                    </>
+                                )}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                                 <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
@@ -413,7 +427,8 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                             WhatsApp
                         </Button>
 
-                        {doc?.type === 'QUOTATION' && (
+                        {/* Distinct Actions based on Type */}
+                        {doc?.type === 'QUOTATION' && currentStatus !== 'accepted' && (
                             <Button
                                 size="sm"
                                 className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -422,6 +437,18 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
                             >
                                 {converting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FileCheck className="w-4 h-4 mr-1" />}
                                 Jadikan Invoice
+                            </Button>
+                        )}
+
+                        {doc?.type === 'INVOICE' && currentStatus === 'pending' && (
+                            <Button
+                                size="sm"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                onClick={() => handleUpdateStatus('PAID')}
+                                disabled={updatingStatus}
+                            >
+                                <span className="mr-1">💰</span>
+                                Tandai Lunas
                             </Button>
                         )}
 

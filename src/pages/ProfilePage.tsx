@@ -434,7 +434,7 @@ const DashboardView = ({ user, logout, confirm }: any) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-24 pb-32">
+        <div className="min-h-screen bg-gray-50 pt-24 pb-48">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header Card */}
                 <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-6">
@@ -549,37 +549,46 @@ const DashboardView = ({ user, logout, confirm }: any) => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {stats?.history && stats.history.length > 0 ? (
-                                            stats.history.map((item: any, idx: number) => (
-                                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4">{idx + 1}</td>
-                                                    <td className="px-6 py-4">
-                                                        {new Date(item.created_at).toLocaleDateString('id-ID', {
-                                                            day: 'numeric', month: 'long', year: 'numeric'
-                                                        })}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {item.Order ? (
-                                                            <div>
-                                                                <div className="font-medium text-gray-900">Order #{item.Order.id}</div>
-                                                                <div className="text-xs text-gray-500">
-                                                                    Total: Rp {parseInt(item.Order.total_amount).toLocaleString('id-ID')}
+                                            stats.history.map((item: any, idx: number) => {
+                                                const orderData = item.Order || item.Document;
+                                                const isOrder = !!item.Order;
+                                                // const isDocument = !!item.Document;
+                                                const date = new Date(item.created_at || item.createdAt);
+
+                                                return (
+                                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-6 py-4">{idx + 1}</td>
+                                                        <td className="px-6 py-4">
+                                                            {date instanceof Date && !isNaN(date.getTime()) ? date.toLocaleDateString('id-ID', {
+                                                                day: 'numeric', month: 'long', year: 'numeric'
+                                                            }) : '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            {orderData ? (
+                                                                <div>
+                                                                    <div className="font-medium text-gray-900">
+                                                                        {isOrder ? `Order #${orderData.id}` : `Document #${orderData.id}`}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        Total: Rp {parseInt(orderData.total_amount).toLocaleString('id-ID')}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ) : <span className="text-gray-400">Belum ada order</span>}
-                                                    </td>
-                                                    <td className="px-6 py-4 font-medium text-[#EB216A]">
-                                                        Rp {parseInt(item.commission_amount || 0).toLocaleString('id-ID')}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PAID'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-yellow-100 text-yellow-700'
-                                                            }`}>
-                                                            {item.status === 'PAID' ? 'Sudah Cair' : 'Menunggu'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                            ) : <span className="text-gray-400">Belum ada order</span>}
+                                                        </td>
+                                                        <td className="px-6 py-4 font-medium text-[#EB216A]">
+                                                            Rp {parseInt(item.commission_amount || 0).toLocaleString('id-ID')}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PAID'
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-yellow-100 text-yellow-700'
+                                                                }`}>
+                                                                {item.status === 'PAID' ? 'Sudah Cair' : 'Menunggu'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })
                                         ) : (
                                             <tr>
                                                 <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
