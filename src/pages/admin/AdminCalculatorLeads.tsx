@@ -5,7 +5,6 @@ import {
   FileText,
   Filter,
   Mail,
-  Package,
   Phone,
   Ruler,
   Search,
@@ -15,12 +14,13 @@ import {
   X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { QuotationPreview } from '../../components/QuotationPreview';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useConfirm } from '../../context/ConfirmContext';
-import { calculatorLeadsApi } from '../../utils/api';
+import { calculatorLeadsApi, documentsApi } from '../../utils/api';
 import { exportToCSV } from '../../utils/exportHelper';
 
 // Mock data - nanti akan dari localStorage atau database
@@ -221,6 +221,7 @@ const statusConfig = {
 };
 
 export default function AdminCalculatorLeads() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedLead, setSelectedLead] = useState<any>(null);
@@ -230,47 +231,71 @@ export default function AdminCalculatorLeads() {
   const { confirm } = useConfirm();
 
   // Fetch leads from backend
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        console.log('🔄 Fetching calculator leads from backend...');
-        const response = await calculatorLeadsApi.getAll();
-        console.log('✅ Calculator leads fetched:', response);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10
+  });
 
-        // Parse calculation_data if it's a string (JSON)
-        const parsedLeads = (response.data || []).map((lead: any) => {
-          if (lead.calculation_data && typeof lead.calculation_data === 'string') {
-            try {
-              lead.calculation_data = JSON.parse(lead.calculation_data);
-            } catch (e) {
-              console.warn('Failed to parse calculation_data for lead:', lead.id);
-            }
+  // Fetch leads from backend
+  const fetchLeads = async (page = 1) => {
+    try {
+      setLoading(true);
+      console.log('🔄 Fetching calculator leads from backend...');
+      const response = await calculatorLeadsApi.getAll({
+        page,
+        limit: pagination.itemsPerPage,
+        status: filterStatus !== 'all' ? filterStatus : undefined
+      });
+      console.log('✅ Calculator leads fetched:', response);
+
+      // Handle both old (array) and new (paginated object) response structures
+      const leadsData = Array.isArray(response.data) ? response.data : [];
+      const paginationData = response.pagination || {
+        page: 1,
+        totalPages: 1,
+        total: leadsData.length,
+        limit: 10
+      };
+
+      // Parse calculation_data if it's a string (JSON)
+      const parsedLeads = leadsData.map((lead: any) => {
+        if (lead.calculation_data && typeof lead.calculation_data === 'string') {
+          try {
+            lead.calculation_data = JSON.parse(lead.calculation_data);
+          } catch (e) {
+            console.warn('Failed to parse calculation_data for lead:', lead.id);
           }
-          return lead;
-        });
-        console.log('📊 Parsed leads:', parsedLeads);
-
-        setLeads(parsedLeads);
-      } catch (error) {
-        console.error('❌ Error fetching calculator leads:', error);
-
-        // Check if it's a network error
-        if (error instanceof TypeError && error.message === 'Failed to fetch') {
-          console.warn('⚠️ Backend not available - using empty data. Server may need to warm up.');
-          toast.error('Backend tidak tersedia. Silakan coba lagi dalam beberapa saat atau hubungi admin untuk memastikan server sudah berjalan.');
-        } else {
-          toast.error('Error fetching leads: ' + (error as any).message);
         }
+        return lead;
+      });
 
-        // Set empty array as fallback
-        setLeads([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setLeads(parsedLeads);
+      setPagination({
+        currentPage: paginationData.page,
+        totalPages: paginationData.totalPages,
+        totalItems: paginationData.total,
+        itemsPerPage: paginationData.limit
+      });
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      toast.error('Gagal mengambil data leads');
+      setLeads([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchLeads();
-  }, []);
+  useEffect(() => {
+    fetchLeads(1);
+  }, [filterStatus]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchLeads(newPage);
+    }
+  };
 
   // Add sample test data function
   const handleAddTestData = async () => {
@@ -350,8 +375,54 @@ export default function AdminCalculatorLeads() {
     toast.success('Data berhasil didownload');
   };
 
+  // Create real document from lead
+  const handleCreateDocument = async (lead: any) => {
+    const isConfirmed = await confirm({
+      title: 'Buat Draft Penawaran',
+      description: `Buat dokumen penawaran resmi untuk ${lead.customerName || lead.name}? Anda akan diarahkan ke halaman editor.`,
+      confirmText: 'Ya, Buat Dokumen',
+      cancelText: 'Batal'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const quotationData = convertToQuotation(lead); // Reuse existing conversion logic but adapt for payload
+
+      // Prepare Payload for API
+      const payload = {
+        type: 'QUOTATION',
+        customer_name: lead.customerName || lead.name,
+        customer_phone: lead.customerPhone || lead.phone,
+        customer_email: lead.customerEmail || lead.email || null,
+        customer_address: null, // Lead doesn't usually have address
+        discount_percentage: 0,
+        valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days
+        total_amount: quotationData.amount,
+        status: 'DRAFT',
+        data: quotationData.quotationData // This contains windows, items, paymentTerms, etc.
+      };
+
+      console.log('Creating document from lead:', payload);
+      const response = await documentsApi.create(payload);
+
+      if (response.success && response.data) {
+        toast.success('Draft Penawaran berhasil dibuat!');
+        // Update lead status
+        await calculatorLeadsApi.updateStatus(lead.id, 'quoted');
+        // Navigate to Edit Page
+        navigate(`/admin/documents/edit/${response.data.id}`);
+      } else {
+        throw new Error(response.message || 'Gagal membuat dokumen');
+      }
+    } catch (error: any) {
+      console.error('Error creating document:', error);
+      toast.error('Gagal membuat dokumen: ' + error.message);
+    }
+  };
+
   const handleSendQuote = (lead: any) => {
-    toast.info(`Kirim penawaran ke ${lead.customerName || lead.name}`);
+    handleCreateDocument(lead); // Redirect to Create Doc logic
   };
 
   const handleDelete = async (id: string) => {
@@ -381,55 +452,67 @@ export default function AdminCalculatorLeads() {
     }
   };
 
-  // Convert calculator lead to quotation format
   const convertToQuotation = (lead: any) => {
-    const calculation = lead.calculation || {};
-    const components = calculation.components || [];
-    const installation = calculation.installation || {};
-
-    const items = [
-      ...components.map((comp: any, idx: number) => ({
-        id: `1-${idx + 1}`,
-        name: `${comp.name || 'Item'} - ${comp.type || ''}`,
-        price: comp.pricePerUnit || 0,
-        discount: 0,
-        quantity: comp.quantity || 1
-      })),
-      ...(installation.type ? [{
-        id: '1-install',
-        name: installation.type,
-        price: installation.price || 0,
-        discount: 0,
-        quantity: 1
-      }] : [])
-    ];
+    const calcData = lead.calculation_data || lead.calculation || {};
+    const calcItems = calcData.items || [];
+    const fabric = calcData.fabric || {};
+    // Ensure raw_items for editor reconstruction
+    // We map calcItems back to a structure resembling original calculator items if possible, 
+    // or just pass them as raw_items if they are detailed enough.
+    // The calcItems from CalculatorPage ARE detailed (components, dimensions, etc).
 
     return {
-      id: lead.id,
-      type: 'quotation',
-      documentNumber: `QT-CALC-${lead.id.toString().padStart(4, '0')}`,
-      customerName: lead.customerName || lead.name,
-      customerEmail: lead.customerEmail || lead.email || '-',
-      customerPhone: lead.customerPhone || lead.phone,
-      customerAddress: '',
-      amount: lead.grandTotal || lead.estimatedPrice,
-      createdAt: lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('id-ID') : new Date(lead.submittedAt).toLocaleDateString('id-ID'),
-      sentAt: null,
-      status: 'draft',
-      referralCode: '',
-      discount: 0,
+      amount: calcData.grandTotal || lead.estimated_price || 0,
       quotationData: {
-        windows: [
-          {
-            id: '1',
-            title: `Gorden ${lead.calculatorType}`,
-            size: `Ukuran ${lead.calculation.dimensions.width}m x ${lead.calculation.dimensions.height}m (${lead.calculation.dimensions.area}m²)`,
-            fabricType: lead.calculation.product.name,
-            items: items
-          }
-        ],
+        raw_items: calcItems, // Vital for "Rich Edit" mode
+        calculatorType: calcData.calculatorType?.name || lead.calculator_type || 'Smokering',
+        calculatorTypeSlug: calcData.calculatorType?.slug,
+        baseFabric: fabric,
+        windows: calcItems.map((item: any, idx: number) => {
+          // Reconstruct window items for legacy view / PDF generation
+          const winItems = [];
+
+          // Fabric Item
+          const fabricPrice = item.fabricPrice || 0;
+          winItems.push({
+            id: `${item.id}-fabric`,
+            name: `${item.selectedVariant?.name || item.fabricName || fabric.name || 'Kain'} (${item.fabricMeters?.toFixed(2)}m)`,
+            price: item.fabricPricePerMeter || fabric.price || 0,
+            discount: 0,
+            quantity: item.quantity,
+            totalPrice: fabricPrice
+          });
+
+          // Component Items
+          (item.components || []).forEach((comp: any) => {
+            winItems.push({
+              id: `${item.id}-comp-${comp.componentId}`,
+              name: `${comp.label}: ${comp.productName}`,
+              price: comp.productPrice || 0,
+              discount: 0,
+              quantity: comp.qty * item.quantity, // Total items = qty per window * quantity windows? Wait.
+              // In CalculatorPage: components are per ITEM.
+              // In AdminDocumentCreate: windowItems include components.
+              // The qty in component list is PER WINDOW.
+              // So we typically show Qty per window * Windows count? 
+              // Or Qty per window.
+              // AdminDocumentCreate payload stores "quantity: selection.qty" (per window).
+              qty: comp.qty,
+              totalPrice: (comp.productPrice || 0) * (comp.qty || 1)
+            });
+          });
+
+          return {
+            id: item.id || String(idx + 1),
+            title: `${idx + 1} ${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}`,
+            size: `Ukuran ${item.dimensions?.width}cm x ${item.dimensions?.height}cm`,
+            fabricType: item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja',
+            items: winItems,
+            subtotal: item.subtotal || 0
+          };
+        }),
         paymentTerms: 'Bank BRI 0763 0100 1160 564 a.n ABDUL RAHIM',
-        notes: lead.calculation.notes || 'Terima kasih atas kepercayaannya'
+        notes: calcData.notes || 'Terima kasih atas kepercayaannya'
       }
     };
   };
@@ -518,7 +601,7 @@ export default function AdminCalculatorLeads() {
             <div>
               <p className="text-sm text-gray-600">Total Estimasi</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{leads.reduce((sum, l) => sum + (l.grandTotal || l.estimatedPrice || 0), 0).toLocaleString('id-ID')}
+                Rp{leads.reduce((sum, l) => sum + (Number(l.grandTotal) || Number(l.estimatedPrice) || Number(l.estimated_price) || 0), 0).toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -687,383 +770,217 @@ export default function AdminCalculatorLeads() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {leads.length > 0 && (
+          <div className="flex items-center justify-between p-4 border-t border-gray-200">
+            <div className="text-sm text-gray-500">
+              Menampilkan {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} - {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} dari {pagination.totalItems} leads
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage === 1}
+              >
+                Sebelumnya
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  let pageNum = i + 1;
+                  if (pagination.totalPages > 5) {
+                    if (pagination.currentPage > 3) {
+                      pageNum = pagination.currentPage - 2 + i;
+                    }
+                    if (pageNum > pagination.totalPages) {
+                      pageNum = pagination.totalPages - (4 - i);
+                    }
+                  }
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${pagination.currentPage === pageNum
+                        ? 'bg-[#EB216A] text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+              >
+                Selanjutnya
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Detail Modal */}
+      {/* Unified Clean Detail Modal */}
       {selectedLead && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-[#EB216A] to-pink-600">
-              <div>
-                <h2 className="text-xl text-white">Detail Kalkulasi Gorden</h2>
-                <p className="text-sm text-pink-100 mt-1">#{selectedLead.id} - {selectedLead.calculatorType}</p>
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-[#EB216A]/10 flex items-center justify-center">
+                  <Ruler className="w-6 h-6 text-[#EB216A]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Detail Kalkulasi</h2>
+                  <p className="text-sm text-gray-500">#{selectedLead.id} • {new Date(selectedLead.createdAt || selectedLead.submittedAt).toLocaleString('id-ID')}</p>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedLead(null)}
-                className="text-white hover:text-pink-100 transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6 text-gray-400" />
               </button>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Customer Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-base text-gray-900">Informasi Customer</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1">Nama Lengkap</p>
-                    <p className="text-sm text-gray-900">{selectedLead.customerName || selectedLead.name}</p>
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
+
+              {/* 1. Customer Info & Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-semibold text-gray-900">Data Customer</h3>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1">No. Telepon</p>
-                    <p className="text-sm text-gray-900">{selectedLead.customerPhone || selectedLead.phone}</p>
-                  </div>
-                  {(selectedLead.customerEmail || selectedLead.email) && (
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-gray-600 mb-1">Email</p>
-                      <p className="text-sm text-gray-900">{selectedLead.customerEmail || selectedLead.email || '-'}</p>
+                      <p className="text-xs text-gray-500">Nama</p>
+                      <p className="font-medium">{selectedLead.customerName || selectedLead.name}</p>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1">Tanggal Submit</p>
-                    <p className="text-sm text-gray-900">{selectedLead.createdAt ? new Date(selectedLead.createdAt).toLocaleString('id-ID') : selectedLead.submittedAt}</p>
+                    <div>
+                      <p className="text-xs text-gray-500">Telepon</p>
+                      <p className="font-medium">{selectedLead.customerPhone || selectedLead.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium">{selectedLead.customerEmail || selectedLead.email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="w-4 h-4 text-purple-600" />
+                    <h3 className="font-semibold text-gray-900">Ringkasan</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Tipe Kalkulator</p>
+                      <Badge className="bg-purple-100 text-purple-700 border-0 mt-1">
+                        {selectedLead.calculatorType || selectedLead.calculator_type || selectedLead.calculation_data?.calculatorType?.name || 'Unknown'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Estimasi Total</p>
+                      <p className="text-xl font-bold text-[#EB216A]">
+                        Rp {(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Status</p>
+                      <Badge className={`${(statusConfig as any)[selectedLead.status]?.color || 'bg-gray-500'} text-white border-0 mt-1`}>
+                        {(statusConfig as any)[selectedLead.status]?.label || selectedLead.status}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Product & Calculator Info */}
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Package className="w-5 h-5 text-purple-600" />
-                  <h3 className="text-base text-gray-900">Informasi Kalkulasi</h3>
+              {/* 2. Items Detail List */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <ShoppingCart className="w-4 h-4 text-gray-500" />
+                  <h3 className="font-semibold text-gray-900">Rincian Item</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1">Tipe Kalkulator</p>
-                    <Badge className="bg-purple-100 text-purple-700 border-0">
-                      {selectedLead.calculatorType || selectedLead.calculator_type || selectedLead.calculation_data?.calculatorType?.name || 'Unknown'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1">Kain</p>
-                    <p className="text-sm text-gray-900">
-                      {selectedLead.productName || selectedLead.calculation_data?.fabric?.name || '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1">Total Item</p>
-                    <p className="text-sm text-gray-900">
-                      {selectedLead.calculation_data?.items?.length || selectedLead.totalItems || 0} item
-                      ({selectedLead.calculation_data?.items?.reduce((s: number, i: any) => s + (i.quantity || 0), 0) || selectedLead.totalUnits || 0} unit)
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              {/* New Format - calculation_data.items */}
-              {selectedLead.calculation_data?.items && selectedLead.calculation_data.items.length > 0 && (
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gray-50 p-4 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-gray-600" />
-                      <h3 className="text-base text-gray-900">Detail Item Kalkulasi</h3>
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-4">
-                    {selectedLead.calculation_data.items.map((item: any, index: number) => (
-                      <div key={index} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 mb-1">
-                              Item #{index + 1} - {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} ({item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'})
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              Ukuran: {item.dimensions?.width || item.width}cm × {item.dimensions?.height || item.height}cm | Qty: {item.quantity}
-                            </p>
-                          </div>
-                          <p className="text-sm font-bold text-[#EB216A]">
-                            Rp{(item.subtotal || 0).toLocaleString('id-ID')}
-                          </p>
+                {(selectedLead.calculation_data?.items || []).map((item: any, idx: number) => (
+                  <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    {/* Item Header */}
+                    <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[#EB216A] text-white flex items-center justify-center font-bold text-sm">
+                          {idx + 1}
                         </div>
-
-                        {/* Fabric Info */}
-                        <div className="bg-white rounded p-3 border border-gray-100">
-                          <p className="text-xs text-gray-600 mb-1">Kain</p>
-                          <div className="flex justify-between items-center">
-                            <p className="text-sm text-gray-900">{selectedLead.calculation_data?.fabric?.name || 'N/A'}</p>
-                            <p className="text-sm text-gray-600">
-                              {item.fabricMeters?.toFixed(2) || 0}m × Rp{(selectedLead.calculation_data?.fabric?.price || 0).toLocaleString('id-ID')} = Rp{(item.fabricPrice || 0).toLocaleString('id-ID')}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Dynamic Components */}
-                        {item.components && item.components.length > 0 && (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {item.components.map((comp: any, compIdx: number) => (
-                              <div key={compIdx} className="bg-white rounded p-2 border border-gray-100">
-                                <p className="text-xs text-gray-600 mb-1">{comp.label}</p>
-                                <p className="text-sm text-gray-900">{comp.productName}</p>
-                                <p className="text-xs text-gray-500">×{comp.qty} - Rp{(comp.productPrice || 0).toLocaleString('id-ID')}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="bg-[#EB216A] text-white p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-base">Total Estimasi Harga</p>
-                      <p className="text-xl font-bold">
-                        Rp{(selectedLead.calculation_data?.grandTotal || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Old Format - Items List (legacy) */}
-              {selectedLead.items && selectedLead.items.length > 0 && (
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gray-50 p-4 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-gray-600" />
-                      <h3 className="text-base text-gray-900">Detail Pesanan (Legacy)</h3>
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-4">
-                    {selectedLead.items.map((item: any, index: number) => (
-                      <div key={index} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-sm text-gray-900 mb-1">
-                              Item #{index + 1}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              Ukuran: {item.width}m x {item.height}m | Quantity: {item.quantity}
-                            </p>
-                          </div>
-                          <p className="text-sm text-[#EB216A]">
-                            Rp{(item.totalPrice || 0).toLocaleString('id-ID')}
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                          {item.relGorden && (
-                            <div className="bg-white rounded p-2">
-                              <p className="text-gray-600 mb-1">Rel Gorden:</p>
-                              <p className="text-gray-900">{item.relGorden.name}</p>
-                            </div>
-                          )}
-                          {item.tassel && (
-                            <div className="bg-white rounded p-2">
-                              <p className="text-gray-600 mb-1">Tassel:</p>
-                              <p className="text-gray-900">{item.tassel.name}</p>
-                            </div>
-                          )}
-                          {item.hook && (
-                            <div className="bg-white rounded p-2">
-                              <p className="text-gray-600 mb-1">Hook:</p>
-                              <p className="text-gray-900">{item.hook.name}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="bg-[#EB216A] text-white p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-base">Total Estimasi Harga</p>
-                      <p className="text-xl">
-                        Rp{(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Show old format if exists */}
-              {selectedLead.calculation && selectedLead.calculation.product && selectedLead.calculation.components && (
-                <>
-                  {/* Product Info */}
-                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Package className="w-5 h-5 text-purple-600" />
-                      <h3 className="text-base text-gray-900">Produk yang Dipilih</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm text-gray-900">{selectedLead.calculation.product.name}</p>
-                          <p className="text-xs text-gray-600 mt-1">{selectedLead.calculation.product.category}</p>
+                          <h4 className="font-semibold text-gray-900">
+                            {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}
+                          </h4>
+                          <p className="text-xs text-gray-500">
+                            {item.dimensions?.width}cm × {item.dimensions?.height}cm • {item.panels} Panel • {item.quantity} Unit
+                          </p>
                         </div>
-                        <code className="text-xs bg-white px-2 py-1 rounded border border-purple-300 text-purple-700">
-                          {selectedLead.calculation.product.sku}
-                        </code>
                       </div>
+                      <p className="font-bold text-gray-900">
+                        Rp {(item.subtotal || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {/* Fabric */}
+                      <div className="flex justify-between items-start py-2 border-b border-gray-50">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {item.selectedVariant?.name || item.fabricName || selectedLead.calculation_data?.fabric?.name || 'Kain'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {item.fabricMeters?.toFixed(2)}m × Rp {Number(item.fabricPricePerMeter || selectedLead.calculation_data?.fabric?.price || 0).toLocaleString('id-ID')}
+                          </p>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">
+                          Rp {(item.fabricPrice || 0).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+
+                      {/* Components */}
+                      {(item.components || []).map((comp: any, cIdx: number) => (
+                        <div key={cIdx} className="flex justify-between items-start py-1 pl-4 border-l-2 border-gray-100">
+                          <div>
+                            <p className="text-sm text-gray-700">{comp.label}: {comp.productName}</p>
+                            <p className="text-xs text-gray-500">Qty: {comp.qty} {comp.unit}</p>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            Rp {(comp.productPrice * comp.qty).toLocaleString('id-ID')}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  {/* Dimensions */}
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Ruler className="w-5 h-5 text-green-600" />
-                      <h3 className="text-base text-gray-900">Ukuran & Dimensi</h3>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Lebar</p>
-                        <p className="text-sm text-gray-900">{selectedLead.calculation.dimensions.width} meter</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Tinggi</p>
-                        <p className="text-sm text-gray-900">{selectedLead.calculation.dimensions.height} meter</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Total Area</p>
-                        <p className="text-sm text-gray-900">{selectedLead.calculation.dimensions.area} m²</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Component Breakdown */}
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="bg-gray-50 p-4 border-b border-gray-200">
-                      <div className="flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5 text-gray-600" />
-                        <h3 className="text-base text-gray-900">Rincian Komponen & Harga</h3>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs text-gray-600">Komponen</th>
-                            <th className="px-4 py-3 text-left text-xs text-gray-600">Tipe/Jenis</th>
-                            <th className="px-4 py-3 text-center text-xs text-gray-600">Qty</th>
-                            <th className="px-4 py-3 text-right text-xs text-gray-600">Harga Satuan</th>
-                            <th className="px-4 py-3 text-right text-xs text-gray-600">Subtotal</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {selectedLead.calculation.components.map((component: any, index: number) => (
-                            <tr key={index} className={component.isOptional ? 'bg-blue-50/50' : ''}>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm text-gray-900">{component.name}</p>
-                                  {component.isOptional && (
-                                    <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">
-                                      Optional
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <p className="text-xs text-gray-600">{component.type}</p>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <p className="text-sm text-gray-900">{component.quantity} {component.unit}</p>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <p className="text-sm text-gray-900">
-                                  Rp{component.pricePerUnit.toLocaleString('id-ID')}
-                                </p>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <p className="text-sm text-gray-900">
-                                  Rp{component.subtotal.toLocaleString('id-ID')}
-                                </p>
-                              </td>
-                            </tr>
-                          ))}
-
-                          {/* Installation */}
-                          <tr className="bg-yellow-50/50">
-                            <td className="px-4 py-3">
-                              <p className="text-sm text-gray-900">Biaya Instalasi</p>
-                            </td>
-                            <td className="px-4 py-3">
-                              <p className="text-xs text-gray-600">{selectedLead.calculation.installation.type}</p>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <p className="text-sm text-gray-900">1 paket</p>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <p className="text-sm text-gray-900">
-                                Rp{selectedLead.calculation.installation.price.toLocaleString('id-ID')}
-                              </p>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <p className="text-sm text-gray-900">
-                                Rp{selectedLead.calculation.installation.price.toLocaleString('id-ID')}
-                              </p>
-                            </td>
-                          </tr>
-
-                          {/* Total */}
-                          <tr className="bg-[#EB216A] text-white">
-                            <td colSpan={4} className="px-4 py-4 text-right">
-                              <p className="text-base">Total Estimasi Harga</p>
-                            </td>
-                            <td className="px-4 py-4 text-right">
-                              <p className="text-lg">
-                                Rp{(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
-                              </p>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  {selectedLead.calculation.notes && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-                      <h3 className="text-sm text-gray-900 mb-2">Catatan Customer</h3>
-                      <p className="text-sm text-gray-700 italic">&quot;{selectedLead.calculation.notes}&quot;</p>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50">
-              <div className="flex flex-col sm:flex-row gap-3">
+            <div className="p-6 border-t border-gray-100 bg-white sticky bottom-0 z-10">
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setSelectedLead(null)}>
+                  Tutup
+                </Button>
                 <Button
-                  className="flex-1 bg-[#EB216A] hover:bg-[#d11d5e] text-white"
-                  onClick={() => {
-                    setShowQuotation(true);
-                  }}
+                  onClick={() => handleCreateDocument(selectedLead)}
+                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
                 >
                   <FileText className="w-4 h-4 mr-2" />
-                  Lihat Surat Penawaran
-                </Button>
-                <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => handleSendQuote(selectedLead)}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Kirim via Email
-                </Button>
-                <Button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => window.open(`https://wa.me/${selectedLead.phone.replace(/^0/, '62')}`)}
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  WhatsApp
+                  Buat Draft Penawaran
                 </Button>
               </div>
             </div>
+
           </div>
         </div>
       )}

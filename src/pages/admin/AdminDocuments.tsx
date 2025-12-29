@@ -2,6 +2,7 @@ import {
   CheckCircle,
   Clock,
   Download,
+  Edit3,
   Eye,
   FileText,
   Gift,
@@ -15,7 +16,6 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { DocumentDetailModal } from '../../components/DocumentDetailModal';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -39,6 +39,43 @@ const typeConfig = {
 };
 
 
+// Helper to get document total - calculates from data if total_amount is null
+const getDocumentTotal = (doc: any): number => {
+  // First try total_amount or total fields
+  if (doc.total_amount && parseFloat(doc.total_amount) > 0) {
+    return parseFloat(doc.total_amount);
+  }
+  if (doc.total && parseFloat(doc.total) > 0) {
+    return parseFloat(doc.total);
+  }
+
+  // Fallback: calculate from data.windows
+  try {
+    let data = doc.data;
+    if (!data) return 0;
+
+    // Parse if string (may be double-serialized)
+    while (typeof data === 'string') {
+      data = JSON.parse(data);
+    }
+
+    if (data.windows && Array.isArray(data.windows)) {
+      return data.windows.reduce((sum: number, win: any) => {
+        if (win.subtotal) return sum + win.subtotal;
+        if (win.items && Array.isArray(win.items)) {
+          return sum + win.items.reduce((itemSum: number, item: any) => {
+            return itemSum + (item.totalPrice || (item.price * item.quantity) || 0);
+          }, 0);
+        }
+        return sum;
+      }, 0);
+    }
+  } catch (e) {
+    console.error('Error calculating total from data:', e);
+  }
+
+  return 0;
+};
 
 export default function AdminDocuments() {
   const navigate = useNavigate();
@@ -48,43 +85,65 @@ export default function AdminDocuments() {
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10
+  });
 
   const { confirm } = useConfirm();
 
-  // Fetch documents from API
+  // Fetch documents from API when filters or page changes
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    // Debounce search
+    const timer = setTimeout(() => {
+      fetchDocuments(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, filterType, filterStatus]);
 
-
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (page = 1) => {
     try {
+      const response = await documentsApi.getAll({
+        page,
+        limit: pagination.itemsPerPage,
+        type: filterType !== 'all' ? filterType : undefined,
+        status: filterStatus !== 'all' ? filterStatus : undefined,
+        search: searchTerm
+      });
 
-      const response = await documentsApi.getAll();
+      console.log('Documents API response:', response);
       if (response.success) {
         setDocuments(response.data || []);
+
+        const paginationData = response.pagination || {
+          page: 1,
+          totalPages: 1,
+          total: (response.data || []).length,
+          limit: 10
+        };
+
+        setPagination({
+          currentPage: paginationData.page,
+          totalPages: paginationData.totalPages,
+          totalItems: paginationData.total,
+          itemsPerPage: paginationData.limit
+        });
       }
     } catch (error: any) {
       console.error('Error fetching documents:', error);
       toast.error('Gagal memuat dokumen');
     }
-
   };
 
-
-
-  const filteredDocs = documents.filter(doc => {
-    const customerName = doc.customer_name || '';
-    const docNumber = doc.document_number || '';
-    const matchSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      docNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchType = filterType === 'all' || doc.type?.toLowerCase() === filterType;
-    const matchStatus = filterStatus === 'all' || doc.status?.toLowerCase() === filterStatus;
-    return matchSearch && matchType && matchStatus;
-  });
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchDocuments(newPage);
+    }
+  };
 
   const handleDownloadPDF = async (doc: any) => {
     try {
@@ -185,7 +244,7 @@ export default function AdminDocuments() {
             <div>
               <p className="text-sm text-gray-600">Total Nilai</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{documents.reduce((sum, d) => sum + (parseFloat(d.total_amount) || 0), 0).toLocaleString('id-ID')}
+                Rp{documents.reduce((sum, d) => sum + getDocumentTotal(d), 0).toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
@@ -247,7 +306,7 @@ export default function AdminDocuments() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredDocs.map((doc) => {
+              {documents.map((doc) => {
                 const statusKey = (doc.status || 'draft').toLowerCase() as keyof typeof statusConfig;
                 const StatusIcon = statusConfig[statusKey]?.icon || Clock;
                 return (
@@ -275,7 +334,7 @@ export default function AdminDocuments() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-900">Rp{parseFloat(doc.total_amount || 0).toLocaleString('id-ID')}</p>
+                      <p className="text-sm text-gray-900">Rp{getDocumentTotal(doc).toLocaleString('id-ID')}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-600">
@@ -299,10 +358,19 @@ export default function AdminDocuments() {
                           size="sm"
                           variant="outline"
                           className="border-gray-300"
-                          onClick={() => setSelectedDoc(doc)}
+                          onClick={() => navigate(`/admin/documents/${doc.id}`)}
                           title="Preview"
                         >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-yellow-300 text-yellow-600 hover:bg-yellow-50"
+                          onClick={() => navigate(`/admin/documents/edit/${doc.id}`)}
+                          title="Edit"
+                        >
+                          <Edit3 className="w-4 h-4" />
                         </Button>
                         <Button
                           size="sm"
@@ -331,19 +399,61 @@ export default function AdminDocuments() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {documents.length > 0 && (
+          <div className="flex items-center justify-between p-4 border-t border-gray-200">
+            <div className="text-sm text-gray-500">
+              Menampilkan {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} - {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} dari {pagination.totalItems} dokumen
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage === 1}
+              >
+                Sebelumnya
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  let pageNum = i + 1;
+                  if (pagination.totalPages > 5) {
+                    if (pagination.currentPage > 3) {
+                      pageNum = pagination.currentPage - 2 + i;
+                    }
+                    if (pageNum > pagination.totalPages) {
+                      pageNum = pagination.totalPages - (4 - i);
+                    }
+                  }
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${pagination.currentPage === pageNum
+                        ? 'bg-[#EB216A] text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+              >
+                Selanjutnya
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Create Quotation Modal */}
 
-
-      {/* Document Detail Modal */}
-      {selectedDoc && (
-        <DocumentDetailModal
-          doc={selectedDoc}
-          onClose={() => setSelectedDoc(null)}
-          onRefresh={fetchDocuments}
-        />
-      )}
     </div>
   );
 }

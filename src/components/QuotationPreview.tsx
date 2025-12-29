@@ -215,45 +215,63 @@ export function QuotationPreview({ doc, onClose, onRefresh }: QuotationPreviewPr
             {/* Items per Window - only show if we have window data */}
             {quotationData?.windows && quotationData.windows.length > 0 ? (
               <div className="space-y-6 mb-6">
+                {/* Calculator Type Header */}
+                {quotationData.calculatorType && (
+                  <div className="bg-[#EB216A]/10 border border-[#EB216A]/30 rounded-lg px-4 py-3">
+                    <p className="text-sm font-medium text-[#EB216A]">
+                      Jenis Kalkulator: {quotationData.calculatorType}
+                    </p>
+                  </div>
+                )}
+
                 {quotationData.windows.map((window: any, windowIndex: number) => (
                   <div key={window.id || windowIndex} className="border border-gray-200 rounded-lg overflow-hidden">
                     {/* Window Header */}
                     <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-900">{window.title}</p>
-                          <p className="text-xs text-gray-600">{window.size} - {window.fabricType}</p>
+                          <p className="text-sm font-medium text-gray-900">{window.title}</p>
+                          <p className="text-xs text-gray-600">{window.size} — Qty: {window.quantity || 1}x</p>
+                          {window.fabricType && (
+                            <p className="text-xs text-[#EB216A] mt-1">Kain: {window.fabricType}</p>
+                          )}
                         </div>
-                        <p className="text-sm text-gray-900">
-                          Subtotal: Rp{calculateWindowTotal(window).toLocaleString('id-ID')}
+                        <p className="text-sm font-medium text-gray-900">
+                          Rp{(window.subtotal || calculateWindowTotal(window)).toLocaleString('id-ID')}
                         </p>
                       </div>
                     </div>
 
-                    {/* Items Table */}
+                    {/* Items Table - use window.items or quotationData.items filtered by window */}
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-4 py-2 text-left text-xs text-gray-600">No</th>
                           <th className="px-4 py-2 text-left text-xs text-gray-600">Nama Item</th>
                           <th className="px-4 py-2 text-right text-xs text-gray-600">Harga</th>
-                          <th className="px-4 py-2 text-center text-xs text-gray-600">Disc%</th>
                           <th className="px-4 py-2 text-center text-xs text-gray-600">Qty</th>
+                          <th className="px-4 py-2 text-center text-xs text-gray-600">Satuan</th>
                           <th className="px-4 py-2 text-right text-xs text-gray-600">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {window.items?.map((item: any, itemIndex: number) => (
+                        {/* Get items for this window from quotationData.items if available */}
+                        {(quotationData.items?.filter((item: any) => item.id?.startsWith(`${windowIndex + 1}-`)) || window.items || []).map((item: any, itemIndex: number) => (
                           <tr key={item.id || itemIndex}>
                             <td className="px-4 py-2 text-gray-600">{itemIndex + 1}</td>
-                            <td className="px-4 py-2 text-gray-900">{item.name}</td>
+                            <td className="px-4 py-2">
+                              <p className="text-gray-900">{item.name}</p>
+                              {item.description && (
+                                <p className="text-xs text-gray-500">{item.description}</p>
+                              )}
+                            </td>
                             <td className="px-4 py-2 text-right text-gray-900">
                               Rp{(item.price || 0).toLocaleString('id-ID')}
                             </td>
-                            <td className="px-4 py-2 text-center text-gray-900">{item.discount || 0}%</td>
                             <td className="px-4 py-2 text-center text-gray-900">{item.quantity || 1}</td>
+                            <td className="px-4 py-2 text-center text-gray-500">{item.unit || '-'}</td>
                             <td className="px-4 py-2 text-right text-gray-900">
-                              Rp{calculateItemTotal(item).toLocaleString('id-ID')}
+                              Rp{(item.subtotal || calculateItemTotal(item)).toLocaleString('id-ID')}
                             </td>
                           </tr>
                         ))}

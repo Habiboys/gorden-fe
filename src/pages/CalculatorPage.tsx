@@ -525,6 +525,17 @@ export default function CalculatorPageV2() {
                 panels: item.panels
               },
               quantity: item.quantity,
+              // Include variant info per item
+              selectedVariant: item.selectedVariant ? {
+                id: item.selectedVariant.id,
+                name: item.selectedVariant.name,
+                width: item.selectedVariant.width,
+                height: item.selectedVariant.height,
+                sibak: item.selectedVariant.sibak,
+                price: item.selectedVariant.price
+              } : null,
+              fabricName: (prices as any).fabricName || selectedFabric?.name,
+              fabricPricePerMeter: (prices as any).fabricPricePerMeter || selectedFabric?.price,
               fabricMeters: (prices as any).fabricMeters || 0,
               fabricPrice: prices.fabric,
               components: Object.entries(item.components).map(([compId, selection]) => {

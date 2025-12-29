@@ -215,10 +215,12 @@ export const articlesApi = {
 
 // Calculator Leads API
 export const calculatorLeadsApi = {
-    getAll: (params?: { status?: string; type?: string }) => {
+    getAll: (params?: { status?: string; type?: string; page?: number; limit?: number }) => {
         const queryParams = new URLSearchParams();
         if (params?.status) queryParams.append('status', params.status);
         if (params?.type) queryParams.append('type', params.type);
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const query = queryParams.toString();
         return apiCall(`/calculator-leads${query ? `?${query}` : ''}`);
@@ -232,7 +234,7 @@ export const calculatorLeadsApi = {
     }),
 
     updateStatus: (id: string, status: string) => apiCall(`/calculator-leads/${id}/status`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ status }),
     }),
 
@@ -243,11 +245,13 @@ export const calculatorLeadsApi = {
 
 // Documents API (Quotations & Invoices)
 export const documentsApi = {
-    getAll: (params?: { type?: string; status?: string; search?: string }) => {
+    getAll: (params?: { type?: string; status?: string; search?: string; page?: number; limit?: number }) => {
         const queryParams = new URLSearchParams();
         if (params?.type) queryParams.append('type', params.type);
         if (params?.status) queryParams.append('status', params.status);
         if (params?.search) queryParams.append('search', params.search);
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const query = queryParams.toString();
         return apiCall(`/documents${query ? `?${query}` : ''}`);

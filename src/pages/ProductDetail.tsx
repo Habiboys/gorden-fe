@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { productsApi } from '../utils/api';
+import { productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { chatAdminAboutProduct } from '../utils/whatsappHelper';
 
@@ -29,6 +29,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<any>(null);
+  const [variants, setVariants] = useState<any[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
@@ -125,6 +126,16 @@ export default function ProductDetail() {
       }
     };
 
+    const fetchVariants = async () => {
+      if (!id) return;
+      try {
+        const response = await productVariantsApi.getByProduct(id);
+        setVariants(response.data || []);
+      } catch (error) {
+        console.error('Error fetching variants:', error);
+      }
+    };
+
     const fetchRelatedProducts = async () => {
       if (!id) return;
 
@@ -141,6 +152,7 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
+    fetchVariants();
     fetchRelatedProducts();
   }, [id, navigate]);
 
@@ -359,6 +371,14 @@ export default function ProductDetail() {
               >
                 Informasi
               </TabsTrigger>
+              {variants.length > 0 && (
+                <TabsTrigger
+                  value="variants"
+                  className="flex-1 lg:flex-none data-[state=active]:bg-[#EB216A] data-[state=active]:text-white"
+                >
+                  Varian ({variants.length})
+                </TabsTrigger>
+              )}
               <TabsTrigger
                 value="order"
                 className="flex-1 lg:flex-none data-[state=active]:bg-[#EB216A] data-[state=active]:text-white"
@@ -438,6 +458,63 @@ export default function ProductDetail() {
                 </ol>
               </div>
             </TabsContent>
+
+            {/* Variants Tab Content */}
+            {variants.length > 0 && (
+              <TabsContent value="variants" className="mt-6">
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8">
+                  <h3 className="text-xl text-gray-900 mb-4">Pilihan Varian</h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Pilih varian yang sesuai dengan ukuran jendela atau pintu Anda.
+                  </p>
+
+                  {/* Responsive Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">Ukuran</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">Sibak</th>
+                          <th className="px-4 py-3 text-right font-medium text-gray-700">Harga/m</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">Cocok Untuk</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {variants.map((variant: any) => (
+                          <tr key={variant.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-4">
+                              <span className="font-medium text-gray-900">{variant.width} × {variant.height} cm</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#EB216A]/10 text-[#EB216A]">
+                                Sibak {variant.sibak}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <span className="font-semibold text-[#EB216A]">
+                                Rp {Number(variant.price).toLocaleString('id-ID')}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-gray-600 text-xs">
+                              {variant.recommended_min_width && variant.recommended_max_width
+                                ? `Lebar ${variant.recommended_min_width} - ${variant.recommended_max_width} cm`
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <p className="text-sm text-blue-800">
+                      <strong>Tips:</strong> Gunakan Kalkulator Gorden kami untuk menghitung kebutuhan dan harga yang lebih akurat berdasarkan ukuran jendela Anda.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
