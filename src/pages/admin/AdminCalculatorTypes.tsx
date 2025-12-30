@@ -33,7 +33,7 @@ import {
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
-import { calculatorTypesApi, subcategoriesApi } from '../../utils/api';
+import { calculatorTypesApi, categoriesApi, subcategoriesApi } from '../../utils/api';
 
 interface CalculatorType {
     id: number;
@@ -45,6 +45,12 @@ interface CalculatorType {
     fabric_multiplier: number;
     is_active: boolean;
     display_order: number;
+    category_id?: number | null;
+    category?: {
+        id: number;
+        name: string;
+        slug: string;
+    };
     components: CalculatorTypeComponent[];
 }
 
@@ -73,6 +79,7 @@ interface SubCategory {
 export default function AdminCalculatorTypes() {
     const [calculatorTypes, setCalculatorTypes] = useState<CalculatorType[]>([]);
     const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
+    const [categories, setCategories] = useState<any[]>([]); // For calculator type linkage
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const { confirm } = useConfirm();
@@ -97,6 +104,7 @@ export default function AdminCalculatorTypes() {
         fabric_multiplier: '2.5',
         is_active: true,
         display_order: '0',
+        category_id: '' as string,
     });
 
     // Component form
@@ -115,9 +123,10 @@ export default function AdminCalculatorTypes() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [typesResponse, subcatsResponse] = await Promise.all([
+            const [typesResponse, subcatsResponse, catsResponse] = await Promise.all([
                 calculatorTypesApi.getAllTypes(),
-                subcategoriesApi.getAll()
+                subcategoriesApi.getAll(),
+                categoriesApi.getAll()
             ]);
 
             if (typesResponse.success) {
@@ -125,6 +134,9 @@ export default function AdminCalculatorTypes() {
             }
             if (subcatsResponse.success) {
                 setSubcategories(subcatsResponse.data || []);
+            }
+            if (catsResponse.success) {
+                setCategories(catsResponse.data || []);
             }
         } catch (error: any) {
             console.error('Error loading data:', error);
@@ -161,6 +173,7 @@ export default function AdminCalculatorTypes() {
             fabric_multiplier: '2.5',
             is_active: true,
             display_order: '0',
+            category_id: '',
         });
         setIsTypeDialogOpen(true);
     };
@@ -176,6 +189,7 @@ export default function AdminCalculatorTypes() {
             fabric_multiplier: type.fabric_multiplier.toString(),
             is_active: type.is_active,
             display_order: type.display_order.toString(),
+            category_id: type.category_id?.toString() || '',
         });
         setIsTypeDialogOpen(true);
     };
@@ -197,6 +211,7 @@ export default function AdminCalculatorTypes() {
                 fabric_multiplier: parseFloat(typeForm.fabric_multiplier) || 2.5,
                 is_active: typeForm.is_active,
                 display_order: parseInt(typeForm.display_order) || 0,
+                category_id: typeForm.category_id ? parseInt(typeForm.category_id) : null,
             };
 
             if (editingType) {
@@ -406,6 +421,16 @@ export default function AdminCalculatorTypes() {
                                         <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
                                             <span>Multiplier: {type.fabric_multiplier}x</span>
                                             <span>•</span>
+                                            <span>Multiplier: {type.fabric_multiplier}x</span>
+                                            {type.category && (
+                                                <>
+                                                    <span>•</span>
+                                                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                                        Kategori: {type.category.name}
+                                                    </Badge>
+                                                </>
+                                            )}
+                                            <span>•</span>
                                             <span>{type.components?.length || 0} komponen</span>
                                         </div>
                                     </div>
@@ -584,6 +609,26 @@ export default function AdminCalculatorTypes() {
                                     onChange={(e) => setTypeForm({ ...typeForm, fabric_multiplier: e.target.value })}
                                 />
                                 <p className="text-xs text-gray-500">2.5 untuk smokering, 2 untuk kupu-kupu, 1 untuk blind</p>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Kategori Produk Utama</Label>
+                                <Select
+                                    value={typeForm.category_id || "no_category"}
+                                    onValueChange={(value: string) => setTypeForm({ ...typeForm, category_id: value === "no_category" ? "" : value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih kategori terkait" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="no_category">- Tidak ada filter kategori -</SelectItem>
+                                        {categories.map((cat) => (
+                                            <SelectItem key={cat.id} value={cat.id.toString()}>
+                                                {cat.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-gray-500">Hanya tampilkan produk dari kategori ini saat membuat dokumen</p>
                             </div>
                             <div className="grid gap-2">
                                 <Label>Urutan Tampil</Label>

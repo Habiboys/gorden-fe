@@ -124,6 +124,7 @@ export default function AdminDocumentDetail() {
     // Raw Items data (for full fidelity view)
     const [rawItems, setRawItems] = useState<any[]>([]);
     const [calculatorSchema, setCalculatorSchema] = useState<any>(null); // To store schema for labels
+    const [baseFabric, setBaseFabric] = useState<any>(null); // For price calc fallback
 
     // ================== LOAD DATA ==================
     useEffect(() => {
@@ -136,17 +137,12 @@ export default function AdminDocumentDetail() {
         setLoading(true);
         try {
             const response = await documentsApi.getOne(id!);
-            console.log('Document API response:', response);
             if (response.success && response.data) {
                 const docData = response.data;
-                console.log('Document data:', docData);
-                console.log('Document data.data:', docData.data);
                 setDoc(docData);
 
-                // Parse quotation data - may be double-serialized JSON (string of string)
+                // Parse quotation data
                 let quotationData: any = docData.data || docData.quotationData || {};
-
-                // Keep parsing until we get an actual object (handles double/triple serialization)
                 let parseAttempts = 0;
                 while (typeof quotationData === 'string' && parseAttempts < 5) {
                     try {
@@ -158,9 +154,6 @@ export default function AdminDocumentDetail() {
                         break;
                     }
                 }
-                console.log('Parsed quotationData:', quotationData, 'windows:', quotationData?.windows);
-                console.log('Address fields:', 'address=', docData.address, 'customer_address=', docData.customer_address);
-                console.log('Date fields:', 'created_at=', docData.created_at, 'createdAt=', docData.createdAt);
 
                 // Set form data
                 setFormData({
@@ -170,11 +163,8 @@ export default function AdminDocumentDetail() {
                     customerAddress: docData.address || docData.customer_address || '',
                     referralCode: docData.referral_code || '',
                     discount: (() => {
-                        // Priority 1: Saved in quotation data (New Docs)
                         if (quotationData.discount !== undefined) return quotationData.discount;
-                        // Priority 2: Saved in document column (Legacy 1)
                         if (docData.discount || docData.discount_percentage) return docData.discount || docData.discount_percentage;
-                        // Priority 3: Reverse calculate from values (Legacy 2)
                         if (docData.discount_amount && docData.total_amount) {
                             const net = Number(docData.total_amount);
                             const disc = Number(docData.discount_amount);
@@ -192,11 +182,10 @@ export default function AdminDocumentDetail() {
                 setWindows(quotationData.windows || []);
                 if (quotationData.raw_items) {
                     setRawItems(quotationData.raw_items);
-                    // Fetch schema if available to get labels
+
+                    // Fetch schema if available
                     if (quotationData.calculatorTypeSlug) {
                         try {
-                            // Find schema by slug (requires fetching all or specific endpoint if exists)
-                            // For now, let's fetch all and find matching slug, or use ID if available in future
                             const typesRes = await calculatorTypesApi.getAllTypes();
                             if (typesRes.success) {
                                 const matchedType = typesRes.data.find((t: any) => t.slug === quotationData.calculatorTypeSlug);
@@ -207,6 +196,11 @@ export default function AdminDocumentDetail() {
                         } catch (err) {
                             console.error('Error fetching schema for detail view:', err);
                         }
+                    }
+
+                    // Set Base Fabric
+                    if (quotationData.baseFabric) {
+                        setBaseFabric(quotationData.baseFabric);
                     }
                 }
             } else {
@@ -220,6 +214,62 @@ export default function AdminDocumentDetail() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // ================== CALCULATIONS ==================
+
+    const isBlindType = () => {
+        return calculatorSchema?.slug?.includes('blind') || calculatorSchema?.has_item_type === false;
+    };
+
+    const calculateComponentPrice = (item: any, comp: any, selection: any) => {
+        const widthM = item.width / 100;
+        const basePrice = (() => {
+            switch (comp.price_calculation) {
+                case 'per_meter':
+                    return Math.max(1, widthM) * selection.product.price * item.quantity;
+                case 'per_unit':
+                    return selection.product.price * item.quantity;
+                case 'per_10_per_meter':
+                    return Math.ceil(widthM * 10) * selection.product.price * item.quantity;
+                default:
+                    return 0;
+            }
+        })();
+        const priceBeforeDiscount = basePrice * selection.qty;
+        return priceBeforeDiscount * (1 - (selection.discount || 0) / 100);
+    };
+
+    const calculateItemPriceRich = (item: any) => {
+        const product = item.product || baseFabric;
+        if (!product || !calculatorSchema) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, fabricPricePerMeter: 0 };
+
+        const widthM = item.width / 100;
+        const heightM = item.height / 100;
+
+        const fabricPricePerMeter = item.selectedVariant?.price ?? product.price;
+        const fabricMeters = widthM * (calculatorSchema.fabric_multiplier || 2.4) * heightM;
+        const fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+        const fabricPrice = fabricPriceBeforeDiscount * (1 - (item.fabricDiscount || 0) / 100);
+
+        let componentsPrice = 0;
+        if (item.packageType === 'gorden-lengkap' && calculatorSchema.components) {
+            calculatorSchema.components.forEach((comp: any) => {
+                const selection = item.components ? item.components[comp.id] : null;
+                if (selection) {
+                    componentsPrice += calculateComponentPrice(item, comp, selection);
+                }
+            });
+        }
+
+        return {
+            fabric: fabricPrice,
+            fabricBeforeDiscount: fabricPriceBeforeDiscount,
+            fabricMeters,
+            fabricPricePerMeter,
+            components: componentsPrice,
+            total: fabricPrice + componentsPrice
+        };
     };
 
     // ================== CALCULATIONS ==================
@@ -444,114 +494,215 @@ export default function AdminDocumentDetail() {
 
                         {/* Items List Rendering - Support both Raw/Rich view and Legacy/Simple view */}
                         {(rawItems && rawItems.length > 0) ? (
-                            // Rich View (Calculator Style)
-                            <div className="space-y-4">
-                                {rawItems.map((item, idx) => {
-                                    const window = windows[idx];
-                                    if (!window) return null;
-
-                                    // Find fabric and component items in the flattened window items
-                                    const fabricItem = window.items.find(i => i.id.endsWith('-fabric'));
-                                    const componentItems = window.items.filter(i => i.id.includes('-comp-'));
-
-                                    // Calculate fabric prices for display
-                                    const fabricTotalPrice = fabricItem ? calculateItemTotal(fabricItem) : 0;
-                                    const fabricOriginalTotal = fabricItem ? (Number(fabricItem.price) * (fabricItem.quantity || 1)) : 0; // Note: fabric qty is meters? No, window items qty is usually item count? Wait, fabric item qty IS fabric meters in some logic, or item count? In Create: qty = item.quantity (window count). name has (Xm). price is unit price. So Original Total = Price * Qty? NO.
-                                    // In Create: totalPrice = prices.fabric (which is width * panels * 2.5 * fabricPrice).
-                                    // So fabricItem.price is Unit Price / m.
-                                    // But fabricItem.quantity is NUMBER OF WINDOWS (e.g. 1).
-                                    // So fabricItem.totalPrice is correct.
-                                    // But to reverse engineer "Original Price" we need: fabricTotalPrice / (1 - discount/100).
-                                    const fabricRealOriginal = fabricItem && fabricItem.discount > 0 ? (fabricTotalPrice / (1 - fabricItem.discount / 100)) : fabricTotalPrice;
+                            isBlindType() ? (
+                                // BLIND GROUPING VIEW
+                                (() => {
+                                    // Group Items Logic
+                                    const groupedItems = rawItems.reduce((groups, item) => {
+                                        const groupId = item.groupId || `ungrouped-${item.id}`;
+                                        if (!groups[groupId]) {
+                                            groups[groupId] = [];
+                                        }
+                                        groups[groupId].push(item);
+                                        return groups;
+                                    }, {} as Record<string, any[]>);
 
                                     return (
-                                        <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                                            {/* Header */}
-                                            <div className="bg-gray-50 p-3 border-b border-gray-200">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="w-8 h-8 rounded-lg bg-[#EB216A]/10 text-[#EB216A] text-sm font-bold flex items-center justify-center">{idx + 1}</span>
-                                                    <div>
-                                                        <h4 className="font-semibold">{item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}</h4>
-                                                        <p className="text-sm text-gray-500">Ukuran {item.width}cm × {item.height}cm • {item.panels} panel • {item.quantity} unit</p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div className="space-y-6">
+                                            {Object.entries(groupedItems).map(([groupId, groupItems]) => {
+                                                const items = groupItems as any[];
+                                                const firstItem = items[0];
+                                                const groupProduct = firstItem.product || baseFabric;
+                                                const groupTotal = items.reduce((sum, item) => sum + calculateItemPriceRich(item).total, 0);
 
-                                            <div className="p-4 space-y-3">
-                                                {/* Fabric Row */}
-                                                {fabricItem && (
-                                                    <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                                                        <div className="flex items-start gap-3">
-                                                            {item.selectedVariant?.image ? (
-                                                                <img src={getProductImageUrl(item.selectedVariant.image)} className="w-12 h-12 rounded object-cover bg-gray-100" alt="" />
-                                                            ) : (
-                                                                <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-xs">IMG</div>
-                                                            )}
-                                                            <div>
-                                                                <p className="font-medium">{fabricItem.name}</p>
-                                                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                                    <span>Rp {Number(fabricItem.price).toLocaleString('id-ID')}</span>
-                                                                    {fabricItem.discount > 0 && <span className="text-green-600 font-medium">Disc {fabricItem.discount}%</span>}
+                                                return (
+                                                    <div key={groupId} className="bg-white border rounded-xl shadow-sm overflow-hidden mb-6">
+                                                        {/* Product Header */}
+                                                        <div className="bg-gray-50 p-4 flex items-center justify-between border-b">
+                                                            <div className="flex items-center gap-4">
+                                                                <img
+                                                                    src={getProductImageUrl(groupProduct?.images || groupProduct?.image)}
+                                                                    className="w-16 h-16 rounded-lg object-cover bg-white border"
+                                                                />
+                                                                <div>
+                                                                    <h3 className="font-bold text-lg text-gray-900">{groupProduct?.name || 'Produk Custom'}</h3>
+                                                                    <p className="text-[#EB216A] font-medium">Rp {(groupProduct?.price ?? 0).toLocaleString('id-ID')}/m</p>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="text-right">
-                                                            {fabricItem.discount > 0 && (
-                                                                <span className="text-xs text-gray-400 line-through block">Rp {fabricRealOriginal.toLocaleString('id-ID')}</span>
-                                                            )}
-                                                            <span className="font-semibold text-lg">Rp {fabricTotalPrice.toLocaleString('id-ID')}</span>
+
+                                                        {/* Items Table */}
+                                                        <div className="p-4">
+                                                            <div className="overflow-x-auto">
+                                                                <table className="w-full text-sm">
+                                                                    <thead>
+                                                                        <tr className="bg-gray-50 text-gray-600 border-b">
+                                                                            <th className="py-2 px-3 text-left font-medium">Label</th>
+                                                                            <th className="py-2 px-3 text-center font-medium">L x T (cm)</th>
+                                                                            <th className="py-2 px-3 text-center font-medium">Vol (m²)</th>
+                                                                            <th className="py-2 px-3 text-right font-medium">Harga Satuan</th>
+                                                                            <th className="py-2 px-3 text-center font-medium">Disc (%)</th>
+                                                                            <th className="py-2 px-3 text-center font-medium">Qty</th>
+                                                                            <th className="py-2 px-3 text-right font-medium">Total</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-gray-100">
+                                                                        {items.map((item) => {
+                                                                            const prices = calculateItemPriceRich(item);
+                                                                            return (
+                                                                                <tr key={item.id} className="hover:bg-gray-50/50">
+                                                                                    <td className="py-3 px-3 relative">
+                                                                                        <p className="font-medium text-gray-900">{item.name || '-'}</p>
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-center">
+                                                                                        {item.width} x {item.height}
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-center text-gray-500">
+                                                                                        {prices.fabricMeters.toFixed(2)}
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-right text-gray-600">
+                                                                                        Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID')}
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-center text-gray-600">
+                                                                                        {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-center font-medium">
+                                                                                        {item.quantity}
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-right font-bold text-gray-900">
+                                                                                        Rp {prices.total.toLocaleString('id-ID')}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
+                                                                    </tbody>
+                                                                    <tfoot className="border-t border-gray-200">
+                                                                        <tr>
+                                                                            <td colSpan={6} className="py-3 px-3 text-right font-semibold text-gray-600">Subtotal Grup</td>
+                                                                            <td className="py-3 px-3 text-right font-bold text-[#EB216A] text-lg">
+                                                                                Rp {groupTotal.toLocaleString('id-ID')}
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                )}
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()
+                            ) : (
+                                // Rich View (Curtain / Legacy Style)
+                                <div className="space-y-4">
+                                    {rawItems.map((item, idx) => {
+                                        const window = windows[idx];
+                                        if (!window) return null;
 
-                                                {/* Components Rows */}
-                                                {Object.entries(item.components || {}).map(([compId, selection]: [string, any]) => {
-                                                    // Find matching window item to get final calculated price
-                                                    const winItem = componentItems.find(i => i.id === `${item.id}-comp-${compId}`);
-                                                    if (!winItem || !selection) return null;
+                                        // Find fabric and component items in the flattened window items
+                                        const fabricItem = window.items.find(i => i.id.endsWith('-fabric'));
+                                        const componentItems = window.items.filter(i => i.id.includes('-comp-'));
 
-                                                    const compTotal = calculateItemTotal(winItem);
-                                                    const compOriginal = winItem.discount > 0 ? (compTotal / (1 - winItem.discount / 100)) : compTotal;
+                                        // Calculate fabric prices for display
+                                        const fabricTotalPrice = fabricItem ? calculateItemTotal(fabricItem) : 0;
+                                        const fabricOriginalTotal = fabricItem ? (Number(fabricItem.price) * (fabricItem.quantity || 1)) : 0; // Note: fabric qty is meters? No, window items qty is usually item count? Wait, fabric item qty IS fabric meters in some logic, or item count? In Create: qty = item.quantity (window count). name has (Xm). price is unit price. So Original Total = Price * Qty? NO.
+                                        // In Create: totalPrice = prices.fabric (which is width * panels * 2.5 * fabricPrice).
+                                        // So fabricItem.price is Unit Price / m.
+                                        // But fabricItem.quantity is NUMBER OF WINDOWS (e.g. 1).
+                                        // So fabricItem.totalPrice is correct.
+                                        // But to reverse engineer "Original Price" we need: fabricTotalPrice / (1 - discount/100).
+                                        const fabricRealOriginal = fabricItem && fabricItem.discount > 0 ? (fabricTotalPrice / (1 - fabricItem.discount / 100)) : fabricTotalPrice;
 
-                                                    // Get label from schema if available, else use name parsing or default
-                                                    let label = 'Sub-Komponen';
-                                                    if (calculatorSchema && calculatorSchema.components) {
-                                                        const compDef = calculatorSchema.components.find((c: any) => c.id === parseInt(compId));
-                                                        if (compDef) label = compDef.label;
-                                                    } else {
-                                                        // Fallback: parse from name "Label: Product Name"
-                                                        if (winItem.name.includes(':')) label = winItem.name.split(':')[0];
-                                                    }
+                                        return (
+                                            <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                                                {/* Header */}
+                                                <div className="bg-gray-50 p-3 border-b border-gray-200">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="w-8 h-8 rounded-lg bg-[#EB216A]/10 text-[#EB216A] text-sm font-bold flex items-center justify-center">{idx + 1}</span>
+                                                        <div>
+                                                            <h4 className="font-semibold">{item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}</h4>
+                                                            <p className="text-sm text-gray-500">Ukuran {item.width}cm × {item.height}cm • {item.panels} panel • {item.quantity} unit</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                                                    return (
-                                                        <div key={compId} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0 pl-14"> {/* Indented to align with text */}
-                                                            <div>
-                                                                <p className="font-medium text-sm text-gray-600">{label}: <span className="text-gray-900">{selection.product.name}</span></p>
-                                                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                                    <span>Qty: {selection.qty}</span>
-                                                                    {selection.discount > 0 && <span className="text-green-600 font-medium">Disc {selection.discount}%</span>}
+                                                <div className="p-4 space-y-3">
+                                                    {/* Fabric Row */}
+                                                    {fabricItem && (
+                                                        <div className="flex justify-between items-start py-2 border-b border-gray-100">
+                                                            <div className="flex items-start gap-3">
+                                                                {item.selectedVariant?.image ? (
+                                                                    <img src={getProductImageUrl(item.selectedVariant.image)} className="w-12 h-12 rounded object-cover bg-gray-100" alt="" />
+                                                                ) : (
+                                                                    <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-xs">IMG</div>
+                                                                )}
+                                                                <div>
+                                                                    <p className="font-medium">{fabricItem.name}</p>
+                                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                                        <span>Rp {Number(fabricItem.price).toLocaleString('id-ID')}</span>
+                                                                        {fabricItem.discount > 0 && <span className="text-green-600 font-medium">Disc {fabricItem.discount}%</span>}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                             <div className="text-right">
-                                                                {selection.discount > 0 && (
-                                                                    <span className="text-xs text-gray-400 line-through block">Rp {compOriginal.toLocaleString('id-ID')}</span>
+                                                                {fabricItem.discount > 0 && (
+                                                                    <span className="text-xs text-gray-400 line-through block">Rp {fabricRealOriginal.toLocaleString('id-ID')}</span>
                                                                 )}
-                                                                <span className="font-semibold">Rp {compTotal.toLocaleString('id-ID')}</span>
+                                                                <span className="font-semibold text-lg">Rp {fabricTotalPrice.toLocaleString('id-ID')}</span>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })}
+                                                    )}
 
-                                                {/* Window Subtotal */}
-                                                <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
-                                                    <span className="font-medium text-sm">Subtotal</span>
-                                                    <span className="text-lg font-bold text-[#EB216A]">Rp {calculateWindowTotal(window).toLocaleString('id-ID')}</span>
+                                                    {/* Components Rows */}
+                                                    {Object.entries(item.components || {}).map(([compId, selection]: [string, any]) => {
+                                                        // Find matching window item to get final calculated price
+                                                        const winItem = componentItems.find(i => i.id === `${item.id}-comp-${compId}`);
+                                                        if (!winItem || !selection) return null;
+
+                                                        const compTotal = calculateItemTotal(winItem);
+                                                        const compOriginal = winItem.discount > 0 ? (compTotal / (1 - winItem.discount / 100)) : compTotal;
+
+                                                        // Get label from schema if available, else use name parsing or default
+                                                        let label = 'Sub-Komponen';
+                                                        if (calculatorSchema && calculatorSchema.components) {
+                                                            const compDef = calculatorSchema.components.find((c: any) => c.id === parseInt(compId));
+                                                            if (compDef) label = compDef.label;
+                                                        } else {
+                                                            // Fallback: parse from name "Label: Product Name"
+                                                            if (winItem.name.includes(':')) label = winItem.name.split(':')[0];
+                                                        }
+
+                                                        return (
+                                                            <div key={compId} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0 pl-14"> {/* Indented to align with text */}
+                                                                <div>
+                                                                    <p className="font-medium text-sm text-gray-600">{label}: <span className="text-gray-900">{selection.product.name}</span></p>
+                                                                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                                        <span>Qty: {selection.qty}</span>
+                                                                        {selection.discount > 0 && <span className="text-green-600 font-medium">Disc {selection.discount}%</span>}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    {selection.discount > 0 && (
+                                                                        <span className="text-xs text-gray-400 line-through block">Rp {compOriginal.toLocaleString('id-ID')}</span>
+                                                                    )}
+                                                                    <span className="font-semibold">Rp {compTotal.toLocaleString('id-ID')}</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {/* Window Subtotal */}
+                                                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                                                        <span className="font-medium text-sm">Subtotal</span>
+                                                        <span className="text-lg font-bold text-[#EB216A]">Rp {calculateWindowTotal(window).toLocaleString('id-ID')}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )
                         ) : (
                             // Legacy View (Simple Flat List)
                             <div className="space-y-4">

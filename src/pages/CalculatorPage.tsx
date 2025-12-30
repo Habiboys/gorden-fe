@@ -38,6 +38,7 @@ interface CalculatorTypeFromDB {
   is_active: boolean;
   display_order: number;
   components: ComponentFromDB[];
+  category?: { id: number; name: string; slug: string };
 }
 
 interface ComponentFromDB {
@@ -72,6 +73,8 @@ interface SelectedComponents {
 
 interface CalculatorItem {
   id: string;
+  groupId?: string; // Group items by product (Block logic)
+  name?: string; // Optional name for the item (e.g. "Jendela Depan")
   itemType: 'jendela' | 'pintu';
   packageType: 'gorden-saja' | 'gorden-lengkap';
   width: number;
@@ -79,6 +82,7 @@ interface CalculatorItem {
   panels: number;
   quantity: number;
   components: SelectedComponents;
+  product?: ProductOption; // Specific product for this item (Blind flow)
   selectedVariant?: {
     id: string;
     width: number;
@@ -110,12 +114,20 @@ export default function CalculatorPageV2() {
   const [items, setItems] = useState<CalculatorItem[]>([]);
 
   // Form state
+  const [itemName, setItemName] = useState('');
   const [itemType, setItemType] = useState<'jendela' | 'pintu'>('jendela');
   const [packageType, setPackageType] = useState<'gorden-saja' | 'gorden-lengkap'>('gorden-lengkap');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
-  const [panels, setPanels] = useState('2');
+  const [panels, setPanels] = useState('1'); // Default 1
   const [quantity, setQuantity] = useState('1');
+
+  // Flow Helper
+  const isBlindFlow = selectedTypeSlug.toLowerCase().includes('blind');
+
+  // Temporary state for Blind flow (product selected before dimensions)
+  const [tempSelectedProduct, setTempSelectedProduct] = useState<ProductOption | null>(null);
+  const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
 
   // Modals
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -160,7 +172,9 @@ export default function CalculatorPageV2() {
 
         if (productsRes.success && productsRes.data?.length > 0) {
           setFabricProducts(productsRes.data);
-          setSelectedFabric(productsRes.data[0]);
+
+          // Initial selection handling moved to the new useEffect
+          // setSelectedFabric(productsRes.data[0]); 
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -206,6 +220,32 @@ export default function CalculatorPageV2() {
     }
   }, [selectedTypeSlug, calculatorTypes]);
 
+  // Update selected fabric when type changes if current one is invalid
+  useEffect(() => {
+    if (!currentType) return;
+
+    // Check if current selected fabric matches the new type's category
+    const isCompatible = (() => {
+      if (!selectedFabric) return false;
+      if (!currentType.category?.slug) return true; // No category restriction
+      return (selectedFabric.category?.slug || selectedFabric.Category?.slug || '') === currentType.category.slug;
+    })();
+
+    if (!isCompatible) {
+      // Find first compatible product
+      const compatibleProduct = fabricProducts.find(p => {
+        if (!currentType.category?.slug) return true;
+        return (p.category?.slug || p.Category?.slug || '') === currentType.category.slug;
+      });
+
+      if (compatibleProduct) {
+        setSelectedFabric(compatibleProduct);
+      } else {
+        setSelectedFabric(null); // Clear if no compatible product found
+      }
+    }
+  }, [selectedTypeSlug, calculatorTypes, fabricProducts, selectedFabric]);
+
   // Get current calculator type
   const currentType = calculatorTypes.find(t => t.slug === selectedTypeSlug);
 
@@ -217,26 +257,42 @@ export default function CalculatorPageV2() {
     setIsCustomerDialogOpen(false);
   };
 
-  // Handle type change
+  // Confirmation Dialog State
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [pendingTypeSlug, setPendingTypeSlug] = useState<string | null>(null);
+
+  // Handle type change request
   const handleTypeChange = (slug: string) => {
     if (items.length > 0) {
-      if (window.confirm('Mengganti jenis kalkulator akan menghapus semua item. Lanjutkan?')) {
-        setItems([]);
-        setSelectedTypeSlug(slug);
-      }
+      // Show custom confirmation dialog
+      setPendingTypeSlug(slug);
+      setIsConfirmDialogOpen(true);
     } else {
       setSelectedTypeSlug(slug);
     }
   };
 
+  // Execute type change after confirmation
+  const confirmTypeChange = () => {
+    if (pendingTypeSlug) {
+      setItems([]);
+      setSelectedTypeSlug(pendingTypeSlug);
+      setPendingTypeSlug(null);
+      setIsConfirmDialogOpen(false);
+    }
+  };
+
   // Reset form
   const resetForm = () => {
+    setItemName('');
     setWidth('');
     setHeight('');
-    setPanels('2');
+    setPanels('1');
     setQuantity('1');
     setItemType('jendela');
     setPackageType('gorden-lengkap');
+    setTempSelectedProduct(null);
+    setTargetGroupId(null);
   };
 
   // Add item - then check for variants based on dimensions
@@ -249,15 +305,26 @@ export default function CalculatorPageV2() {
     const itemWidth = parseFloat(width);
     const itemHeight = parseFloat(height);
 
+    // Group ID Logic:
+    // If targetGroupId is set, use it.
+    // Else if Blind Flow, generate a new one.
+    // Else undefined (Curtain flow doesn't use grouping yet, or uses global group).
+    const groupId = targetGroupId
+      ? targetGroupId
+      : (isBlindFlow ? Date.now().toString() + '-group' : undefined);
+
     const newItem: CalculatorItem = {
       id: Date.now().toString(),
+      groupId,
+      name: itemName,
       itemType,
       packageType,
       width: itemWidth,
       height: itemHeight,
-      panels: parseInt(panels),
+      panels: parseInt(panels) || 1,
       quantity: parseInt(quantity),
-      components: {}
+      components: {},
+      product: isBlindFlow && tempSelectedProduct ? tempSelectedProduct : undefined
     };
 
     setItems([...items, newItem]);
@@ -308,10 +375,35 @@ export default function CalculatorPageV2() {
     setIsComponentModalOpen(true);
   };
 
+  // Add Item to existing Group (Blind Flow)
+  const handleAddSizeToGroup = (groupId: string, product: ProductOption) => {
+    setTargetGroupId(groupId);
+    setTempSelectedProduct(product);
+    setItemName(''); // Reset name for new size
+    setIsAddItemModalOpen(true);
+  };
+
+  // Remove entire group
+  const handleRemoveGroup = (groupId: string) => {
+    if (confirm('Hapus seluruh grup item ini?')) {
+      setItems(items.filter(i => i.groupId !== groupId));
+    }
+  };
+
   // Select fabric product - no variant check here, variants picked after adding item
   const handleSelectFabric = (product: any) => {
-    setSelectedFabric(product);
-    setIsProductModalOpen(false);
+    if (isBlindFlow) {
+      // Blind Flow: Select product then open Add Item Modal
+      setTempSelectedProduct(product);
+      setIsProductModalOpen(false);
+      setIsAddItemModalOpen(true);
+      // Pre-fill name if empty
+      if (!itemName) setItemName(product.name);
+    } else {
+      // Curtain Flow: Global selection
+      setSelectedFabric(product);
+      setIsProductModalOpen(false);
+    }
     setSearchQuery('');
   };
 
@@ -445,14 +537,17 @@ export default function CalculatorPageV2() {
 
   // Calculate item price
   const calculateItemPrice = (item: CalculatorItem) => {
-    if (!selectedFabric || !currentType) return { fabric: 0, fabricMeters: 0, components: 0, total: 0 };
+    // Determine the product to use (Item specific OR Global selected)
+    const productToUse = item.product || selectedFabric;
+
+    if (!productToUse || !currentType) return { fabric: 0, fabricMeters: 0, components: 0, total: 0 };
 
     const widthM = item.width / 100;
     const heightM = item.height / 100;
 
-    // Use item's variant price if available, otherwise use base fabric price
-    const fabricPricePerMeter = item.selectedVariant?.price ?? selectedFabric.price;
-    const fabricName = item.selectedVariant?.name ?? selectedFabric.name;
+    // Use item's variant price if available, otherwise use base product price
+    const fabricPricePerMeter = item.selectedVariant?.price ?? productToUse.price;
+    const fabricName = item.selectedVariant?.name ?? productToUse.name;
 
     // Fabric calculation with multiplier
     const fabricMeters = widthM * currentType.fabric_multiplier * heightM;
@@ -573,14 +668,22 @@ export default function CalculatorPageV2() {
         console.error('Error saving lead:', error);
       }
     }
-
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
 
   // Filtered fabric products
-  const filteredProducts = fabricProducts.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = fabricProducts.filter(p => {
+    // Search filter
+    if (!p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+    // Category filter based on calculator type
+    if (currentType?.category?.slug) {
+      // Handle potential case variance (category vs Category)
+      const productCategory = p.category?.slug || p.Category?.slug || '';
+      return productCategory === currentType.category.slug;
+    }
+
+    return true;
+  });
 
   // Loading state
   if (loading) {
@@ -704,72 +807,80 @@ export default function CalculatorPageV2() {
             </div>
           </div>
 
-          {/* Step 2: Fabric Selection */}
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#EB216A] rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-xl text-white font-bold">2</span>
+          {/* Step 2: Fabric Selection (Only for Curtain Types) */}
+          {!isBlindFlow && (
+            <div className="mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#EB216A] rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-xl text-white font-bold">2</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl text-gray-900 font-semibold">Pilih Produk Gorden</h2>
               </div>
-              <h2 className="text-xl sm:text-2xl text-gray-900 font-semibold">Pilih Produk Gorden</h2>
-            </div>
 
-            {selectedFabric ? (
-              <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-[#EB216A] shadow-lg">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img
-                        src={getProductImageUrl(selectedFabric.images || selectedFabric.image)}
-                        alt={selectedFabric.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <Badge className="bg-[#EB216A]/10 text-[#EB216A] border-0 mb-1">
-                        {selectedFabric.category || 'Kain Gorden'}
-                      </Badge>
-                      <h3 className="text-lg sm:text-xl text-gray-900 font-medium truncate">{selectedFabric.name}</h3>
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl sm:text-2xl text-[#EB216A] font-bold">
-                          Rp {selectedFabric.price?.toLocaleString('id-ID') || '0'}
-                        </span>
-                        <span className="text-sm text-gray-500">/meter</span>
+              {selectedFabric ? (
+                <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-[#EB216A] shadow-lg">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                        <img
+                          src={getProductImageUrl(selectedFabric.images || selectedFabric.image)}
+                          alt={selectedFabric.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Badge className="bg-[#EB216A]/10 text-[#EB216A] border-0 mb-1">
+                          {selectedFabric.category || 'Kain Gorden'}
+                        </Badge>
+                        <h3 className="text-lg sm:text-xl text-gray-900 font-medium truncate">{selectedFabric.name}</h3>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-xl sm:text-2xl text-[#EB216A] font-bold">
+                            Rp {selectedFabric.price?.toLocaleString('id-ID') || '0'}
+                          </span>
+                          <span className="text-sm text-gray-500">/meter</span>
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      onClick={() => setIsProductModalOpen(true)}
+                      variant="outline"
+                      className="border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white w-full sm:w-auto"
+                    >
+                      <Pencil className="w-4 h-4 mr-2" /> Ganti Produk
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => setIsProductModalOpen(true)}
-                    variant="outline"
-                    className="border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white w-full sm:w-auto"
-                  >
-                    <Pencil className="w-4 h-4 mr-2" /> Ganti Produk
-                  </Button>
                 </div>
-              </div>
-            ) : (
-              <Button
-                onClick={() => setIsProductModalOpen(true)}
-                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-8 py-6 rounded-xl text-lg"
-              >
-                <Package className="w-5 h-5 mr-2" /> Pilih Produk Gorden
-              </Button>
-            )}
-          </div>
+              ) : (
+                <Button
+                  onClick={() => setIsProductModalOpen(true)}
+                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-8 py-6 rounded-xl text-lg"
+                >
+                  <Package className="w-5 h-5 mr-2" /> Pilih Produk Gorden
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Step 3: Add Items */}
           <div className="mb-10">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#EB216A] rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-xl text-white font-bold">3</span>
+                  <span className="text-xl text-white font-bold">{isBlindFlow ? '2' : '3'}</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl text-gray-900 font-semibold">Daftar Item ({items.length})</h2>
               </div>
               <Button
-                onClick={() => setIsAddItemModalOpen(true)}
+                onClick={() => {
+                  if (isBlindFlow) {
+                    setIsProductModalOpen(true); // Open Product Picker for Blinds
+                  } else {
+                    setIsAddItemModalOpen(true); // Open Dimensions for Curtain
+                  }
+                }}
                 className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
               >
-                <Plus className="w-4 h-4 mr-2" /> Tambah Item
+                <Plus className="w-4 h-4 mr-2" /> {isBlindFlow ? 'Tambah Produk' : 'Tambah Item'}
               </Button>
             </div>
 
@@ -781,203 +892,335 @@ export default function CalculatorPageV2() {
                 <h3 className="text-xl text-gray-900 font-medium mb-2">Belum Ada Item</h3>
                 <p className="text-gray-500 mb-6">Tambahkan item untuk mulai menghitung estimasi biaya</p>
                 <Button
-                  onClick={() => setIsAddItemModalOpen(true)}
+                  onClick={() => {
+                    if (isBlindFlow) {
+                      setIsProductModalOpen(true);
+                    } else {
+                      setIsAddItemModalOpen(true);
+                    }
+                  }}
                   className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-8"
                 >
-                  <Plus className="w-4 h-4 mr-2" /> Tambah Item Pertama
+                  <Plus className="w-4 h-4 mr-2" /> {isBlindFlow ? 'Pilih Produk Pertama' : 'Tambah Item Pertama'}
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                {items.map((item, idx) => {
-                  const prices = calculateItemPrice(item);
+                {/* Group Logic Rendering */}
+                {(() => {
+                  // Group Items
+                  const groupedItems: { [key: string]: CalculatorItem[] } = {};
+                  const ungroupedItems: CalculatorItem[] = [];
 
+                  items.forEach(item => {
+                    if (item.groupId) {
+                      if (!groupedItems[item.groupId]) groupedItems[item.groupId] = [];
+                      groupedItems[item.groupId].push(item);
+                    } else {
+                      ungroupedItems.push(item);
+                    }
+                  });
+
+                  // Render Grouped Items (Blind Flow Style)
                   return (
-                    <div key={item.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                      {/* Item Header */}
-                      <div className="bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 border-b border-gray-100">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-[#EB216A]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                              <span className="text-lg font-bold text-[#EB216A]">{idx + 1}</span>
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}
-                              </h3>
-                              <p className="text-sm text-gray-500">
-                                {item.width} cm × {item.height} cm • Jumlah: {item.quantity}x
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-2"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
+                    <>
+                      {Object.entries(groupedItems).map(([groupId, groupItems]) => {
+                        const firstItem = groupItems[0];
+                        const product = firstItem.product;
+                        if (!product) return null; // Should not happen in Blind flow
 
-                      {/* Item Details */}
-                      <div className="p-4 sm:p-6 space-y-3">
-                        <h4 className="text-xs text-gray-500 uppercase tracking-wide font-medium">Rincian Komponen</h4>
+                        // Calculate Group Total
+                        const groupTotal = groupItems.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
 
-                        {/* Fabric */}
-                        <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-gray-900 font-medium">{(prices as any).fabricName || selectedFabric?.name}</p>
-                              {selectedFabric && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
-                                  onClick={async () => {
-                                    try {
-                                      const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
-                                      const variants = variantsRes.data || [];
-                                      if (variants.length > 0) {
-                                        setEditingVariantItemId(item.id);
-                                        setPendingProductForVariant(selectedFabric);
-                                        setAvailableVariants(variants);
-                                        setVariantSelectionMode('fabric');
-                                        setIsVariantModalOpen(true);
-                                      }
-                                    } catch (error) {
-                                      console.error('Error loading variants:', error);
-                                    }
-                                  }}
-                                >
-                                  {item.selectedVariant ? 'Ganti Varian' : 'Pilih Varian'}
-                                </Button>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {(prices as any).fabricMeters?.toFixed(2) || 0}m × Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')} × {item.quantity}
-                            </p>
-                          </div>
-                          <p className="text-lg font-semibold text-gray-900">
-                            Rp {prices.fabric.toLocaleString('id-ID')}
-                          </p>
-                        </div>
-
-                        {/* Dynamic Components */}
-                        {item.packageType === 'gorden-lengkap' && currentType?.components?.map(comp => {
-                          const selection = item.components[comp.id];
-                          const products = componentProducts[comp.subcategory_id] || [];
-                          const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
-
-                          return (
-                            <div key={comp.id} className={`flex justify-between items-center py-3 border-b border-gray-100 ${!selection ? 'opacity-60' : ''}`}>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="text-gray-900 font-medium">
-                                    {selection ? selection.product.name : comp.label}
-                                  </p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
-                                    onClick={() => openComponentModal(item.id, comp.id)}
-                                    disabled={products.length === 0}
-                                  >
-                                    {selection ? 'Ganti' : 'Pilih'}
-                                  </Button>
+                        return (
+                          <div key={groupId} className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden mb-6">
+                            {/* Group Header: Product Info */}
+                            <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-start">
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-white rounded-lg border border-gray-200 p-1">
+                                  <img src={getProductImageUrl(product.images || product.image)} className="w-full h-full object-cover rounded" />
                                 </div>
-                                {selection ? (
-                                  <div className="flex items-center gap-3">
-                                    <p className="text-sm text-gray-500">
-                                      {comp.price_calculation === 'per_meter' && `${(item.width / 100).toFixed(2)}m × Rp ${selection.product.price.toLocaleString('id-ID')}`}
-                                      {comp.price_calculation === 'per_unit' && `Rp ${selection.product.price.toLocaleString('id-ID')} × ${item.quantity}`}
-                                      {comp.price_calculation === 'per_10_per_meter' && `${Math.ceil((item.width / 100) * 10)} pcs × Rp ${selection.product.price.toLocaleString('id-ID')}`}
-                                    </p>
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-xs text-gray-500">×</span>
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        value={selection.qty}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => {
-                                          const newQty = Math.max(1, parseInt(e.target.value) || 1);
-                                          setItems(items.map(i => {
-                                            if (i.id === item.id) {
-                                              return {
-                                                ...i,
-                                                components: {
-                                                  ...i.components,
-                                                  [comp.id]: { ...selection, qty: newQty }
-                                                }
-                                              };
-                                            }
-                                            return i;
-                                          }));
-                                        }}
-                                        className="w-14 h-7 px-2 border border-gray-300 rounded text-center text-sm focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                      />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-400">
-                                    {products.length === 0 ? 'Tidak ada produk tersedia' : `Pilih ${comp.label.toLowerCase()}`}
-                                  </p>
-                                )}
+                                <div>
+                                  <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
+                                  <p className="text-[#EB216A] font-medium">Rp {product.price?.toLocaleString('id-ID')}/m</p>
+                                  <p className="text-xs text-gray-500 mt-1">{groupItems.length} Ukuran</p>
+                                </div>
                               </div>
-                              <p className="text-lg font-semibold text-gray-900">
-                                Rp {compPrice.toLocaleString('id-ID')}
-                              </p>
+                              <button
+                                onClick={() => handleRemoveGroup(groupId)}
+                                className="text-red-500 hover:text-red-700 p-2"
+                                title="Hapus seluruh grup"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
                             </div>
-                          );
-                        })}
 
-                        {/* Subtotal */}
-                        <div className="flex justify-between items-center pt-3">
-                          <p className="text-gray-600 font-medium">Subtotal</p>
-                          <p className="text-xl font-bold text-[#EB216A]">
-                            Rp {prices.total.toLocaleString('id-ID')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                            {/* Table of Items */}
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-100">
+                                  <tr>
+                                    <th className="py-3 px-4 text-left">Nama</th>
+                                    <th className="py-3 px-4 text-center">L (cm)</th>
+                                    <th className="py-3 px-4 text-center">T (cm)</th>
+                                    <th className="py-3 px-4 text-center">Vol (m²)</th>
+                                    <th className="py-3 px-4 text-right">Harga</th>
+                                    <th className="py-3 px-4 text-center">Qty</th>
+                                    <th className="py-3 px-4 text-right">Total</th>
+                                    <th className="py-3 px-4 text-center">Aksi</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {groupItems.map((item) => {
+                                    const prices = calculateItemPrice(item);
+                                    const vol = (item.width * item.height) / 10000;
+
+                                    return (
+                                      <tr key={item.id} className="hover:bg-gray-50/50">
+                                        <td className="py-3 px-4 font-medium text-gray-900">{item.name || '-'}</td>
+                                        <td className="py-3 px-4 text-center">{item.width}</td>
+                                        <td className="py-3 px-4 text-center">{item.height}</td>
+                                        <td className="py-3 px-4 text-center">{vol.toFixed(2)}</td>
+                                        <td className="py-3 px-4 text-right text-gray-500">
+                                          Rp {(prices.fabric / item.quantity).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="py-3 px-4 text-center">{item.quantity}</td>
+                                        <td className="py-3 px-4 text-right font-medium text-gray-900">
+                                          Rp {prices.total.toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="py-3 px-4 text-center">
+                                          <button
+                                            onClick={() => handleRemoveItem(item.id)}
+                                            className="text-gray-400 hover:text-red-500"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot className="bg-gray-50 font-semibold text-gray-900 border-t border-gray-100">
+                                  <tr>
+                                    <td colSpan={6} className="py-3 px-4 text-right">Subtotal Group</td>
+                                    <td className="py-3 px-4 text-right text-[#EB216A]">
+                                      Rp {groupTotal.toLocaleString('id-ID')}
+                                    </td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+
+                            {/* Group Footer Action */}
+                            <div className="p-3 border-t border-gray-100 bg-white">
+                              <Button
+                                variant="outline"
+                                onClick={() => handleAddSizeToGroup(groupId, product)}
+                                className="w-full border-dashed border-gray-300 hover:border-[#EB216A] hover:text-[#EB216A]"
+                              >
+                                <Plus className="w-4 h-4 mr-2" /> Tambah Ukuran (Produk Sama)
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Ungrouped Items (Curtain Flow / Internal Legacy) */}
+                      {ungroupedItems.map((item, idx) => {
+                        const prices = calculateItemPrice(item);
+                        return (
+                          <div key={item.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                            {/* Item Header */}
+                            <div className="bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 border-b border-gray-100">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-[#EB216A]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <span className="text-lg font-bold text-[#EB216A]">{idx + 1}</span>
+                                  </div>
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                      {isBlindFlow ? (item.name || `Jendela ${idx + 1}`) : (item.itemType === 'jendela' ? 'Jendela' : 'Pintu')}
+                                      {!isBlindFlow && (item.packageType === 'gorden-lengkap' ? ' - Paket Lengkap' : ' - Gorden Saja')}
+                                    </h3>
+                                    <p className="text-sm text-gray-500">
+                                      {item.width} cm × {item.height} cm • Jumlah: {item.quantity}x
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Item Details */}
+                            <div className="p-4 sm:p-6 space-y-3">
+                              <h4 className="text-xs text-gray-500 uppercase tracking-wide font-medium">Rincian Komponen</h4>
+
+                              {/* Fabric / Main Product */}
+                              <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {/* Product Image for Blind Flow */}
+                                    {isBlindFlow && item.product && (
+                                      <img src={getProductImageUrl(item.product.images || item.product.image)} className="w-8 h-8 rounded object-cover" />
+                                    )}
+                                    <p className="text-gray-900 font-medium">{(prices as any).fabricName || item.product?.name || selectedFabric?.name}</p>
+                                    {selectedFabric && !isBlindFlow && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
+                                        onClick={async () => {
+                                          try {
+                                            const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
+                                            const variants = variantsRes.data || [];
+                                            if (variants.length > 0) {
+                                              setEditingVariantItemId(item.id);
+                                              setPendingProductForVariant(selectedFabric);
+                                              setAvailableVariants(variants);
+                                              setVariantSelectionMode('fabric');
+                                              setIsVariantModalOpen(true);
+                                            }
+                                          } catch (error) {
+                                            console.error('Error loading variants:', error);
+                                          }
+                                        }}
+                                      >
+                                        {item.selectedVariant ? 'Ganti Varian' : 'Pilih Varian'}
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-500">
+                                    {(prices as any).fabricMeters?.toFixed(2) || 0}m × Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')} × {item.quantity}
+                                  </p>
+                                </div>
+                                <p className="text-lg font-semibold text-gray-900">
+                                  Rp {prices.fabric.toLocaleString('id-ID')}
+                                </p>
+                              </div>
+
+                              {/* Dynamic Components */}
+                              {item.packageType === 'gorden-lengkap' && currentType?.components?.map(comp => {
+                                const selection = item.components[comp.id];
+                                const products = componentProducts[comp.subcategory_id] || [];
+                                const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
+
+                                return (
+                                  <div key={comp.id} className={`flex justify-between items-center py-3 border-b border-gray-100 ${!selection ? 'opacity-60' : ''}`}>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <p className="text-gray-900 font-medium">
+                                          {selection ? selection.product.name : comp.label}
+                                        </p>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
+                                          onClick={() => openComponentModal(item.id, comp.id)}
+                                          disabled={products.length === 0}
+                                        >
+                                          {selection ? 'Ganti' : 'Pilih'}
+                                        </Button>
+                                      </div>
+                                      {selection ? (
+                                        <div className="flex items-center gap-3">
+                                          <p className="text-sm text-gray-500">
+                                            {comp.price_calculation === 'per_meter' && `${(item.width / 100).toFixed(2)}m × Rp ${selection.product.price.toLocaleString('id-ID')}`}
+                                            {comp.price_calculation === 'per_unit' && `Rp ${selection.product.price.toLocaleString('id-ID')} × ${item.quantity}`}
+                                            {comp.price_calculation === 'per_10_per_meter' && `${Math.ceil((item.width / 100) * 10)} pcs × Rp ${selection.product.price.toLocaleString('id-ID')}`}
+                                          </p>
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-gray-500">×</span>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={selection.qty}
+                                              onClick={(e) => e.stopPropagation()}
+                                              onChange={(e) => {
+                                                const newQty = Math.max(1, parseInt(e.target.value) || 1);
+                                                setItems(items.map(i => {
+                                                  if (i.id === item.id) {
+                                                    return {
+                                                      ...i,
+                                                      components: {
+                                                        ...i.components,
+                                                        [comp.id]: { ...selection, qty: newQty }
+                                                      }
+                                                    };
+                                                  }
+                                                  return i;
+                                                }));
+                                              }}
+                                              className="w-14 h-7 px-2 border border-gray-300 rounded text-center text-sm focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                            />
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-gray-400">
+                                          {products.length === 0 ? 'Tidak ada produk tersedia' : `Pilih ${comp.label.toLowerCase()}`}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <p className="text-lg font-semibold text-gray-900">
+                                      Rp {compPrice.toLocaleString('id-ID')}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Subtotal */}
+                              <div className="flex justify-between items-center pt-3">
+                                <p className="text-gray-600 font-medium">Subtotal</p>
+                                <p className="text-xl font-bold text-[#EB216A]">
+                                  Rp {prices.total.toLocaleString('id-ID')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
                   );
-                })}
+                })()}
+              </div>
+            )} {/* Grand Total & WhatsApp */}
+            {items.length > 0 && (
+              <div className="space-y-4">
+                {/* Grand Total - Transparent Background */}
+                <div className="bg-transparent p-6 sm:p-8 text-[#EB216A] border-2 border-[#EB216A] rounded-2xl shadow-sm">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <p className="text-gray-800 font-semibold">Total Keseluruhan</p>
+                      <p className="text-sm text-gray-500">Untuk {items.length} item ({items.reduce((s, i) => s + i.quantity, 0)} unit)</p>
+                    </div>
+                    <p className="text-3xl sm:text-4xl font-bold">
+                      Rp {grandTotal.toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info Note */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                  <p>Harga di atas adalah estimasi berdasarkan kalkulasi {currentType?.name}. Harga final dapat berbeda tergantung detail pemesanan dan instalasi.</p>
+                </div>
+
+                {/* WhatsApp Button */}
+                <Button
+                  onClick={handleSendWhatsApp}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-6 text-lg rounded-2xl shadow-lg group"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2 group-hover:animate-pulse" />
+                  Kirim ke WhatsApp Admin
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
               </div>
             )}
           </div>
-
-          {/* Grand Total & WhatsApp */}
-          {items.length > 0 && (
-            <div className="space-y-4">
-              {/* Grand Total */}
-              <div className="bg-gradient-to-r from-[#EB216A] to-[#d11d5e] rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <p className="text-white/80">Total Keseluruhan</p>
-                    <p className="text-sm text-white/60">Untuk {items.length} item ({items.reduce((s, i) => s + i.quantity, 0)} unit)</p>
-                  </div>
-                  <p className="text-3xl sm:text-4xl font-bold">
-                    Rp {grandTotal.toLocaleString('id-ID')}
-                  </p>
-                </div>
-              </div>
-
-              {/* Info Note */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-                <p>Harga di atas adalah estimasi berdasarkan kalkulasi {currentType?.name}. Harga final dapat berbeda tergantung detail pemesanan dan instalasi.</p>
-              </div>
-
-              {/* WhatsApp Button */}
-              <Button
-                onClick={handleSendWhatsApp}
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-6 text-lg rounded-2xl shadow-lg group"
-              >
-                <MessageCircle className="w-5 h-5 mr-2 group-hover:animate-pulse" />
-                Kirim ke WhatsApp Admin
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </Button>
-            </div>
-          )}
         </div>
       </section>
 
@@ -985,13 +1228,41 @@ export default function CalculatorPageV2() {
       <Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Tambah Item Baru</DialogTitle>
-            <DialogDescription>Masukkan detail ukuran dan jenis item</DialogDescription>
+            <DialogTitle>
+              {isBlindFlow ? `Tambah: ${tempSelectedProduct?.name || 'Blind'}` : 'Tambah Item Baru'}
+            </DialogTitle>
+            <DialogDescription>Masukkan detail ukuran dan kebutuhan</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Item Type */}
-            {currentType?.has_item_type && (
+
+            {/* Show Product Image for Blind Flow */}
+            {isBlindFlow && tempSelectedProduct && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <img src={getProductImageUrl(tempSelectedProduct.images || tempSelectedProduct.image)} className="w-16 h-16 rounded-lg object-cover" />
+                <div>
+                  <p className="font-medium text-gray-900">{tempSelectedProduct.name}</p>
+                  <p className="text-[#EB216A] font-bold">Rp {tempSelectedProduct.price?.toLocaleString('id-ID')}/m</p>
+                </div>
+              </div>
+            )}
+
+            {/* Item Name (Blind Flow) */}
+            {isBlindFlow && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nama Jendela / Identitas</label>
+                <input
+                  type="text"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                  placeholder="Contoh: Jendela Depan, Jendela Kamar"
+                />
+              </div>
+            )}
+
+            {/* Item Type (Curtain Only) */}
+            {!isBlindFlow && currentType?.has_item_type && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Item</label>
                 <div className="flex gap-3">
@@ -1017,8 +1288,8 @@ export default function CalculatorPageV2() {
               </div>
             )}
 
-            {/* Package Type */}
-            {currentType?.has_package_type && (
+            {/* Package Type (Curtain Only) */}
+            {!isBlindFlow && currentType?.has_package_type && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Paket</label>
                 <div className="flex gap-3">
@@ -1069,18 +1340,13 @@ export default function CalculatorPageV2() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Jumlah Panel</label>
-                <input
-                  type="number"
-                  value={panels}
-                  onChange={(e) => setPanels(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                  placeholder="2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Jumlah Unit</label>
+
+              {/* Panels (Blind Only - as requested) */}
+
+
+              {/* Quantity (Both) */}
+              <div className={isBlindFlow ? '' : 'col-span-2'}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Jumlah Unit (Set)</label>
                 <input
                   type="number"
                   value={quantity}
@@ -1297,6 +1563,29 @@ export default function CalculatorPageV2() {
                 </table>
               );
             })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Confirmation Modal */}
+      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ganti Jenis Kalkulator?</DialogTitle>
+            <DialogDescription>
+              Mengganti jenis kalkulator akan menghapus semua item yang sudah ditambahkan. Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setIsConfirmDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmTypeChange}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Ya, Ganti & Hapus Item
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
