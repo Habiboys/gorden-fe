@@ -649,12 +649,16 @@ export default function AdminDocumentDetail() {
                                                                 ITEM
                                                             </div>
                                                             <span className="font-semibold text-gray-700 min-w-[120px]">
-                                                                Gorden {item.productName || 'Custom'}
+                                                                Gorden {item.product?.name || item.productName || 'Custom'}
                                                             </span>
                                                             <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
                                                                 <div className="flex flex-col leading-tight">
-                                                                    <span className="font-medium text-gray-900 line-clamp-1">{item.productName}</span>
-                                                                    <span className="text-[10px] text-gray-500">Varian: {item.variant}</span>
+                                                                    <span className="font-medium text-gray-900 line-clamp-1">
+                                                                        {item.selectedVariant?.name || item.product?.name || item.productName || 'Produk'}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-500">
+                                                                        Varian: {item.selectedVariant?.name || item.variant || '-'}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -676,24 +680,25 @@ export default function AdminDocumentDetail() {
                                                     </div>
 
                                                     {/* 2. Components Rows */}
-                                                    {item.packageType === 'gorden-lengkap' && item.components && typeof item.components === 'object' && Object.values(item.components).map((comp: any, idx) => {
-                                                        const compTotal = comp.totalPrice || 0;
+                                                    {item.packageType === 'gorden-lengkap' && item.components && typeof item.components === 'object' && Object.entries(item.components).map(([compId, comp]: [string, any], idx) => {
+                                                        // comp has structure: { product: { id, name, price }, qty, discount }
+                                                        const compTotal = (comp.product?.price || 0) * (comp.qty || 1) * (1 - (comp.discount || 0) / 100);
                                                         const compDiscount = comp.discount || 0;
-                                                        const unitPriceGross = comp.price || 0;
+                                                        const unitPriceGross = comp.product?.price || 0;
 
                                                         return (
-                                                            <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
+                                                            <div key={compId} className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
                                                                 <div className="flex items-center gap-3 flex-1">
                                                                     <div className="w-12 h-8 flex items-center justify-center bg-gray-100 rounded text-xs font-bold text-gray-500">
                                                                         #{idx + 1}
                                                                     </div>
                                                                     <span className="font-semibold text-gray-700 min-w-[120px]">
-                                                                        {comp.name || 'Komponen'}
+                                                                        {comp.product?.name || comp.name || 'Komponen'}
                                                                     </span>
                                                                     <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
                                                                         <div className="flex flex-col leading-tight">
-                                                                            <span className="font-medium text-gray-900 line-clamp-1">{comp.name}</span>
-                                                                            <span className="text-[10px] text-gray-500">Qty: {comp.qty}</span>
+                                                                            <span className="font-medium text-gray-900 line-clamp-1">{comp.product?.name || comp.name || '-'}</span>
+                                                                            <span className="text-[10px] text-gray-500">Qty: {comp.qty || 1}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
