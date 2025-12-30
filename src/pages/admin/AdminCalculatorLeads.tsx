@@ -460,6 +460,10 @@ export default function AdminCalculatorLeads() {
     // Transform calcItems to the CalculatorItem format expected by AdminDocumentCreate
     // CalculatorPage saves: dimensions.width, dimensions.height, components[] array
     // AdminDocumentCreate expects: width, height, components{} object keyed by componentId
+    // For Blind, we want to group by Product ID
+    const isBlind = (calcData.calculatorType?.slug || '').toLowerCase().includes('blind') ||
+      (lead.calculator_type || '').toLowerCase().includes('blind');
+
     const transformedItems = calcItems.map((item: any, idx: number) => {
       // Transform components array to object
       const componentsObj: any = {};
@@ -475,18 +479,27 @@ export default function AdminCalculatorLeads() {
         };
       });
 
+      // Determine product first to use ID for grouping
+      const product = item.product || {
+        id: fabric.id,
+        name: item.fabricName || fabric.name,
+        price: item.fabricPricePerMeter || fabric.price
+      };
+
+      // Generate Group ID for Blind items based on Product ID if not already present
+      let groupId = item.groupId;
+      if (isBlind && !groupId && product.id) {
+        groupId = `blind-group-${product.id}`;
+      }
+
       return {
         id: item.id || String(Date.now() + idx),
-        groupId: item.groupId || undefined,
+        groupId: groupId || undefined,
         itemType: item.itemType || 'jendela',
         packageType: item.packageType || 'gorden-lengkap',
         name: item.name || undefined,
         // Transform: use product from lead OR reconstruct from fabric
-        product: item.product || {
-          id: fabric.id,
-          name: item.fabricName || fabric.name,
-          price: item.fabricPricePerMeter || fabric.price
-        },
+        product: product,
         // Transform: dimensions object to direct properties
         width: item.dimensions?.width || item.width || 0,
         height: item.dimensions?.height || item.height || 0,
@@ -553,6 +566,93 @@ export default function AdminCalculatorLeads() {
         notes: calcData.notes || 'Terima kasih atas kepercayaannya'
       }
     };
+  };
+
+  const handleWhatsAppClick = (lead: any) => {
+    const customerName = lead.customerName || lead.name;
+    let phone = lead.customerPhone || lead.phone;
+    if (phone.startsWith('0')) {
+      phone = '62' + phone.substring(1);
+    }
+
+    const calcData = lead.calculation_data || {};
+    const items = calcData.items || [];
+    const currentType = lead.calculatorType || calcData.calculatorType || { name: 'Gorden' };
+    const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    let message = `*ESTIMASI ORDER GORDEN*\n`;
+    message += `Tanggal: ${date}\n`;
+    message += `Jenis: ${currentType.name}\n\n`;
+
+    message += `*DATA PEMESAN*\n`;
+    message += `Nama: ${customerName}\n`;
+    message += `No. HP: ${phone}\n`;
+    message += `------------------------------\n\n`;
+
+    // Group Items (Universal Grouping)
+    const groups: { [key: string]: any[] } = {};
+    items.forEach((item: any) => {
+      const groupKey = item.groupId || item.product?.id || 'default';
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(item);
+    });
+
+    Object.values(groups).forEach((groupItems) => {
+      const firstItem = groupItems[0];
+      const productName = firstItem.product?.name || firstItem.fabricName || calcData.fabric?.name || 'Produk';
+      const productPrice = firstItem.product?.price || firstItem.fabricPricePerMeter || calcData.fabric?.price || 0;
+
+      const groupTotal = groupItems.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
+
+      message += `*PRODUK: ${productName}*\n`;
+      message += `Harga: Rp ${productPrice.toLocaleString('id-ID')}/m\n\n`;
+
+      message += `*DAFTAR ITEM & UKURAN:*\n`;
+      groupItems.forEach((item: any, idx: number) => {
+        const w = item.width || item.dimensions?.width || 0;
+        const h = item.height || item.dimensions?.height || 0;
+        const qty = item.quantity || 1;
+        const sub = item.subtotal || 0;
+        const type = item.itemType === 'pintu' ? 'Pintu' : 'Jendela';
+
+        message += `${idx + 1}. ${type} ${w}cm x ${h}cm\n`;
+        message += `   Jumlah: ${qty} unit\n`;
+
+        // Variant
+        if (item.selectedVariant) {
+          message += `   - Varian: ${item.selectedVariant.name}\n`;
+        }
+
+        // Components logic handles both Array (DB) and Object (Frontend) structures
+        if (item.components) {
+          const comps = Array.isArray(item.components) ? item.components : Object.values(item.components);
+
+          comps.forEach((comp: any) => {
+            // Admin/DB structure usually has 'productName' and 'label'
+            // Frontend structure has 'product.name' and 'label' derived from currentType
+            const label = comp.label || 'Komponen';
+            const name = comp.productName || comp.product?.name || comp.name;
+            const cQty = comp.qty || comp.quantity || 1;
+
+            if (name) {
+              message += `   - ${label}: ${name} (${cQty}x)\n`;
+            }
+          });
+        }
+
+        message += `   Total: Rp ${sub.toLocaleString('id-ID')}\n\n`;
+      });
+
+      message += `Subtotal Group: *Rp ${groupTotal.toLocaleString('id-ID')}*\n`;
+      message += `------------------------------\n\n`;
+    });
+
+    const total = lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0;
+    message += `*TOTAL ESTIMASI: Rp ${total.toLocaleString('id-ID')}*\n\n`;
+    message += `Apakah Anda ingin melanjutkan ke proses pemesanan?`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
   };
 
   if (loading) {
@@ -794,6 +894,14 @@ export default function AdminCalculatorLeads() {
                         </Button>
                         <Button
                           size="sm"
+                          className="bg-[#25D366] hover:bg-[#128C7E] text-white border-none"
+                          onClick={() => handleWhatsAppClick(lead)}
+                          title="Kirim ke WhatsApp"
+                        >
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="outline"
                           className="border-red-300 text-red-600 hover:bg-red-50"
                           onClick={() => handleDelete(lead.id)}
@@ -946,59 +1054,149 @@ export default function AdminCalculatorLeads() {
                   <h3 className="font-semibold text-gray-900">Rincian Item</h3>
                 </div>
 
-                {(selectedLead.calculation_data?.items || []).map((item: any, idx: number) => (
-                  <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                    {/* Item Header */}
-                    <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#EB216A] text-white flex items-center justify-center font-bold text-sm">
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}
-                          </h4>
-                          <p className="text-xs text-gray-500">
-                            {item.dimensions?.width}cm × {item.dimensions?.height}cm • {item.panels} Panel • {item.quantity} Unit
-                          </p>
-                        </div>
-                      </div>
-                      <p className="font-bold text-gray-900">
-                        Rp {(item.subtotal || 0).toLocaleString('id-ID')}
-                      </p>
-                    </div>
+                {(() => {
+                  const isBlind = (selectedLead.calculatorType || selectedLead.calculator_type || '').toLowerCase().includes('blind') ||
+                    (selectedLead.calculation_data?.calculatorType?.name || '').toLowerCase().includes('blind');
 
-                    <div className="p-4 space-y-3">
-                      {/* Fabric */}
-                      <div className="flex justify-between items-start py-2 border-b border-gray-50">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {item.selectedVariant?.name || item.fabricName || selectedLead.calculation_data?.fabric?.name || 'Kain'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {item.fabricMeters?.toFixed(2)}m × Rp {Number(item.fabricPricePerMeter || selectedLead.calculation_data?.fabric?.price || 0).toLocaleString('id-ID')}
-                          </p>
-                        </div>
-                        <p className="text-sm font-medium text-gray-900">
-                          Rp {(item.fabricPrice || 0).toLocaleString('id-ID')}
-                        </p>
-                      </div>
+                  let displayItems: any[] = [];
+                  const rawItems = selectedLead.calculation_data?.items || [];
 
-                      {/* Components */}
-                      {(item.components || []).map((comp: any, cIdx: number) => (
-                        <div key={cIdx} className="flex justify-between items-start py-1 pl-4 border-l-2 border-gray-100">
-                          <div>
-                            <p className="text-sm text-gray-700">{comp.label}: {comp.productName}</p>
-                            <p className="text-xs text-gray-500">Qty: {comp.qty} {comp.unit}</p>
+                  if (isBlind) {
+                    const groups: { [key: string]: any } = {};
+                    rawItems.forEach((item: any) => {
+                      // Group by product name as fallback invalid key
+                      const key = item.product?.name || item.fabricName || 'Unknown Product';
+
+                      if (!groups[key]) {
+                        const newGroup = {
+                          isGroup: true,
+                          name: key,
+                          product: item.product || { name: item.fabricName, price: item.fabricPricePerMeter },
+                          items: [],
+                          total: 0
+                        };
+                        groups[key] = newGroup;
+                        displayItems.push(newGroup);
+                      }
+                      groups[key].items.push(item);
+                      groups[key].total += (item.subtotal || 0);
+                    });
+                  } else {
+                    displayItems = rawItems;
+                  }
+
+                  return displayItems.map((item: any, idx: number) => {
+                    if (item.isGroup) {
+                      // RENDER GROUPED VIEW (Blind)
+                      return (
+                        <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                          {/* Group Header */}
+                          <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                                <Ruler className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{item.name}</h4>
+                                <p className="text-xs text-gray-500">{item.items.length} Ukuran</p>
+                              </div>
+                            </div>
+                            <p className="font-bold text-gray-900 text-lg">
+                              Rp {(item.total || 0).toLocaleString('id-ID')}
+                            </p>
                           </div>
-                          <p className="text-sm text-gray-700">
-                            Rp {(comp.productPrice * comp.qty).toLocaleString('id-ID')}
+
+                          {/* Group Items Table */}
+                          <div className="p-0">
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                                <tr>
+                                  <th className="px-4 py-2">Label</th>
+                                  <th className="px-4 py-2 text-center">Ukuran (LxT)</th>
+                                  <th className="px-4 py-2 text-center">Vol (m²)</th>
+                                  <th className="px-4 py-2 text-right">Harga</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50 text-gray-600">
+                                {item.items.map((subItem: any, sIdx: number) => (
+                                  <tr key={sIdx} className="hover:bg-gray-50/50">
+                                    <td className="px-4 py-3 font-medium text-gray-900">
+                                      {subItem.name || `Jendela ${sIdx + 1}`}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      {subItem.dimensions?.width}cm x {subItem.dimensions?.height}cm
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      {subItem.fabricMeters?.toFixed(2) || ((subItem.dimensions?.width * subItem.dimensions?.height) / 10000).toFixed(2)}
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-medium">
+                                      Rp {(subItem.subtotal || 0).toLocaleString('id-ID')}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // RENDER SINGLE ITEM (Existing Logic)
+                    return (
+                      <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                        {/* Item Header */}
+                        <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#EB216A] text-white flex items-center justify-center font-bold text-sm">
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900">
+                                {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}
+                              </h4>
+                              <p className="text-xs text-gray-500">
+                                {item.dimensions?.width}cm × {item.dimensions?.height}cm • {item.panels} Panel • {item.quantity} Unit
+                              </p>
+                            </div>
+                          </div>
+                          <p className="font-bold text-gray-900">
+                            Rp {(item.subtotal || 0).toLocaleString('id-ID')}
                           </p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+
+                        <div className="p-4 space-y-3">
+                          {/* Fabric */}
+                          <div className="flex justify-between items-start py-2 border-b border-gray-50">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {item.selectedVariant?.name || item.fabricName || selectedLead.calculation_data?.fabric?.name || 'Kain'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {item.fabricMeters?.toFixed(2)}m × Rp {Number(item.fabricPricePerMeter || selectedLead.calculation_data?.fabric?.price || 0).toLocaleString('id-ID')}
+                              </p>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900">
+                              Rp {(item.fabricPrice || 0).toLocaleString('id-ID')}
+                            </p>
+                          </div>
+
+                          {/* Components */}
+                          {(item.components || []).map((comp: any, cIdx: number) => (
+                            <div key={cIdx} className="flex justify-between items-start py-1 pl-4 border-l-2 border-gray-100">
+                              <div>
+                                <p className="text-sm text-gray-700">{comp.label}: {comp.productName}</p>
+                                <p className="text-xs text-gray-500">Qty: {comp.qty} {comp.unit}</p>
+                              </div>
+                              <p className="text-sm text-gray-700">
+                                Rp {(comp.productPrice * comp.qty).toLocaleString('id-ID')}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
 
             </div>
