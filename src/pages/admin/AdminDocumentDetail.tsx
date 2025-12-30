@@ -244,7 +244,7 @@ export default function AdminDocumentDetail() {
 
     const calculateItemPriceRich = (item: any) => {
         const product = item.product || baseFabric;
-        if (!product || !calculatorSchema) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, fabricPricePerMeter: 0 };
+        if (!product || !calculatorSchema) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0, fabricPricePerMeter: 0 };
 
         const widthM = item.width / 100;
         const heightM = item.height / 100;
@@ -264,13 +264,17 @@ export default function AdminDocumentDetail() {
             });
         }
 
+        const subtotal = fabricPrice + componentsPrice;
+        const totalAfterItemDiscount = subtotal * (1 - (item.itemDiscount || 0) / 100);
+
         return {
             fabric: fabricPrice,
             fabricBeforeDiscount: fabricPriceBeforeDiscount,
             fabricMeters,
             fabricPricePerMeter,
             components: componentsPrice,
-            total: fabricPrice + componentsPrice
+            total: subtotal,
+            totalAfterItemDiscount
         };
     };
 
@@ -725,10 +729,15 @@ export default function AdminDocumentDetail() {
                                                     })}
 
                                                     {/* FOOTER per Item */}
-                                                    <div className="flex justify-end pt-2 mt-2 border-t border-dashed">
+                                                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-dashed">
+                                                        {item.itemDiscount > 0 ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm text-gray-500">Diskon Item: {item.itemDiscount}%</span>
+                                                            </div>
+                                                        ) : <div />}
                                                         <div className="flex items-center gap-4">
                                                             <span className="text-gray-500 font-medium">Subtotal</span>
-                                                            <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(prices.total).toLocaleString('id-ID')}</span>
+                                                            <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(prices.totalAfterItemDiscount).toLocaleString('id-ID')}</span>
                                                         </div>
                                                     </div>
                                                 </div>

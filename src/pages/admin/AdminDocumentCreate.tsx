@@ -469,7 +469,7 @@ export default function AdminDocumentCreate() {
 
     const calculateItemPrice = (item: CalculatorItem) => {
         const product = item.product || selectedFabric; // PRIORITIZE ITEM PRODUCT
-        if (!product || !selectedCalcType) return { fabric: 0, fabricMeters: 0, components: 0, total: 0 };
+        if (!product || !selectedCalcType) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0 };
 
         const widthM = item.width / 100;
         const heightM = item.height / 100;
@@ -489,18 +489,22 @@ export default function AdminDocumentCreate() {
             });
         }
 
+        const subtotal = fabricPrice + componentsPrice;
+        const totalAfterItemDiscount = subtotal * (1 - (item.itemDiscount || 0) / 100);  // Apply item discount
+
         return {
             fabricPricePerMeter, // ADD THIS
             fabric: fabricPrice,
             fabricBeforeDiscount: fabricPriceBeforeDiscount,
             fabricMeters,
             components: componentsPrice,
-            total: fabricPrice + componentsPrice
+            total: subtotal,                      // Subtotal before item discount
+            totalAfterItemDiscount               // Total after item discount
         };
     };
 
     const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
+        return items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterItemDiscount, 0);
     };
 
     // ================== SUBMIT ==================
@@ -559,7 +563,8 @@ export default function AdminDocumentCreate() {
                     size: `Ukuran ${item.width}cm x ${item.height}cm`,
                     fabricType: item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja',
                     items: windowItems,
-                    subtotal: prices.total
+                    itemDiscount: item.itemDiscount || 0,
+                    subtotal: prices.totalAfterItemDiscount
                 };
             });
 
@@ -924,7 +929,7 @@ export default function AdminDocumentCreate() {
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <Button variant="ghost" size="sm" onClick={() => handleEditItem(item)} className="text-gray-500 hover:text-blue-600">
+                                                                    <Button variant="ghost" size="sm" onClick={() => setShowItemModal(true)} className="text-gray-500 hover:text-blue-600">
                                                                         Edit Ukuran
                                                                     </Button>
                                                                     <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(item.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
