@@ -27,27 +27,29 @@ import { getProductImageUrl } from '../../utils/imageHelper';
 
 // ================== TYPES ==================
 
-interface ComponentFromDB {
-    id: number;
-    calculator_type_id: number;
-    subcategory_id: number;
-    label: string;
-    is_required: boolean;
-    price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
-    display_order: number;
-}
+// Unused interface - kept for reference
+// interface ComponentFromDB {
+//     id: number;
+//     calculator_type_id: number;
+//     subcategory_id: number;
+//     label: string;
+//     is_required: boolean;
+//     price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
+//     display_order: number;
+// }
 
-interface CalculatorTypeFromDB {
-    id: number;
-    name: string;
-    slug: string;
-    description: string;
-    has_item_type: boolean;
-    has_package_type: boolean;
-    fabric_multiplier: number;
-    is_active: boolean;
-    components: ComponentFromDB[];
-}
+// Unused interface - kept for reference
+// interface CalculatorTypeFromDB {
+//     id: number;
+//     name: string;
+//     slug: string;
+//     description: string;
+//     has_item_type: boolean;
+//     has_package_type: boolean;
+//     fabric_multiplier: number;
+//     is_active: boolean;
+//     components: ComponentFromDB[];
+// }
 
 interface QuotationItem {
     id: string;
@@ -542,6 +544,7 @@ export default function AdminDocumentDetail() {
                                                                             <th className="py-2 px-3 text-center font-medium">Vol (m²)</th>
                                                                             <th className="py-2 px-3 text-right font-medium">Harga Satuan</th>
                                                                             <th className="py-2 px-3 text-center font-medium">Disc (%)</th>
+                                                                            <th className="py-2 px-3 text-right font-medium">Harga Net</th>
                                                                             <th className="py-2 px-3 text-center font-medium">Qty</th>
                                                                             <th className="py-2 px-3 text-right font-medium">Total</th>
                                                                         </tr>
@@ -566,6 +569,9 @@ export default function AdminDocumentDetail() {
                                                                                     <td className="py-3 px-3 text-center text-gray-600">
                                                                                         {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
                                                                                     </td>
+                                                                                    <td className="py-3 px-3 text-right text-gray-700 bg-gray-50/50">
+                                                                                        Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                    </td>
                                                                                     <td className="py-3 px-3 text-center font-medium">
                                                                                         {item.quantity}
                                                                                     </td>
@@ -578,7 +584,7 @@ export default function AdminDocumentDetail() {
                                                                     </tbody>
                                                                     <tfoot className="border-t border-gray-200">
                                                                         <tr>
-                                                                            <td colSpan={6} className="py-3 px-3 text-right font-semibold text-gray-600">Subtotal Grup</td>
+                                                                            <td colSpan={7} className="py-3 px-3 text-right font-semibold text-gray-600">Subtotal Grup</td>
                                                                             <td className="py-3 px-3 text-right font-bold text-[#EB216A] text-lg">
                                                                                 Rp {groupTotal.toLocaleString('id-ID')}
                                                                             </td>
@@ -594,116 +600,137 @@ export default function AdminDocumentDetail() {
                                     );
                                 })()
                             ) : (
-                                // Rich View (Curtain / Legacy Style)
-                                <div className="space-y-4">
-                                    {rawItems.map((item, idx) => {
-                                        const window = windows[idx];
-                                        if (!window) return null;
-
-                                        // Find fabric and component items in the flattened window items
-                                        const fabricItem = window.items.find(i => i.id.endsWith('-fabric'));
-                                        const componentItems = window.items.filter(i => i.id.includes('-comp-'));
-
-                                        // Calculate fabric prices for display
-                                        const fabricTotalPrice = fabricItem ? calculateItemTotal(fabricItem) : 0;
-                                        const fabricOriginalTotal = fabricItem ? (Number(fabricItem.price) * (fabricItem.quantity || 1)) : 0; // Note: fabric qty is meters? No, window items qty is usually item count? Wait, fabric item qty IS fabric meters in some logic, or item count? In Create: qty = item.quantity (window count). name has (Xm). price is unit price. So Original Total = Price * Qty? NO.
-                                        // In Create: totalPrice = prices.fabric (which is width * panels * 2.5 * fabricPrice).
-                                        // So fabricItem.price is Unit Price / m.
-                                        // But fabricItem.quantity is NUMBER OF WINDOWS (e.g. 1).
-                                        // So fabricItem.totalPrice is correct.
-                                        // But to reverse engineer "Original Price" we need: fabricTotalPrice / (1 - discount/100).
-                                        const fabricRealOriginal = fabricItem && fabricItem.discount > 0 ? (fabricTotalPrice / (1 - fabricItem.discount / 100)) : fabricTotalPrice;
+                                // Item Block View (Curtain / Legacy Style)
+                                <div className="space-y-6 mt-6">
+                                    {rawItems.map((item) => {
+                                        const prices = calculateItemPriceRich(item);
+                                        // Calculate Unit Prices for display
+                                        // Use logic from Create Page:
+                                        // Fabric
+                                        const fabricNet = prices.fabric;
+                                        const unitNet = fabricNet / item.quantity;
 
                                         return (
-                                            <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                                                {/* Header */}
-                                                <div className="bg-gray-50 p-3 border-b border-gray-200">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="w-8 h-8 rounded-lg bg-[#EB216A]/10 text-[#EB216A] text-sm font-bold flex items-center justify-center">{idx + 1}</span>
-                                                        <div>
-                                                            <h4 className="font-semibold">{item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}</h4>
-                                                            <p className="text-sm text-gray-500">Ukuran {item.width}cm × {item.height}cm • {item.panels} panel • {item.quantity} unit</p>
-                                                        </div>
+                                            <div key={item.id} className="border rounded-xl overflow-hidden shadow-sm bg-white">
+                                                {/* ITEM HEADER */}
+                                                <div className="bg-gray-50 border-b px-4 py-3 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-gray-800 text-lg">
+                                                            {item.quantity} {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}
+                                                        </span>
+                                                        <span className="text-gray-500 mx-2">|</span>
+                                                        <span className="font-medium text-gray-700">
+                                                            Ukuran {item.width}cm x {item.height}cm
+                                                        </span>
+                                                        <span className="text-gray-500 mx-2">|</span>
+                                                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                                                            {item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja'}
+                                                        </span>
                                                     </div>
                                                 </div>
 
+                                                {/* COMPONENT LIST (Card Style in Detail) */}
                                                 <div className="p-4 space-y-3">
-                                                    {/* Fabric Row */}
-                                                    {fabricItem && (
-                                                        <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                                                            <div className="flex items-start gap-3">
-                                                                {item.selectedVariant?.image ? (
-                                                                    <img src={getProductImageUrl(item.selectedVariant.image)} className="w-12 h-12 rounded object-cover bg-gray-100" alt="" />
-                                                                ) : (
-                                                                    <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-xs">IMG</div>
-                                                                )}
-                                                                <div>
-                                                                    <p className="font-medium">{fabricItem.name}</p>
-                                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                                        <span>Rp {Number(fabricItem.price).toLocaleString('id-ID')}</span>
-                                                                        {fabricItem.discount > 0 && <span className="text-green-600 font-medium">Disc {fabricItem.discount}%</span>}
-                                                                    </div>
-                                                                </div>
+                                                    {/* Column Headers */}
+                                                    <div className="flex items-center justify-between p-3 text-xs font-medium text-gray-500 border-b border-dashed mb-2">
+                                                        <div className="flex-1">Produk</div>
+                                                        <div className="flex items-center gap-6">
+                                                            <div className="w-24 text-right">Harga</div>
+                                                            <div className="w-16 text-center">Disc</div>
+                                                            <div className="w-16 text-center">Qty</div>
+                                                            <div className="w-28 text-right">Total</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 1. Main Fabric Row */}
+                                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
+                                                        <div className="flex items-center gap-3 flex-1">
+                                                            <div className="w-12 h-8 flex items-center justify-center bg-gray-100 rounded text-xs font-bold text-gray-500">
+                                                                ITEM
                                                             </div>
-                                                            <div className="text-right">
-                                                                {fabricItem.discount > 0 && (
-                                                                    <span className="text-xs text-gray-400 line-through block">Rp {fabricRealOriginal.toLocaleString('id-ID')}</span>
-                                                                )}
-                                                                <span className="font-semibold text-lg">Rp {fabricTotalPrice.toLocaleString('id-ID')}</span>
+                                                            <span className="font-semibold text-gray-700 min-w-[120px]">
+                                                                Gorden {item.productName || 'Custom'}
+                                                            </span>
+                                                            <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
+                                                                <div className="flex flex-col leading-tight">
+                                                                    <span className="font-medium text-gray-900 line-clamp-1">{item.productName}</span>
+                                                                    <span className="text-[10px] text-gray-500">Varian: {item.variant}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    )}
 
-                                                    {/* Components Rows */}
-                                                    {Object.entries(item.components || {}).map(([compId, selection]: [string, any]) => {
-                                                        // Find matching window item to get final calculated price
-                                                        const winItem = componentItems.find(i => i.id === `${item.id}-comp-${compId}`);
-                                                        if (!winItem || !selection) return null;
+                                                        <div className="flex items-center gap-6">
+                                                            <div className="w-24 text-right">
+                                                                <span className="text-sm font-medium text-gray-600">Rp {Math.round(unitNet).toLocaleString('id-ID')}</span>
+                                                            </div>
+                                                            <div className="w-16 flex justify-center text-sm text-gray-500">
+                                                                {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
+                                                            </div>
+                                                            <div className="w-16 text-center text-sm text-gray-700 font-medium">
+                                                                {item.quantity}
+                                                            </div>
+                                                            <div className="w-28 text-right font-bold text-gray-900">
+                                                                Rp {Math.round(fabricNet).toLocaleString('id-ID')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                                        const compTotal = calculateItemTotal(winItem);
-                                                        const compOriginal = winItem.discount > 0 ? (compTotal / (1 - winItem.discount / 100)) : compTotal;
-
-                                                        // Get label from schema if available, else use name parsing or default
-                                                        let label = 'Sub-Komponen';
-                                                        if (calculatorSchema && calculatorSchema.components) {
-                                                            const compDef = calculatorSchema.components.find((c: any) => c.id === parseInt(compId));
-                                                            if (compDef) label = compDef.label;
-                                                        } else {
-                                                            // Fallback: parse from name "Label: Product Name"
-                                                            if (winItem.name.includes(':')) label = winItem.name.split(':')[0];
-                                                        }
+                                                    {/* 2. Components Rows */}
+                                                    {item.packageType === 'gorden-lengkap' && item.components && typeof item.components === 'object' && Object.values(item.components).map((comp: any, idx) => {
+                                                        const compTotal = comp.totalPrice || 0;
+                                                        const compDiscount = comp.discount || 0;
+                                                        const unitPriceGross = comp.price || 0;
 
                                                         return (
-                                                            <div key={compId} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0 pl-14"> {/* Indented to align with text */}
-                                                                <div>
-                                                                    <p className="font-medium text-sm text-gray-600">{label}: <span className="text-gray-900">{selection.product.name}</span></p>
-                                                                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                                        <span>Qty: {selection.qty}</span>
-                                                                        {selection.discount > 0 && <span className="text-green-600 font-medium">Disc {selection.discount}%</span>}
+                                                            <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
+                                                                <div className="flex items-center gap-3 flex-1">
+                                                                    <div className="w-12 h-8 flex items-center justify-center bg-gray-100 rounded text-xs font-bold text-gray-500">
+                                                                        #{idx + 1}
+                                                                    </div>
+                                                                    <span className="font-semibold text-gray-700 min-w-[120px]">
+                                                                        {comp.name || 'Komponen'}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
+                                                                        <div className="flex flex-col leading-tight">
+                                                                            <span className="font-medium text-gray-900 line-clamp-1">{comp.name}</span>
+                                                                            <span className="text-[10px] text-gray-500">Qty: {comp.qty}</span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                                <div className="text-right">
-                                                                    {selection.discount > 0 && (
-                                                                        <span className="text-xs text-gray-400 line-through block">Rp {compOriginal.toLocaleString('id-ID')}</span>
-                                                                    )}
-                                                                    <span className="font-semibold">Rp {compTotal.toLocaleString('id-ID')}</span>
+
+                                                                <div className="flex items-center gap-6">
+                                                                    <div className="w-24 text-right">
+                                                                        <span className="text-sm font-medium text-gray-600">Rp {Math.round(unitPriceGross).toLocaleString('id-ID')}</span>
+                                                                    </div>
+
+                                                                    <div className="w-16 flex justify-center text-sm text-gray-500">
+                                                                        {compDiscount ? `${compDiscount}%` : '-'}
+                                                                    </div>
+
+                                                                    <div className="w-16 text-center text-sm text-gray-700 font-medium">
+                                                                        {comp.qty || '-'}
+                                                                    </div>
+
+                                                                    <div className="w-28 text-right font-bold text-gray-900">
+                                                                        Rp {Math.round(compTotal).toLocaleString('id-ID')}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         );
                                                     })}
 
-                                                    {/* Window Subtotal */}
-                                                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
-                                                        <span className="font-medium text-sm">Subtotal</span>
-                                                        <span className="text-lg font-bold text-[#EB216A]">Rp {calculateWindowTotal(window).toLocaleString('id-ID')}</span>
+                                                    {/* FOOTER per Item */}
+                                                    <div className="flex justify-end pt-2 mt-2 border-t border-dashed">
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="text-gray-500 font-medium">Subtotal</span>
+                                                            <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(prices.total).toLocaleString('id-ID')}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         );
                                     })}
-                                </div>
-                            )
-                        ) : (
+                                </div>)) : (
                             // Legacy View (Simple Flat List)
                             <div className="space-y-4">
                                 {windows.length === 0 ? (
@@ -758,7 +785,8 @@ export default function AdminDocumentDetail() {
                                             </div>
                                         </div>
                                     ))
-                                )}
+                                )
+                                }
                             </div>
                         )}
 
@@ -811,6 +839,6 @@ export default function AdminDocumentDetail() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

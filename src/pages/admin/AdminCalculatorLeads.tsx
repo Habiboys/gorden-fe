@@ -456,30 +456,75 @@ export default function AdminCalculatorLeads() {
     const calcData = lead.calculation_data || lead.calculation || {};
     const calcItems = calcData.items || [];
     const fabric = calcData.fabric || {};
-    // Ensure raw_items for editor reconstruction
-    // We map calcItems back to a structure resembling original calculator items if possible, 
-    // or just pass them as raw_items if they are detailed enough.
-    // The calcItems from CalculatorPage ARE detailed (components, dimensions, etc).
+
+    // Transform calcItems to the CalculatorItem format expected by AdminDocumentCreate
+    // CalculatorPage saves: dimensions.width, dimensions.height, components[] array
+    // AdminDocumentCreate expects: width, height, components{} object keyed by componentId
+    const transformedItems = calcItems.map((item: any, idx: number) => {
+      // Transform components array to object
+      const componentsObj: any = {};
+      (item.components || []).forEach((comp: any) => {
+        componentsObj[comp.componentId] = {
+          product: {
+            id: comp.productId,
+            name: comp.productName,
+            price: comp.productPrice
+          },
+          qty: comp.qty || 1,
+          discount: comp.discount || 0
+        };
+      });
+
+      return {
+        id: item.id || String(Date.now() + idx),
+        groupId: item.groupId || undefined,
+        itemType: item.itemType || 'jendela',
+        packageType: item.packageType || 'gorden-lengkap',
+        name: item.name || undefined,
+        // Transform: use product from lead OR reconstruct from fabric
+        product: item.product || {
+          id: fabric.id,
+          name: item.fabricName || fabric.name,
+          price: item.fabricPricePerMeter || fabric.price
+        },
+        // Transform: dimensions object to direct properties
+        width: item.dimensions?.width || item.width || 0,
+        height: item.dimensions?.height || item.height || 0,
+        panels: item.dimensions?.panels || item.panels || 2,
+        quantity: item.quantity || 1,
+        fabricDiscount: item.fabricDiscount || 0,
+        itemDiscount: item.itemDiscount || 0,
+        // Transform: array to object
+        components: componentsObj,
+        // Preserve selectedVariant if exists
+        selectedVariant: item.selectedVariant || undefined
+      };
+    });
 
     return {
       amount: calcData.grandTotal || lead.estimated_price || 0,
       quotationData: {
-        raw_items: calcItems, // Vital for "Rich Edit" mode
+        raw_items: transformedItems, // Now in correct format for AdminDocumentCreate
         calculatorType: calcData.calculatorType?.name || lead.calculator_type || 'Smokering',
         calculatorTypeSlug: calcData.calculatorType?.slug,
-        baseFabric: fabric,
+        baseFabric: {
+          id: fabric.id,
+          name: fabric.name,
+          price: fabric.price,
+          image: fabric.image
+        },
         windows: calcItems.map((item: any, idx: number) => {
           // Reconstruct window items for legacy view / PDF generation
           const winItems = [];
 
           // Fabric Item
-          const fabricPrice = item.fabricPrice || 0;
+          const fabricPrice = item.fabricPrice || item.subtotal || 0;
           winItems.push({
             id: `${item.id}-fabric`,
-            name: `${item.selectedVariant?.name || item.fabricName || fabric.name || 'Kain'} (${item.fabricMeters?.toFixed(2)}m)`,
+            name: `${item.selectedVariant?.name || item.fabricName || fabric.name || 'Kain'} (${(item.fabricMeters || 0).toFixed(2)}m)`,
             price: item.fabricPricePerMeter || fabric.price || 0,
-            discount: 0,
-            quantity: item.quantity,
+            discount: item.fabricDiscount || 0,
+            quantity: item.quantity || 1,
             totalPrice: fabricPrice
           });
 
@@ -489,15 +534,8 @@ export default function AdminCalculatorLeads() {
               id: `${item.id}-comp-${comp.componentId}`,
               name: `${comp.label}: ${comp.productName}`,
               price: comp.productPrice || 0,
-              discount: 0,
-              quantity: comp.qty * item.quantity, // Total items = qty per window * quantity windows? Wait.
-              // In CalculatorPage: components are per ITEM.
-              // In AdminDocumentCreate: windowItems include components.
-              // The qty in component list is PER WINDOW.
-              // So we typically show Qty per window * Windows count? 
-              // Or Qty per window.
-              // AdminDocumentCreate payload stores "quantity: selection.qty" (per window).
-              qty: comp.qty,
+              discount: comp.discount || 0,
+              quantity: comp.qty || 1,
               totalPrice: (comp.productPrice || 0) * (comp.qty || 1)
             });
           });
@@ -505,7 +543,7 @@ export default function AdminCalculatorLeads() {
           return {
             id: item.id || String(idx + 1),
             title: `${idx + 1} ${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}`,
-            size: `Ukuran ${item.dimensions?.width}cm x ${item.dimensions?.height}cm`,
+            size: `Ukuran ${item.dimensions?.width || item.width || 0}cm x ${item.dimensions?.height || item.height || 0}cm`,
             fabricType: item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja',
             items: winItems,
             subtotal: item.subtotal || 0
