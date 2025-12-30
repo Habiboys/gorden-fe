@@ -612,8 +612,17 @@ export default function CalculatorPageV2() {
             const prices = calculateItemPrice(item);
             return {
               id: item.id,
+              groupId: item.groupId,           // Preserve group for blind multi-product flow
+              name: item.name,                 // Preserve custom item name
               itemType: item.itemType,
               packageType: item.packageType,
+              // Include product info for blind flow (per-item products)
+              product: item.product ? {
+                id: item.product.id,
+                name: item.product.name,
+                price: item.product.price,
+                image: item.product.image
+              } : null,
               dimensions: {
                 width: item.width,
                 height: item.height,

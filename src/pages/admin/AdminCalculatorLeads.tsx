@@ -220,6 +220,13 @@ const statusConfig = {
   rejected: { label: 'Reject', color: 'bg-red-500' }
 };
 
+// Helper function to format currency - handles string values from database DECIMAL type
+const formatRupiah = (value: any): string => {
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+  if (isNaN(num)) return '0';
+  return Math.round(num).toLocaleString('id-ID');
+};
+
 export default function AdminCalculatorLeads() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -486,11 +493,10 @@ export default function AdminCalculatorLeads() {
         price: item.fabricPricePerMeter || fabric.price
       };
 
-      // Generate Group ID for Blind items based on Product ID if not already present
-      let groupId = item.groupId;
-      if (isBlind && !groupId && product.id) {
-        groupId = `blind-group-${product.id}`;
-      }
+      // Preserve original groupId from lead data
+      // Only generate fallback if truly missing (for legacy data without groupId)
+      // Use unique fallback per item to avoid unintended merging
+      const groupId = item.groupId || (isBlind ? `blind-fallback-${Date.now()}-${idx}` : undefined);
 
       return {
         id: item.id || String(Date.now() + idx),
@@ -605,7 +611,7 @@ export default function AdminCalculatorLeads() {
       const groupTotal = groupItems.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
 
       message += `*PRODUK: ${productName}*\n`;
-      message += `Harga: Rp ${productPrice.toLocaleString('id-ID')}/m\n\n`;
+      message += `Harga: Rp ${formatRupiah(productPrice)}/m\n\n`;
 
       message += `*DAFTAR ITEM & UKURAN:*\n`;
       groupItems.forEach((item: any, idx: number) => {
@@ -640,15 +646,15 @@ export default function AdminCalculatorLeads() {
           });
         }
 
-        message += `   Total: Rp ${sub.toLocaleString('id-ID')}\n\n`;
+        message += `   Total: Rp ${formatRupiah(sub)}\n\n`;
       });
 
-      message += `Subtotal Group: *Rp ${groupTotal.toLocaleString('id-ID')}*\n`;
+      message += `Subtotal Group: *Rp ${formatRupiah(groupTotal)}*\n`;
       message += `------------------------------\n\n`;
     });
 
     const total = lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0;
-    message += `*TOTAL ESTIMASI: Rp ${total.toLocaleString('id-ID')}*\n\n`;
+    message += `*TOTAL ESTIMASI: Rp ${formatRupiah(total)}*\n\n`;
     message += `Apakah Anda ingin melanjutkan ke proses pemesanan?`;
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -739,7 +745,7 @@ export default function AdminCalculatorLeads() {
             <div>
               <p className="text-sm text-gray-600">Total Estimasi</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{leads.reduce((sum, l) => sum + (Number(l.grandTotal) || Number(l.estimatedPrice) || Number(l.estimated_price) || 0), 0).toLocaleString('id-ID')}
+                Rp {formatRupiah(leads.reduce((sum, l) => sum + (Number(l.grandTotal) || Number(l.estimatedPrice) || Number(l.estimated_price) || 0), 0))}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -859,7 +865,7 @@ export default function AdminCalculatorLeads() {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-900">
-                        Rp{(lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0).toLocaleString('id-ID')}
+                        Rp {formatRupiah(lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0)}
                       </p>
                     </td>
                     <td className="px-6 py-4">
@@ -894,7 +900,8 @@ export default function AdminCalculatorLeads() {
                         </Button>
                         <Button
                           size="sm"
-                          className="bg-[#25D366] hover:bg-[#128C7E] text-white border-none"
+                          variant="outline"
+                          className="border-green-500 text-green-600 hover:bg-green-50"
                           onClick={() => handleWhatsAppClick(lead)}
                           title="Kirim ke WhatsApp"
                         >
@@ -1034,7 +1041,7 @@ export default function AdminCalculatorLeads() {
                     <div>
                       <p className="text-xs text-gray-500">Estimasi Total</p>
                       <p className="text-xl font-bold text-[#EB216A]">
-                        Rp {(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0).toLocaleString('id-ID')}
+                        Rp {formatRupiah(selectedLead.grandTotal || selectedLead.estimatedPrice || selectedLead.estimated_price || 0)}
                       </p>
                     </div>
                     <div>
@@ -1102,7 +1109,7 @@ export default function AdminCalculatorLeads() {
                               </div>
                             </div>
                             <p className="font-bold text-gray-900 text-lg">
-                              Rp {(item.total || 0).toLocaleString('id-ID')}
+                              Rp {formatRupiah(item.total || 0)}
                             </p>
                           </div>
 
@@ -1130,7 +1137,7 @@ export default function AdminCalculatorLeads() {
                                       {subItem.fabricMeters?.toFixed(2) || ((subItem.dimensions?.width * subItem.dimensions?.height) / 10000).toFixed(2)}
                                     </td>
                                     <td className="px-4 py-3 text-right font-medium">
-                                      Rp {(subItem.subtotal || 0).toLocaleString('id-ID')}
+                                      Rp {formatRupiah(subItem.subtotal || 0)}
                                     </td>
                                   </tr>
                                 ))}
@@ -1160,7 +1167,7 @@ export default function AdminCalculatorLeads() {
                             </div>
                           </div>
                           <p className="font-bold text-gray-900">
-                            Rp {(item.subtotal || 0).toLocaleString('id-ID')}
+                            Rp {formatRupiah(item.subtotal || 0)}
                           </p>
                         </div>
 
@@ -1172,11 +1179,11 @@ export default function AdminCalculatorLeads() {
                                 {item.selectedVariant?.name || item.fabricName || selectedLead.calculation_data?.fabric?.name || 'Kain'}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {item.fabricMeters?.toFixed(2)}m × Rp {Number(item.fabricPricePerMeter || selectedLead.calculation_data?.fabric?.price || 0).toLocaleString('id-ID')}
+                                {item.fabricMeters?.toFixed(2)}m × Rp {formatRupiah(item.fabricPricePerMeter || selectedLead.calculation_data?.fabric?.price || 0)}
                               </p>
                             </div>
                             <p className="text-sm font-medium text-gray-900">
-                              Rp {(item.fabricPrice || 0).toLocaleString('id-ID')}
+                              Rp {formatRupiah(item.fabricPrice || 0)}
                             </p>
                           </div>
 
@@ -1188,7 +1195,7 @@ export default function AdminCalculatorLeads() {
                                 <p className="text-xs text-gray-500">Qty: {comp.qty} {comp.unit}</p>
                               </div>
                               <p className="text-sm text-gray-700">
-                                Rp {(comp.productPrice * comp.qty).toLocaleString('id-ID')}
+                                Rp {formatRupiah(comp.productPrice * comp.qty)}
                               </p>
                             </div>
                           ))}
@@ -1206,6 +1213,14 @@ export default function AdminCalculatorLeads() {
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setSelectedLead(null)}>
                   Tutup
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleWhatsAppClick(selectedLead)}
+                  className="border-green-500 text-green-600 hover:bg-green-50"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 mr-2 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
+                  Kirim WA
                 </Button>
                 <Button
                   onClick={() => handleCreateDocument(selectedLead)}
