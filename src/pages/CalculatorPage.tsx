@@ -24,6 +24,7 @@ import {
 } from '../components/ui/dialog';
 import { calculatorLeadsApi, calculatorTypesApi, productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
+import { safeJSONParse } from '../utils/jsonHelper';
 import { chatAdminFromCalculator } from '../utils/whatsappHelper';
 
 // Types
@@ -60,6 +61,8 @@ interface ProductOption {
   image?: string;
   maxWidth?: number;
   sibak?: number;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 interface ComponentSelection {
@@ -85,10 +88,10 @@ interface CalculatorItem {
   product?: ProductOption; // Specific product for this item (Blind flow)
   selectedVariant?: {
     id: string;
-    width: number;
-    height: number;
-    sibak: number;
+    attributes?: Record<string, any>;
     price: number;
+    price_gross?: number;
+    price_net?: number;
     name: string;
   };
 }
@@ -390,10 +393,31 @@ export default function CalculatorPageV2() {
     }
   };
 
-  // Select fabric product - no variant check here, variants picked after adding item
-  const handleSelectFabric = (product: any) => {
+  // Select fabric product - no variant check here, variants picked after adding item (except for Blind flow)
+  const handleSelectFabric = async (product: any) => {
     if (isBlindFlow) {
-      // Blind Flow: Select product then open Add Item Modal
+      // Blind Flow: Check if product has variants
+      setLoadingVariants(true);
+      try {
+        const variantsRes = await productVariantsApi.getByProduct(product.id);
+        const variants = variantsRes.data || [];
+
+        if (variants.length > 0) {
+          // Has variants: Open variant selection modal
+          setPendingProductForVariant(product);
+          setAvailableVariants(variants);
+          setVariantSelectionMode('fabric'); // Global variant selection
+          setIsProductModalOpen(false);
+          setIsVariantModalOpen(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching variants for blind:', error);
+      } finally {
+        setLoadingVariants(false);
+      }
+
+      // No variants: Just select product and open Add Item Modal
       setTempSelectedProduct(product);
       setIsProductModalOpen(false);
       setIsAddItemModalOpen(true);
@@ -421,6 +445,7 @@ export default function CalculatorPageV2() {
         // Product has variants - show variant picker
         setPendingProductForVariant(product);
         setAvailableVariants(variants);
+        setVariantSelectionMode('component');
         setIsComponentModalOpen(false);
         setIsVariantModalOpen(true);
         return;
@@ -461,18 +486,40 @@ export default function CalculatorPageV2() {
   const handleSelectVariant = (variant: any) => {
     if (!pendingProductForVariant) return;
 
-    if (variantSelectionMode === 'fabric') {
-      // Store variant in the specific item
-      if (!editingVariantItemId) return;
+    // Parse JSON attributes for variant name
+    const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
+    const attrDisplay = Object.entries(attrs).length > 0
+      ? Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')
+      : (variant.attribute_value || `Varian ${variant.id}`);
 
+    // Use Net price as primary (discounted), Gross as fallback
+    const variantPrice = Number(variant.price_net) || Number(variant.price_gross) || 0;
+
+    if (variantSelectionMode === 'fabric') {
       const variantData = {
         id: variant.id,
-        width: variant.width,
-        height: variant.height,
-        sibak: variant.sibak,
-        price: variant.price,
-        name: `${pendingProductForVariant.name} (${variant.width}x${variant.height}cm, Sibak ${variant.sibak})`,
+        attributes: attrs,
+        price: variantPrice,
+        price_gross: Number(variant.price_gross) || 0,
+        price_net: Number(variant.price_net) || 0,
+        name: `${pendingProductForVariant.name} (${attrDisplay})`,
       };
+
+      // If Blind Flow and no editing item ID, this is the initial product selection
+      if (isBlindFlow && !editingVariantItemId) {
+        setTempSelectedProduct({
+          ...pendingProductForVariant,
+          ...variantData
+        });
+        setItemName(variantData.name);
+        setIsVariantModalOpen(false);
+        setIsAddItemModalOpen(true);
+        setPendingProductForVariant(null);
+        return;
+      }
+
+      // Store variant in the specific item
+      if (!editingVariantItemId) return;
 
       setItems(items.map(item => {
         if (item.id === editingVariantItemId) {
@@ -488,9 +535,8 @@ export default function CalculatorPageV2() {
 
       const productWithVariant = {
         ...pendingProductForVariant,
-        price: variant.price,
-        sibak: variant.sibak,
-        name: `${pendingProductForVariant.name} (${variant.width}x${variant.height}cm, Sibak ${variant.sibak})`,
+        price: variantPrice,
+        name: `${pendingProductForVariant.name} (${attrDisplay})`,
       };
 
       setItems(items.map(item => {
@@ -501,7 +547,7 @@ export default function CalculatorPageV2() {
               ...item.components,
               [editingComponentId]: {
                 product: productWithVariant as ProductOption,
-                qty: variant.sibak || 1
+                qty: 1
               }
             }
           };
@@ -629,14 +675,14 @@ export default function CalculatorPageV2() {
                 panels: item.panels
               },
               quantity: item.quantity,
-              // Include variant info per item
+              // Include variant info per item (new JSON attributes format)
               selectedVariant: item.selectedVariant ? {
                 id: item.selectedVariant.id,
                 name: item.selectedVariant.name,
-                width: item.selectedVariant.width,
-                height: item.selectedVariant.height,
-                sibak: item.selectedVariant.sibak,
-                price: item.selectedVariant.price
+                attributes: item.selectedVariant.attributes,
+                price: item.selectedVariant.price,
+                price_gross: item.selectedVariant.price_gross,
+                price_net: item.selectedVariant.price_net
               } : null,
               fabricName: (prices as any).fabricName || selectedFabric?.name,
               fabricPricePerMeter: (prices as any).fabricPricePerMeter || selectedFabric?.price,
@@ -843,10 +889,13 @@ export default function CalculatorPageV2() {
                         </Badge>
                         <h3 className="text-lg sm:text-xl text-gray-900 font-medium truncate">{selectedFabric.name}</h3>
                         <div className="flex items-baseline gap-2 mt-1">
-                          <span className="text-xl sm:text-2xl text-[#EB216A] font-bold">
-                            Rp {selectedFabric.price?.toLocaleString('id-ID') || '0'}
+                          <span className="text-[#EB216A] font-bold text-lg">
+                            {selectedFabric.minPrice && selectedFabric.minPrice > 0
+                              ? `Mulai Rp ${selectedFabric.minPrice.toLocaleString('id-ID')}`
+                              : selectedFabric.price > 0
+                                ? `Rp ${selectedFabric.price.toLocaleString('id-ID')}/m`
+                                : 'Harga ditentukan oleh varian'}
                           </span>
-                          <span className="text-sm text-gray-500">/meter</span>
                         </div>
                       </div>
                     </div>
@@ -1251,7 +1300,13 @@ export default function CalculatorPageV2() {
                 <img src={getProductImageUrl(tempSelectedProduct.images || tempSelectedProduct.image)} className="w-16 h-16 rounded-lg object-cover" />
                 <div>
                   <p className="font-medium text-gray-900">{tempSelectedProduct.name}</p>
-                  <p className="text-[#EB216A] font-bold">Rp {tempSelectedProduct.price?.toLocaleString('id-ID')}/m</p>
+                  <p className="text-[#EB216A] font-bold">
+                    {tempSelectedProduct.minPrice && tempSelectedProduct.minPrice > 0
+                      ? `Mulai Rp ${tempSelectedProduct.minPrice.toLocaleString('id-ID')}`
+                      : tempSelectedProduct.price > 0
+                        ? `Rp ${tempSelectedProduct.price.toLocaleString('id-ID')}/m`
+                        : 'Lihat Varian'}
+                  </p>
                 </div>
               </div>
             )}
@@ -1419,7 +1474,13 @@ export default function CalculatorPageV2() {
                     className="w-full aspect-square object-cover rounded-lg mb-2"
                   />
                   <h4 className="font-medium text-gray-900 text-sm truncate">{product.name}</h4>
-                  <p className="text-[#EB216A] font-bold">Rp {product.price?.toLocaleString('id-ID')}/m</p>
+                  <p className="text-[#EB216A] font-bold">
+                    {product.minPrice && product.minPrice > 0
+                      ? `Mulai Rp ${product.minPrice.toLocaleString('id-ID')}`
+                      : product.price > 0
+                        ? `Rp ${product.price.toLocaleString('id-ID')}/m`
+                        : 'Lihat Varian'}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1478,7 +1539,7 @@ export default function CalculatorPageV2() {
                       />
                     )}
                     <h4 className="font-medium text-gray-900">{product.name}</h4>
-                    <p className="text-[#EB216A] font-bold">Rp {product.price?.toLocaleString('id-ID')}</p>
+                    <p className="text-sm text-gray-500 italic">Lihat Varian</p>
                   </div>
                 ));
               })()}
@@ -1516,15 +1577,24 @@ export default function CalculatorPageV2() {
                 <p className="text-gray-600">Tidak ada varian tersedia.</p>
               </div>
             ) : (() => {
+              // Build search index for attribute keys
+              const allAttrKeys = new Set<string>();
+              availableVariants.forEach((v: any) => {
+                const attrs = safeJSONParse(v.attributes, {});
+                Object.keys(attrs).forEach(k => allAttrKeys.add(k));
+              });
+
               const filtered = availableVariants.filter((v: any) => {
                 if (!variantSearchQuery) return true;
                 const q = variantSearchQuery.toLowerCase();
-                return (
-                  String(v.width).includes(q) ||
-                  String(v.height).includes(q) ||
-                  String(v.sibak).includes(q) ||
-                  String(v.price).includes(q)
+                const attrs = safeJSONParse(v.attributes, {});
+                // Search in attributes
+                const attrMatch = Object.values(attrs).some((val: any) =>
+                  String(val).toLowerCase().includes(q)
                 );
+                // Search in price
+                const priceMatch = String(v.price_net).includes(q) || String(v.price_gross).includes(q);
+                return attrMatch || priceMatch;
               });
 
               if (filtered.length === 0) {
@@ -1532,44 +1602,60 @@ export default function CalculatorPageV2() {
               }
 
               return (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3 text-left">Lebar</th>
-                      <th className="px-4 py-3 text-left">Tinggi</th>
-                      <th className="px-4 py-3 text-left">Sibak</th>
-                      <th className="px-4 py-3 text-left">Harga</th>
-                      <th className="px-4 py-3 text-left">Cocok Untuk</th>
-                      <th className="px-4 py-3 text-right">Pilih</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filtered.map((v: any) => (
-                      <tr key={v.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">{v.width}cm</td>
-                        <td className="px-4 py-3">{v.height}cm</td>
-                        <td className="px-4 py-3">{v.sibak}</td>
-                        <td className="px-4 py-3 font-medium text-[#EB216A]">
-                          Rp {Number(v.price).toLocaleString('id-ID')}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600">
-                          {v.recommended_min_width && v.recommended_max_width ? (
-                            `Lebar ${v.recommended_min_width}-${v.recommended_max_width}cm`
-                          ) : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            size="sm"
-                            className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
-                            onClick={() => handleSelectVariant(v)}
-                          >
-                            Pilih
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="grid grid-cols-1 gap-3">
+                  {filtered.map((v: any) => {
+                    const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                    const priceNet = Number(v.price_net) || 0;
+                    const priceGross = Number(v.price_gross) || 0;
+                    const hasDiscount = priceGross > priceNet && priceNet > 0;
+                    const discountPercent = hasDiscount
+                      ? Math.round((1 - priceNet / priceGross) * 100)
+                      : 0;
+
+                    return (
+                      <div
+                        key={v.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-[#EB216A] hover:bg-pink-50/50 transition-colors cursor-pointer"
+                        onClick={() => handleSelectVariant(v)}
+                      >
+                        <div className="flex-1">
+                          {/* Attribute Display */}
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {Object.entries(attrs).map(([key, val]) => (
+                              <span key={key} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded">
+                                <span className="font-medium text-gray-500 mr-1">{key}:</span>
+                                {String(val)}
+                              </span>
+                            ))}
+                          </div>
+                          {/* Price Display */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold text-[#EB216A]">
+                              Rp {(priceNet || priceGross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </span>
+                            {hasDiscount && (
+                              <>
+                                <span className="text-sm text-gray-400 line-through">
+                                  Rp {priceGross.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </span>
+                                <span className="bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
+                                  -{discountPercent}%
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="bg-[#EB216A] hover:bg-[#d11d5e] text-white ml-4"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Pilih
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
               );
             })()}
           </div>

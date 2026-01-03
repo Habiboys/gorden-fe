@@ -22,6 +22,7 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
+import { safeJSONParse } from '../utils/jsonHelper';
 import { chatAdminAboutProduct } from '../utils/whatsappHelper';
 
 export default function ProductDetail() {
@@ -32,7 +33,8 @@ export default function ProductDetail() {
   const [variants, setVariants] = useState<any[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
@@ -56,12 +58,21 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!product) return;
 
+    // Build variant info for cart
+    let variantInfo = '';
+    if (selectedVariant?.attributes) {
+      const attrs = safeJSONParse(selectedVariant.attributes, {}) as Record<string, any>;
+      variantInfo = Object.entries(attrs)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+    }
+
     addToCart({
       id: product.id,
       name: product.name,
-      price: Number(product.price),
+      price: selectedPrice,
       image: getProductImageUrl(product.images || product.image),
-      packageType: selectedPackage === 'self' ? 'Ukur & Pasang Sendiri' : 'Termasuk Pasang',
+      packageType: variantInfo,
       notes: notes,
     }, quantity);
   };
@@ -74,10 +85,11 @@ export default function ProductDetail() {
     }
   };
 
-  const subtotal = product ? product.price * quantity : 0;
-
-  // Get selected package label
-  const selectedPackageLabel = product ? product.packages.find(pkg => pkg.id === selectedPackage)?.label || '' : '';
+  // Get selected variant price (Net = discounted/final price)
+  const selectedPrice = selectedVariant
+    ? (Number(selectedVariant.price_net) || Number(selectedVariant.price_gross) || 0)
+    : 0;
+  const subtotal = selectedPrice * quantity;
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -130,7 +142,22 @@ export default function ProductDetail() {
       if (!id) return;
       try {
         const response = await productVariantsApi.getByProduct(id);
-        setVariants(response.data || []);
+        const variantData = response.data || [];
+        setVariants(variantData);
+
+        // Initialize selections if variants exist and have attributes
+        if (variantData.length > 0) {
+          const first = variantData[0];
+          if (first.attributes) {
+            // IMPORTANT: Parse the attributes as they come as a string from DB
+            const parsedAttrs = safeJSONParse(first.attributes, {}) as Record<string, any>;
+            setSelectedAttributes(parsedAttrs);
+            setSelectedVariant(first);
+          } else {
+            // Fallback for old way
+            setSelectedVariant(first);
+          }
+        }
       } catch (error) {
         console.error('Error fetching variants:', error);
       }
@@ -213,51 +240,158 @@ export default function ProductDetail() {
                 </p>
               </div>
 
-              {/* Price Section */}
+              {/* Price Section - Based on selected variant */}
               <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <span className="text-lg text-gray-400 line-through">
-                    Rp{product.originalPrice.toLocaleString('id-ID')}
-                  </span>
-                  <Badge className="bg-[#EB216A] text-white border-0">
-                    {product.discount}% OFF
-                  </Badge>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl lg:text-4xl text-[#EB216A]">
-                    Rp{product.price.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">Harga per {product.priceUnit}</p>
+                {selectedVariant ? (
+                  <>
+                    {/* Main Price (Net = Discounted Price) */}
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <span className="text-3xl lg:text-4xl font-bold text-[#EB216A]">
+                        Rp{(Number(selectedVariant.price_net) || Number(selectedVariant.price_gross) || 0).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </span>
+                      {/* Strikethrough Original Price (Gross) */}
+                      {Number(selectedVariant.price_gross) > Number(selectedVariant.price_net) && Number(selectedVariant.price_net) > 0 && (
+                        <span className="text-lg text-gray-400 line-through">
+                          Rp{Number(selectedVariant.price_gross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      )}
+                      {/* Discount Badge */}
+                      {Number(selectedVariant.price_gross) > Number(selectedVariant.price_net) && Number(selectedVariant.price_net) > 0 && (
+                        <span className="bg-red-500 text-white text-sm font-semibold px-2 py-0.5 rounded">
+                          -{Math.round((1 - Number(selectedVariant.price_net) / Number(selectedVariant.price_gross)) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    {/* Variant Info */}
+                    <p className="text-sm text-gray-600 mt-2">
+                      {selectedVariant.attributes
+                        ? Object.entries(safeJSONParse(selectedVariant.attributes, {}) as Record<string, any>).map(([k, v]) => `${k}: ${v}`).join(', ')
+                        : `${selectedVariant.attribute_name}: ${selectedVariant.attribute_value}`}
+                    </p>
+                  </>
+                ) : variants.length > 0 ? (
+                  <p className="text-gray-500">Pilih varian di bawah untuk melihat harga</p>
+                ) : (
+                  <p className="text-gray-500">Produk ini belum memiliki varian</p>
+                )}
               </div>
 
               <Separator />
 
-              {/* Package Selection */}
-              <div>
-                <h3 className="text-base mb-3 text-gray-900">
-                  Pilih Paket | <span className="text-[#EB216A]">{selectedPackageLabel}</span>
-                </h3>
-                <div className="space-y-2">
-                  {product.packages.map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      onClick={() => setSelectedPackage(pkg.id)}
-                      className={`w-full px-4 py-3 rounded-xl border-2 text-left text-sm transition-all ${selectedPackage === pkg.id
-                        ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{pkg.label}</span>
-                        {selectedPackage === pkg.id && (
-                          <Check className="w-5 h-5 text-[#EB216A]" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
+              {/* Variant Selection */}
+              {variants.length > 0 && (
+                <div>
+                  <h3 className="text-base mb-3 text-gray-900">
+                    Pilih Varian
+                  </h3>
+                  {(() => {
+                    // Check if we use new Attribute system (JSON)
+                    const useAttributes = variants.some(v => v.attributes);
+
+                    if (useAttributes) {
+                      // Gather all available keys from product variant_options OR inferred from variants
+                      let keys: string[] = [];
+
+                      const options = safeJSONParse(product.variant_options, []);
+
+                      if (Array.isArray(options) && options.length > 0) {
+                        keys = options.map((o: any) => o.name);
+                      } else {
+                        // Infer keys from first variant (must parse attributes first)
+                        const firstVariantAttrs = safeJSONParse(variants[0]?.attributes, {}) as Record<string, any>;
+                        keys = Object.keys(firstVariantAttrs);
+                      }
+
+                      return keys.map(key => {
+                        // Unique values for this key
+                        // Advanced: Filter available values based on OTHER selected attributes?
+                        // For simplicity, show all values present in variants.
+                        // To make it better: Only show values that exist in combination with current OTHER selections.
+
+                        const availableValues = Array.from(new Set(
+                          variants.map(v => {
+                            const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                            // Case-insensitive key lookup
+                            const matchingKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                            return matchingKey ? attrs[matchingKey] : undefined;
+                          }).filter(Boolean)
+                        ));
+
+                        return (
+                          <div key={key} className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">{key}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {availableValues.map((val: any) => {
+                                const isSelected = selectedAttributes[key] === val;
+                                return (
+                                  <button
+                                    key={val}
+                                    onClick={() => {
+                                      const newAttrs = { ...selectedAttributes, [key]: val };
+                                      setSelectedAttributes(newAttrs);
+
+                                      // Find matching variant with robust comparison
+                                      const match = variants.find((variant) => {
+                                        const variantAttrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
+                                        // Normalize variant attribute keys for matching
+                                        const normalizedVariantAttrs: Record<string, any> = {};
+                                        Object.keys(variantAttrs).forEach(k => {
+                                          normalizedVariantAttrs[k.trim().toLowerCase()] = String(variantAttrs[k]).trim();
+                                        });
+
+                                        return Object.entries(newAttrs).every(([attrKey, attrVal]) => {
+                                          const normalizedKey = attrKey.trim().toLowerCase();
+                                          const normalizedVal = String(attrVal).trim();
+                                          return normalizedVariantAttrs[normalizedKey] === normalizedVal;
+                                        });
+                                      });
+
+                                      setSelectedVariant(match || null);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg border-2 text-sm transition-all ${isSelected
+                                      ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
+                                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    {val}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      });
+                    } else {
+                      // Legacy handling (Attribute Name grouping)
+                      const grouped: Record<string, any[]> = {};
+                      variants.forEach((v: any) => {
+                        const attr = v.attribute_name || 'Varian';
+                        if (!grouped[attr]) grouped[attr] = [];
+                        grouped[attr].push(v);
+                      });
+                      return Object.entries(grouped).map(([attrName, varList]) => (
+                        <div key={attrName} className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">{attrName}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {varList.map((v: any) => (
+                              <button
+                                key={v.id}
+                                onClick={() => setSelectedVariant(v)}
+                                className={`px-4 py-2 rounded-lg border-2 text-sm transition-all ${selectedVariant?.id === v.id
+                                  ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
+                                  : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                                  }`}
+                              >
+                                {v.attribute_value}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    }
+                  })()}
                 </div>
-              </div>
+              )}
 
               <Separator />
 
@@ -326,7 +460,29 @@ export default function ProductDetail() {
                     size="lg"
                     variant="outline"
                     className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500"
-                    onClick={() => chatAdminAboutProduct(product.name, `Rp ${Number(product.price).toLocaleString('id-ID')}`)}
+                    onClick={() => {
+                      // Build price string from selected variant
+                      const price = selectedVariant
+                        ? (Number(selectedVariant.price_net) || Number(selectedVariant.price_gross) || 0)
+                        : 0;
+                      const priceStr = price > 0
+                        ? `Rp ${price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                        : 'Harga belum dipilih';
+
+                      // Build variant info
+                      const variantInfo = selectedVariant?.attributes
+                        ? Object.entries(safeJSONParse(selectedVariant.attributes, {}) as Record<string, any>)
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join(', ')
+                        : '';
+
+                      // Create full product name with variant
+                      const fullProductName = variantInfo
+                        ? `${product.name} (${variantInfo})`
+                        : product.name;
+
+                      chatAdminAboutProduct(fullProductName, priceStr);
+                    }}
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
                     Chat Admin
@@ -397,34 +553,6 @@ export default function ProductDetail() {
 
                 <Separator />
 
-                {/* Dimensions */}
-                {(product.min_width || product.max_width || product.min_length || product.max_length) && (
-                  <div>
-                    <h3 className="text-xl text-gray-900 mb-4">Spesifikasi Ukuran</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(product.min_width || product.max_width) && (
-                        <div className="bg-gray-50 p-4 rounded-xl">
-                          <span className="text-sm text-gray-500 block mb-1">Lebar</span>
-                          <span className="text-gray-900 font-medium">
-                            {product.min_width ? `${product.min_width}` : ''}
-                            {product.min_width && product.max_width ? ' - ' : ''}
-                            {product.max_width ? `${product.max_width}` : ''} cm
-                          </span>
-                        </div>
-                      )}
-                      {(product.min_length || product.max_length) && (
-                        <div className="bg-gray-50 p-4 rounded-xl">
-                          <span className="text-sm text-gray-500 block mb-1">Panjang/Tinggi</span>
-                          <span className="text-gray-900 font-medium">
-                            {product.min_length ? `${product.min_length}` : ''}
-                            {product.min_length && product.max_length ? ' - ' : ''}
-                            {product.max_length ? `${product.max_length}` : ''} cm
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Separator only if dimensions exist */}
                 {(product.min_width || product.max_width || product.min_length || product.max_length) && <Separator />}
@@ -433,7 +561,7 @@ export default function ProductDetail() {
                 <div>
                   <h3 className="text-xl text-gray-900 mb-4">Keunggulan Produk</h3>
                   <ul className="space-y-3">
-                    {product.features.map((feature, index) => (
+                    {product.features.map((feature: string, index: number) => (
                       <li key={index} className="flex items-start gap-3 text-gray-700">
                         <div className="w-5 h-5 rounded-full bg-[#EB216A]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <Check className="w-3 h-3 text-[#EB216A]" />
@@ -450,7 +578,7 @@ export default function ProductDetail() {
               <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8">
                 <h3 className="text-xl text-gray-900 mb-4">Cara Pemesanan</h3>
                 <ol className="list-decimal list-inside space-y-3 text-gray-700">
-                  {product.howToOrder.map((step, index) => (
+                  {product.howToOrder.map((step: string, index: number) => (
                     <li key={index} className="leading-relaxed">
                       {step}
                     </li>
@@ -465,47 +593,60 @@ export default function ProductDetail() {
                 <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8">
                   <h3 className="text-xl text-gray-900 mb-4">Pilihan Varian</h3>
                   <p className="text-sm text-gray-600 mb-6">
-                    Pilih varian yang sesuai dengan ukuran jendela atau pintu Anda.
+                    Pilih varian yang sesuai dengan kebutuhan Anda.
                   </p>
 
-                  {/* Responsive Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Ukuran</th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Sibak</th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-700">Harga/m</th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Cocok Untuk</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {variants.map((variant: any) => (
-                          <tr key={variant.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-4">
-                              <span className="font-medium text-gray-900">{variant.width} × {variant.height} cm</span>
-                            </td>
-                            <td className="px-4 py-4">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#EB216A]/10 text-[#EB216A]">
-                                Sibak {variant.sibak}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-right">
-                              <span className="font-semibold text-[#EB216A]">
-                                Rp {Number(variant.price).toLocaleString('id-ID')}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-gray-600 text-xs">
-                              {variant.recommended_min_width && variant.recommended_max_width
-                                ? `Lebar ${variant.recommended_min_width} - ${variant.recommended_max_width} cm`
-                                : '-'
-                              }
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  {/* Group variants by first attribute key or show all */}
+                  {(() => {
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {variants.map((variant: any) => {
+                          const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
+                          const attrDisplay = Object.entries(attrs)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join(' - ');
+
+                          return (
+                            <div
+                              key={variant.id}
+                              className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-[#EB216A]/5 transition-colors cursor-pointer"
+                              onClick={() => {
+                                // Set all attributes for this variant
+                                // Ensure attrs is a proper object, not a string
+                                const safeAttrs = typeof attrs === 'object' && attrs !== null && !Array.isArray(attrs)
+                                  ? attrs
+                                  : safeJSONParse(attrs, {}) as Record<string, any>;
+                                setSelectedAttributes(safeAttrs);
+                                setSelectedVariant(variant);
+                              }}
+                            >
+                              <p className="font-medium text-gray-900 mb-2">
+                                {attrDisplay || 'Varian'}
+                              </p>
+                              <div className="flex flex-col gap-1">
+                                {Number(variant.price_gross) > 0 && (
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Harga Gross:</span>
+                                    <span className="font-semibold text-gray-700">
+                                      Rp {Number(variant.price_gross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                )}
+                                {Number(variant.price_net) > 0 && (
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Harga Net:</span>
+                                    <span className="font-semibold text-[#EB216A]">
+                                      Rp {Number(variant.price_net).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <p className="text-sm text-blue-800">
@@ -593,24 +734,18 @@ export default function ProductDetail() {
                     {/* Price Section */}
                     <div className="flex items-end justify-between mt-auto">
                       <div className="flex flex-col gap-0.5 lg:gap-1">
-                        {relatedProduct.comparePrice && (
+                        {relatedProduct.minPrice ? (
                           <>
-                            <div className="flex items-center gap-1 lg:gap-2">
-                              <span className="text-xs text-gray-400 line-through">
-                                Rp {relatedProduct.comparePrice.toLocaleString('id-ID')}
-                              </span>
-                              <span className="text-[10px] lg:text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">
-                                -{Math.round((1 - relatedProduct.price / relatedProduct.comparePrice) * 100)}%
-                              </span>
-                            </div>
+                            <span className="text-base lg:text-xl text-[#EB216A]">
+                              Mulai Rp {Number(relatedProduct.minPrice).toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[10px] lg:text-xs text-gray-500">
+                              Berdasarkan varian
+                            </span>
                           </>
+                        ) : (
+                          <span className="text-sm text-gray-500">Pilih varian</span>
                         )}
-                        <span className="text-base lg:text-xl text-[#EB216A]">
-                          Rp {relatedProduct.price.toLocaleString('id-ID')}
-                        </span>
-                        <span className="text-[10px] lg:text-xs text-gray-500">
-                          Per meter
-                        </span>
                       </div>
                       <button className="text-gray-400 hover:text-[#EB216A] transition-colors lg:hidden">
                         <Heart className="w-4 h-4" />
@@ -621,8 +756,8 @@ export default function ProductDetail() {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   );
 }

@@ -1,4 +1,5 @@
 import {
+  Copy,
   Edit,
   Eye,
   MoreVertical,
@@ -33,7 +34,118 @@ import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
 import { categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploadApi } from '../../utils/api';
 import { exportToCSV } from '../../utils/exportHelper';
-import { safelyParseImages } from '../../utils/imageHelper';
+import { getProductImagesArray, getProductImageUrl, safelyParseImages } from '../../utils/imageHelper';
+
+// Detail Modal Component with variants display
+function DetailModalContent({ product, onClose }: { product: any; onClose: () => void }) {
+  const [variants, setVariants] = useState<any[]>([]);
+  const [loadingVariants, setLoadingVariants] = useState(true);
+
+  useEffect(() => {
+    const fetchVariants = async () => {
+      try {
+        const res = await productVariantsApi.getByProduct(product.id);
+        setVariants(res.data || []);
+      } catch (err) {
+        console.error('Error fetching variants:', err);
+      } finally {
+        setLoadingVariants(false);
+      }
+    };
+    fetchVariants();
+  }, [product.id]);
+
+  // Group variants by attribute_name
+  const groupedVariants: Record<string, any[]> = {};
+  variants.forEach((v) => {
+    const attrName = v.attribute_name || 'Varian';
+    if (!groupedVariants[attrName]) {
+      groupedVariants[attrName] = [];
+    }
+    groupedVariants[attrName].push(v);
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-xl text-gray-900">Detail Produk</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <img
+                src={safelyParseImages(product.images)[0] || product.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=100'}
+                alt={product.name}
+                className="w-full h-64 object-cover rounded-xl"
+              />
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-gray-600">Nama Produk</Label>
+                <p className="text-lg text-gray-900">{product.name}</p>
+              </div>
+              <div>
+                <Label className="text-gray-600">SKU</Label>
+                <p className="text-gray-900">{product.sku}</p>
+              </div>
+              <div>
+                <Label className="text-gray-600">Kategori</Label>
+                <p className="text-gray-900">{product.Category?.name || '-'} {product.SubCategory?.name ? `/ ${product.SubCategory.name}` : ''}</p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {product.is_featured && <Badge className="bg-purple-100 text-purple-700">Featured</Badge>}
+                {product.is_new_arrival && <Badge className="bg-green-100 text-green-700">New Arrival</Badge>}
+                {product.is_best_seller && <Badge className="bg-orange-100 text-orange-700">Best Seller</Badge>}
+                {product.is_warranty && <Badge className="bg-blue-100 text-blue-700">Garansi 1 Tahun</Badge>}
+                {product.is_custom && <Badge className="bg-pink-100 text-pink-700">Gorden Custom</Badge>}
+              </div>
+            </div>
+          </div>
+
+          {/* Varian */}
+          <div>
+            <Label className="text-gray-600">Varian ({variants.length})</Label>
+            {loadingVariants ? (
+              <p className="text-gray-500 text-sm mt-2">Memuat varian...</p>
+            ) : variants.length === 0 ? (
+              <p className="text-gray-500 text-sm mt-2">Tidak ada varian</p>
+            ) : (
+              <div className="mt-3 space-y-4">
+                {Object.entries(groupedVariants).map(([attrName, variantList]) => (
+                  <div key={attrName}>
+                    <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded mb-2">{attrName}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {variantList.map((v: any) => (
+                        <div key={v.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                          <p className="font-medium text-gray-900">{v.attribute_value}</p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {v.price_gross > 0 && <span>Gross: Rp {Number(v.price_gross).toLocaleString('id-ID')}</span>}
+                            {v.price_net > 0 && <span className="ml-2 text-[#EB216A]">Net: Rp {Number(v.price_net).toLocaleString('id-ID')}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {product.description && (
+            <div>
+              <Label className="text-gray-600">Deskripsi</Label>
+              <p className="text-gray-900 mt-2">{product.description}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,18 +171,16 @@ export default function AdminProducts() {
 
   // Variants state
   const [variants, setVariants] = useState<any[]>([]);
+  const [pendingVariants, setPendingVariants] = useState<any[]>([]); // For inline creation before save
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<any>(null);
+  const [editingPendingIndex, setEditingPendingIndex] = useState<number | null>(null);
   const [variantForm, setVariantForm] = useState({
-    width: 0,
-    wave: 0,
-    height: 0,
-    sibak: 1,
-    price: 0,
-    recommended_min_width: 0,
-    recommended_max_width: 0,
-    recommended_height: 0,
+    attribute_name: '',
+    attribute_value: '',
+    price_gross: 0,
+    price_net: 0,
   });
 
   // Form states
@@ -186,6 +296,36 @@ export default function AdminProducts() {
 
   const handleRemoveImage = (index: number) => {
     setUploadedImages(uploadedImages.filter((_, i) => i !== index));
+  };
+
+
+
+  const handleDuplicateProduct = async (id: string) => {
+    const ok = await confirm({
+      title: 'Duplikat Produk',
+      description: 'Apakah Anda yakin ingin menduplikasi produk ini beserta semua variannya?',
+      confirmText: 'Duplikat',
+      cancelText: 'Batal'
+    });
+
+    if (!ok) return;
+
+    setLoading(true); // Show loading on table
+    try {
+      const response = await productsApi.duplicate(id);
+      if (response.success) {
+        toast.success(`Produk "${response.data.name}" berhasil dibuat`);
+        // Refresh list
+        const res = await productsApi.getProducts();
+        setProducts(res.data || []);
+        setFilteredProducts(res.data || []);
+      }
+    } catch (error) {
+      console.error('Error duplicating product:', error);
+      toast.error('Gagal menduplikasi produk');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAdd = () => {
@@ -331,7 +471,17 @@ export default function AdminProducts() {
       };
 
       if (modalMode === 'add') {
-        await productsApi.create(productData);
+        const newProductRes = await productsApi.create(productData);
+        const newProductId = newProductRes.data?.id || newProductRes.id;
+
+        // Save pending variants if any
+        if (pendingVariants.length > 0 && newProductId) {
+          for (const pv of pendingVariants) {
+            await productVariantsApi.create(newProductId, pv);
+          }
+          setPendingVariants([]);
+        }
+
         toast.success('Produk berhasil ditambahkan!');
       } else {
         await productsApi.update(selectedProduct.id, productData);
@@ -508,7 +658,7 @@ export default function AdminProducts() {
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Produk</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">SKU</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Kategori</th>
-                <th className="text-left px-6 py-4 text-sm text-gray-600">Harga (Ukur Sendiri)</th>
+                <th className="text-left px-6 py-4 text-sm text-gray-600">Varian</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Stok</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Status</th>
                 <th className="text-right px-6 py-4 text-sm text-gray-600">Aksi</th>
@@ -537,7 +687,7 @@ export default function AdminProducts() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={safelyParseImages(product.images)[0] || product.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=100'}
+                          src={getProductImageUrl(product.images)}
                           alt={product.name}
                           className="w-12 h-12 rounded-lg object-cover"
                         />
@@ -557,8 +707,8 @@ export default function AdminProducts() {
                       <span className="text-sm text-gray-700">{product.Category?.name || '-'}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-900">
-                        Rp {(product.price_self_measure || product.price || 0).toLocaleString('id-ID')}
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        Lihat Detail
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -581,6 +731,10 @@ export default function AdminProducts() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDuplicateProduct(product.id)}>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Duplikat
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleViewDetail(product)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Lihat Detail
@@ -847,7 +1001,7 @@ export default function AdminProducts() {
 
                     {Array.isArray(uploadedImages) && uploadedImages.length > 0 && (
                       <div className="grid grid-cols-4 gap-4 mt-4">
-                        {uploadedImages.map((img, index) => (
+                        {getProductImagesArray(uploadedImages).map((img, index) => (
                           <div key={index} className="relative group">
                             <img
                               src={img}
@@ -1138,120 +1292,143 @@ export default function AdminProducts() {
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="text-base text-gray-900">Varian Produk</h3>
-                      <p className="text-sm text-gray-600">Kelola varian dengan ukuran dan harga berbeda</p>
+                      <p className="text-sm text-gray-600">Kelola varian dengan atribut fleksibel (Layanan, Ukuran, Warna, dll)</p>
                     </div>
-                    {modalMode === 'edit' && selectedProduct && (
-                      <Button
-                        onClick={() => {
-                          setEditingVariant(null);
-                          setVariantForm({ width: 60, wave: 6, height: 210, sibak: 1, price: 0, recommended_min_width: 0, recommended_max_width: 0, recommended_height: 210 });
-                          setIsVariantModalOpen(true);
-                        }}
-                        className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Tambah Varian
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => {
+                        setEditingVariant(null);
+                        setEditingPendingIndex(null);
+                        setVariantForm({ attribute_name: '', attribute_value: '', price_gross: 0, price_net: 0 });
+                        setIsVariantModalOpen(true);
+                      }}
+                      className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Varian
+                    </Button>
                   </div>
 
-                  {modalMode === 'add' ? (
+                  {/* Show pending variants (for add mode) */}
+                  {modalMode === 'add' && pendingVariants.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                      <p className="text-sm text-blue-800 mb-2">Varian akan disimpan setelah produk disimpan:</p>
+                      <div className="space-y-2">
+                        {pendingVariants.map((pv, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-lg">
+                            <div>
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded mr-2">{pv.attribute_name}</span>
+                              <span className="font-medium">{pv.attribute_value}</span>
+                              <span className="text-gray-500 ml-3">Gross: Rp {Number(pv.price_gross).toLocaleString('id-ID')}</span>
+                              <span className="text-gray-500 ml-2">Net: Rp {Number(pv.price_net).toLocaleString('id-ID')}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                setEditingPendingIndex(idx);
+                                setVariantForm(pv);
+                                setIsVariantModalOpen(true);
+                              }}><Edit className="w-4 h-4" /></Button>
+                              <Button variant="ghost" size="sm" className="text-red-600" onClick={() => {
+                                setPendingVariants(prev => prev.filter((_, i) => i !== idx));
+                              }}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {modalMode === 'add' && pendingVariants.length === 0 && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                       <p className="text-sm text-yellow-800">
-                        Simpan produk terlebih dahulu sebelum menambahkan varian.
+                        Tambahkan varian di sini, akan disimpan bersamaan dengan produk.
                       </p>
                     </div>
-                  ) : loadingVariants ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-600">Memuat varian...</p>
-                    </div>
-                  ) : variants.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 rounded-xl">
-                      <p className="text-gray-600">Belum ada varian untuk produk ini.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left">Lebar</th>
-                            <th className="px-4 py-3 text-left">Gelombang</th>
-                            <th className="px-4 py-3 text-left">Tinggi</th>
-                            <th className="px-4 py-3 text-left">Sibak</th>
-                            <th className="px-4 py-3 text-left">Harga</th>
-                            <th className="px-4 py-3 text-left">Cocok Untuk</th>
-                            <th className="px-4 py-3 text-right">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {variants.map((v: any) => (
-                            <tr key={v.id}>
-                              <td className="px-4 py-3">{v.width}cm</td>
-                              <td className="px-4 py-3">{v.wave || '-'}</td>
-                              <td className="px-4 py-3">{v.height}cm</td>
-                              <td className="px-4 py-3">{v.sibak}</td>
-                              <td className="px-4 py-3">Rp {Number(v.price).toLocaleString('id-ID')}</td>
-                              <td className="px-4 py-3 text-xs text-gray-600">
-                                {v.recommended_min_width && v.recommended_max_width ? (
-                                  `Lebar ${v.recommended_min_width}-${v.recommended_max_width}cm, Tinggi ${v.recommended_height || v.height}cm`
-                                ) : '-'}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="flex gap-2 justify-end">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingVariant(v);
-                                      setVariantForm({
-                                        width: v.width,
-                                        wave: v.wave || 0,
-                                        height: v.height,
-                                        sibak: v.sibak,
-                                        price: v.price,
-                                        recommended_min_width: v.recommended_min_width || 0,
-                                        recommended_max_width: v.recommended_max_width || 0,
-                                        recommended_height: v.recommended_height || 0,
-                                      });
-                                      setIsVariantModalOpen(true);
-                                    }}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-600"
-                                    onClick={async () => {
-                                      const ok = await confirm({
-                                        title: 'Hapus Varian',
-                                        description: 'Yakin ingin menghapus varian ini?',
-                                        confirmText: 'Hapus',
-                                        cancelText: 'Batal',
-                                        variant: 'destructive',
-                                      });
-                                      if (ok) {
-                                        try {
-                                          await productVariantsApi.delete(v.id);
-                                          toast.success('Varian berhasil dihapus');
-                                          // Refresh variants
-                                          const res = await productVariantsApi.getByProduct(selectedProduct.id);
-                                          setVariants(res.data || []);
-                                        } catch (err) {
-                                          toast.error('Gagal menghapus varian');
-                                        }
-                                      }
-                                    }}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </td>
+                  )}
+
+                  {/* Show existing variants for edit mode */}
+                  {modalMode === 'edit' && (
+                    loadingVariants ? (
+                      <div className="text-center py-8"><p className="text-gray-600">Memuat varian...</p></div>
+                    ) : variants.length === 0 ? (
+                      <div className="text-center py-8 bg-gray-50 rounded-xl">
+                        <p className="text-gray-600">Belum ada varian untuk produk ini.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left">Atribut</th>
+                              <th className="px-4 py-3 text-left">Nilai</th>
+                              <th className="px-4 py-3 text-right">Harga Gross</th>
+                              <th className="px-4 py-3 text-right">Harga Net</th>
+                              <th className="px-4 py-3 text-right">Aksi</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {variants.map((v: any) => (
+                              <tr key={v.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">
+                                    {v.attribute_name || 'Varian'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 font-medium">{v.attribute_value || '-'}</td>
+                                <td className="px-4 py-3 text-right">Rp {Number(v.price_gross || 0).toLocaleString('id-ID')}</td>
+                                <td className="px-4 py-3 text-right text-[#EB216A]">Rp {Number(v.price_net || 0).toLocaleString('id-ID')}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="flex gap-2 justify-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingVariant(v);
+                                        setEditingPendingIndex(null);
+                                        setVariantForm({
+                                          attribute_name: v.attribute_name || '',
+                                          attribute_value: v.attribute_value || '',
+                                          price_gross: v.price_gross || 0,
+                                          price_net: v.price_net || 0,
+                                        });
+                                        setIsVariantModalOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-600"
+                                      onClick={async () => {
+                                        const ok = await confirm({
+                                          title: 'Hapus Varian',
+                                          description: 'Yakin ingin menghapus varian ini?',
+                                          confirmText: 'Hapus',
+                                          cancelText: 'Batal',
+                                          variant: 'destructive',
+                                        });
+                                        if (ok) {
+                                          try {
+                                            await productVariantsApi.delete(v.id);
+                                            toast.success('Varian berhasil dihapus');
+                                            const res = await productVariantsApi.getByProduct(selectedProduct.id);
+                                            setVariants(res.data || []);
+                                          } catch (err) {
+                                            toast.error('Gagal menghapus varian');
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
                   )}
                 </div>
               )}
@@ -1280,86 +1457,10 @@ export default function AdminProducts() {
 
       {/* Detail Modal */}
       {isDetailModalOpen && selectedProduct && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl text-gray-900">Detail Produk</h2>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <img
-                    src={safelyParseImages(selectedProduct.images)[0] || selectedProduct.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=100'}
-                    alt={selectedProduct.name}
-                    className="w-full h-64 object-cover rounded-xl"
-                  />
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-gray-600">Nama Produk</Label>
-                    <p className="text-lg text-gray-900">{selectedProduct.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">SKU</Label>
-                    <p className="text-gray-900">{selectedProduct.sku}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">Kategori</Label>
-                    <p className="text-gray-900">{selectedProduct.Category?.name || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">Stok</Label>
-                    <p className="text-gray-900">{selectedProduct.stock || 0}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-gray-600">Harga</Label>
-                <div className="mt-2 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Ukur Sendiri:</span>
-                    <span className="text-gray-900">
-                      Rp {(selectedProduct.price_self_measure || 0).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Ukur Sendiri + Pasang:</span>
-                    <span className="text-gray-900">
-                      Rp {(selectedProduct.price_self_measure_install || 0).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Ukur & Pasang:</span>
-                    <span className="text-gray-900">
-                      Rp {(selectedProduct.price_measure_install || 0).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {selectedProduct.description && (
-                <div>
-                  <Label className="text-gray-600">Deskripsi</Label>
-                  <p className="text-gray-900 mt-2">{selectedProduct.description}</p>
-                </div>
-              )}
-
-              {selectedProduct.information && (
-                <div>
-                  <Label className="text-gray-600">Informasi Lengkap</Label>
-                  <p className="text-gray-900 mt-2 whitespace-pre-line">{selectedProduct.information}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <DetailModalContent
+          product={selectedProduct}
+          onClose={() => setIsDetailModalOpen(false)}
+        />
       )}
 
       {/* Variant Form Modal */}
@@ -1368,7 +1469,7 @@ export default function AdminProducts() {
           <div className="bg-white rounded-2xl max-w-lg w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg text-gray-900">
-                {editingVariant ? 'Edit Varian' : 'Tambah Varian Baru'}
+                {editingVariant ? 'Edit Varian' : (editingPendingIndex !== null ? 'Edit Varian (Pending)' : 'Tambah Varian Baru')}
               </h3>
               <button onClick={() => setIsVariantModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -1376,82 +1477,44 @@ export default function AdminProducts() {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Lebar (cm)</Label>
-                  <Input
-                    type="number"
-                    value={variantForm.width}
-                    onChange={(e) => setVariantForm({ ...variantForm, width: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label>Gelombang</Label>
-                  <Input
-                    type="number"
-                    value={variantForm.wave}
-                    onChange={(e) => setVariantForm({ ...variantForm, wave: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label>Tinggi (cm)</Label>
-                  <Input
-                    type="number"
-                    value={variantForm.height}
-                    onChange={(e) => setVariantForm({ ...variantForm, height: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
+              <div>
+                <Label>Nama Atribut *</Label>
+                <Input
+                  value={variantForm.attribute_name}
+                  onChange={(e) => setVariantForm({ ...variantForm, attribute_name: e.target.value })}
+                  placeholder="Contoh: Layanan, Ukuran, Warna"
+                />
+                <p className="text-xs text-gray-500 mt-1">Nama kategori varian (e.g., Layanan, Ukuran, Warna)</p>
+              </div>
+
+              <div>
+                <Label>Nilai Atribut *</Label>
+                <Input
+                  value={variantForm.attribute_value}
+                  onChange={(e) => setVariantForm({ ...variantForm, attribute_value: e.target.value })}
+                  placeholder="Contoh: Ukur Pasang Sendiri, 60x210, Merah"
+                />
+                <p className="text-xs text-gray-500 mt-1">Nilai spesifik dari atribut</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Sibak</Label>
+                  <Label>Harga Gross (Rp)</Label>
                   <Input
                     type="number"
-                    value={variantForm.sibak}
-                    onChange={(e) => setVariantForm({ ...variantForm, sibak: parseInt(e.target.value) || 1 })}
+                    value={variantForm.price_gross}
+                    onChange={(e) => setVariantForm({ ...variantForm, price_gross: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
                   />
                 </div>
                 <div>
-                  <Label>Harga (Rp)</Label>
+                  <Label>Harga Net (Rp)</Label>
                   <Input
                     type="number"
-                    value={variantForm.price}
-                    onChange={(e) => setVariantForm({ ...variantForm, price: parseInt(e.target.value) || 0 })}
+                    value={variantForm.price_net}
+                    onChange={(e) => setVariantForm({ ...variantForm, price_net: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
                   />
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-4">
-                <Label className="mb-2 block">Cocok Untuk (Rekomendasi)</Label>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label className="text-xs text-gray-500">Min Lebar</Label>
-                    <Input
-                      type="number"
-                      value={variantForm.recommended_min_width}
-                      onChange={(e) => setVariantForm({ ...variantForm, recommended_min_width: parseInt(e.target.value) || 0 })}
-                      placeholder="cm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Max Lebar</Label>
-                    <Input
-                      type="number"
-                      value={variantForm.recommended_max_width}
-                      onChange={(e) => setVariantForm({ ...variantForm, recommended_max_width: parseInt(e.target.value) || 0 })}
-                      placeholder="cm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Tinggi</Label>
-                    <Input
-                      type="number"
-                      value={variantForm.recommended_height}
-                      onChange={(e) => setVariantForm({ ...variantForm, recommended_height: parseInt(e.target.value) || 0 })}
-                      placeholder="cm"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -1463,18 +1526,39 @@ export default function AdminProducts() {
               <Button
                 className="flex-1 bg-[#EB216A] hover:bg-[#d11d5e] text-white"
                 onClick={async () => {
+                  if (!variantForm.attribute_name || !variantForm.attribute_value) {
+                    toast.error('Nama Atribut dan Nilai Atribut wajib diisi!');
+                    return;
+                  }
+
                   try {
-                    if (editingVariant) {
-                      await productVariantsApi.update(editingVariant.id, variantForm);
-                      toast.success('Varian berhasil diupdate');
+                    if (modalMode === 'add') {
+                      // Add to pending variants for new product
+                      if (editingPendingIndex !== null) {
+                        // Edit existing pending variant
+                        setPendingVariants(prev => prev.map((pv, idx) =>
+                          idx === editingPendingIndex ? variantForm : pv
+                        ));
+                      } else {
+                        // Add new pending variant
+                        setPendingVariants(prev => [...prev, variantForm]);
+                      }
+                      toast.success('Varian ditambahkan');
+                      setIsVariantModalOpen(false);
                     } else {
-                      await productVariantsApi.create(selectedProduct.id, variantForm);
-                      toast.success('Varian berhasil ditambahkan');
+                      // Save to API for existing product
+                      if (editingVariant) {
+                        await productVariantsApi.update(editingVariant.id, variantForm);
+                        toast.success('Varian berhasil diupdate');
+                      } else {
+                        await productVariantsApi.create(selectedProduct.id, variantForm);
+                        toast.success('Varian berhasil ditambahkan');
+                      }
+                      // Refresh variants
+                      const res = await productVariantsApi.getByProduct(selectedProduct.id);
+                      setVariants(res.data || []);
+                      setIsVariantModalOpen(false);
                     }
-                    // Refresh variants
-                    const res = await productVariantsApi.getByProduct(selectedProduct.id);
-                    setVariants(res.data || []);
-                    setIsVariantModalOpen(false);
                   } catch (error) {
                     console.error('Error saving variant:', error);
                     toast.error('Gagal menyimpan varian');
@@ -1487,6 +1571,6 @@ export default function AdminProducts() {
           </div>
         </div>
       )}
-    </div>
+    </div >
   );
 }

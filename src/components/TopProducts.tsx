@@ -166,25 +166,33 @@ export function TopProducts() {
                   {/* Price Section */}
                   <div className="flex items-end justify-between mt-auto">
                     <div className="flex flex-col gap-1">
-                      {product.original_price && product.original_price > product.price ? (
+                      {product.original_price && Number(product.original_price) > (Number(product.minPrice || product.price)) ? (
                         <>
                           <div className="flex items-center gap-1 lg:gap-2">
                             <span className="text-xs lg:text-sm text-gray-400 line-through">
                               Rp {Number(product.original_price).toLocaleString('id-ID')}
                             </span>
                             <span className="text-[10px] lg:text-xs bg-green-500 text-white px-1.5 lg:px-2 py-0.5 rounded">
-                              -{Math.round((1 - product.price / product.original_price) * 100)}%
+                              -{Math.round((1 - (Number(product.minPrice || product.price) / Number(product.original_price))) * 100)}%
                             </span>
                           </div>
                           <span className="text-lg lg:text-xl text-[#EB216A]">
-                            Rp {Number(product.price).toLocaleString('id-ID')}
+                            {product.minPrice ? (
+                              <>Mulai Rp {Number(product.minPrice).toLocaleString('id-ID')}</>
+                            ) : (
+                              <>Rp {Number(product.price).toLocaleString('id-ID')}</>
+                            )}
                           </span>
                         </>
                       ) : (
                         <>
                           <div className="h-4 lg:h-5" />
                           <span className="text-lg lg:text-xl text-[#EB216A]">
-                            Rp {Number(product.price).toLocaleString('id-ID')}
+                            {product.minPrice ? (
+                              <>Mulai Rp {Number(product.minPrice).toLocaleString('id-ID')}</>
+                            ) : (
+                              <>Rp {Number(product.price).toLocaleString('id-ID')}</>
+                            )}
                           </span>
                         </>
                       )}

@@ -23,6 +23,7 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { calculatorTypesApi, documentsApi, productsApi, productVariantsApi } from '../../utils/api';
 import { getProductImageUrl } from '../../utils/imageHelper';
+import { safeJSONParse } from '../../utils/jsonHelper';
 
 // ================== TYPES (from CalculatorPage) ==================
 
@@ -77,6 +78,7 @@ interface CalculatorItem {
     quantity: number;
     fabricDiscount: number;  // Discount percentage for fabric
     itemDiscount?: number;    // Discount percentage for entire item subtotal
+    groupDiscount?: number;  // Discount percentage for entire group (blind flow)
     components: SelectedComponents;
     selectedVariant?: {
         id: string;
@@ -84,7 +86,10 @@ interface CalculatorItem {
         height: number;
         sibak: number;
         price: number;
+        price_gross?: number;
+        price_net?: number;
         name: string;
+        attributes?: any; // JSON attributes
     };
 }
 
@@ -116,7 +121,6 @@ export default function AdminDocumentCreate() {
     const [packageType, setPackageType] = useState<'gorden-saja' | 'gorden-lengkap'>('gorden-lengkap');
     const [width, setWidth] = useState('200');
     const [height, setHeight] = useState('250');
-    const [panels, setPanels] = useState('2');
     const [quantity, setQuantity] = useState('1');
 
     // Modals
@@ -130,7 +134,10 @@ export default function AdminDocumentCreate() {
     const [showVariantPicker, setShowVariantPicker] = useState(false);
     const [availableVariants, setAvailableVariants] = useState<any[]>([]);
     const [variantItemId, setVariantItemId] = useState<string | null>(null);
-    // Dedicated search for blind product list
+    const [tempGroupVariant, setTempGroupVariant] = useState<any | null>(null); // For Blind: Selected variant before creating item
+    const [variantSelectionMode, setVariantSelectionMode] = useState<'item' | 'component'>('item'); // Track what we are selecting variants for
+
+    // Price type selector removed
 
     // Grouping State
     const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
@@ -195,7 +202,10 @@ export default function AdminDocumentCreate() {
                 // Set Calculator Type
                 if (parsedData.calculatorTypeSlug) {
                     const matchedType = calculatorTypes.find(t => t.slug === parsedData.calculatorTypeSlug);
-                    if (matchedType) setSelectedCalcType(matchedType);
+                    if (matchedType) {
+                        setSelectedCalcType(matchedType);
+                        loadComponentProducts(matchedType); // Load components for this type
+                    }
                 }
 
                 // Set Fabric
@@ -269,12 +279,12 @@ export default function AdminDocumentCreate() {
         return selectedCalcType?.slug.includes('blind') || selectedCalcType?.has_item_type === false;
     };
 
-    // Open Add Item Modal
+    // Open Add Item Modal (Create or Edit Size)
+    // NOTE: This is mainly for SIZE editing. For Product Editing, we use handleEditItemProduct.
     const handleOpenItemModal = (product?: any) => {
         // Reset form
         setWidth('');
         setHeight('');
-        setPanels('1');
         setQuantity('1');
         setItemName('');
 
@@ -289,15 +299,35 @@ export default function AdminDocumentCreate() {
         setShowItemModal(true);
     };
 
-    // Add separate size to existing group
+    // Handler to start editing an item's product/variant
+    const handleEditItemProduct = (item: CalculatorItem) => {
+        setEditingItemId(item.id);
+        setSearchQuery('');
+        setShowFabricPicker(true);
+    };
+
+    // For Blind flow: Add another size for the same product group
     const handleAddSizeToGroup = (groupId: string, product: any) => {
-        setTargetGroupId(groupId);
+        // setIsBlindFlow(true); // Assuming setIsBlindFlow is defined elsewhere if needed
         setItemModalTargetProduct(product);
-        // Reset Item Dimensions
-        setWidth('');
-        setHeight('');
-        setItemName('');
-        setShowItemModal(true);
+        setEditingItemId(null); // New item
+
+        // Find existing group to inherit variant and discount
+        const existingGroupItem = items.find(i => i.groupId === groupId);
+        if (existingGroupItem) {
+            setTempGroupVariant({
+                ...existingGroupItem.selectedVariant,
+                fabricDiscount: existingGroupItem.fabricDiscount // Inherit item discount
+            });
+            setTargetGroupId(groupId); // Set target group to add to
+            // groupDiscount is handled in handleAddItem by looking up targetGroupId if we don't pass it explicitly?
+            // Actually handleAddItem creates new item. We should ideally pass it or set it.
+            // But handleAddItem only reads from form state (width, height, etc).
+            // We need to ensure the NEW item gets the GROUP discount.
+            // We can do this by setting a temp state or finding group in handleAddItem.
+        }
+
+        handleOpenItemModal(product);
     };
 
     // Remove entire group
@@ -308,11 +338,61 @@ export default function AdminDocumentCreate() {
     };
 
     // Select fabric
-    const handleSelectFabric = (product: any) => {
+    const handleSelectFabric = async (product: any) => {
+        // CASE: Editing existing item's product
+        if (editingItemId) {
+            try {
+                // Check variants for the new product
+                const variantsRes = await productVariantsApi.getByProduct(product.id);
+                const variants = variantsRes.data || [];
+
+                if (variants.length > 0) {
+                    // Has variants: Open variant picker
+                    setItemModalTargetProduct(product);
+                    setAvailableVariants(variants);
+                    setVariantItemId(editingItemId); // Set this so handleSelectVariant knows we are editing this item
+                    setShowVariantPicker(true);
+                    setShowFabricPicker(false);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking variants:', error);
+            }
+
+            // No variants: Update item directly with new product
+            setItems(items.map(i => i.id === editingItemId ? {
+                ...i,
+                product: product,
+                selectedVariant: undefined, // Clear old variant
+                name: product.name          // Reset name to product name
+            } : i));
+
+            setEditingItemId(null);
+            setShowFabricPicker(false);
+            return;
+        }
+
+        // CASE: New Item Selection
         if (isBlindType()) {
-            // Check if we are adding a variant to a specific group
-            // Actually, handleAddSizeToGroup passes product directly. 
-            // If picking from "Pilih Produk Blind", we want to start a new Item with this product.
+            // Check for variants FIRST
+            try {
+                const variantsRes = await productVariantsApi.getByProduct(product.id);
+                const variants = variantsRes.data || [];
+
+                if (variants.length > 0) {
+                    // Show Variant Picker FIRST
+                    setItemModalTargetProduct(product); // Set target product
+                    setAvailableVariants(variants);
+                    setTempGroupVariant(null); // Reset temp variant
+                    setShowVariantPicker(true);
+                    setShowFabricPicker(false);
+                    return; // Stop here, wait for variant selection
+                }
+            } catch (error) {
+                console.error('Error checking variants:', error);
+            }
+
+            // If no variants, proceed to Item Modal directly
             handleOpenItemModal(product);
             setShowFabricPicker(false);
         } else {
@@ -336,6 +416,28 @@ export default function AdminDocumentCreate() {
             ? targetGroupId
             : (isBlindType() ? Date.now().toString() + '-group' : undefined);
 
+        // Determine Variant for Blind items (Group Level Consistency)
+        let itemSelectedVariant = undefined;
+        let itemFabricDiscount = 0;
+        let itemGroupDiscount = 0;
+
+        if (isBlindType()) {
+            if (targetGroupId) {
+                // Adding to existing group -> Use Group's Variant
+                const existingGroupItem = items.find(i => i.groupId === targetGroupId);
+                if (existingGroupItem?.selectedVariant) {
+                    itemSelectedVariant = existingGroupItem.selectedVariant;
+                    itemFabricDiscount = existingGroupItem.fabricDiscount || 0;
+                    itemGroupDiscount = existingGroupItem.groupDiscount || 0; // Inherit group discount
+                }
+            } else if (tempGroupVariant) {
+                // New Group -> Use Temp Variant selected in previous step
+                itemSelectedVariant = tempGroupVariant;
+                itemFabricDiscount = tempGroupVariant.fabricDiscount || 0;
+                itemGroupDiscount = 0; // New group starts with 0 discount
+            }
+        }
+
         const newItem: CalculatorItem = {
             id: Date.now().toString(),
             groupId,
@@ -345,10 +447,12 @@ export default function AdminDocumentCreate() {
             product: itemModalTargetProduct || selectedFabric, // Set specific product if any (blind), else use global fabric
             width: itemWidth,
             height: itemHeight,
-            panels: parseInt(panels) || (isBlindType() ? 1 : 2),
-            quantity: parseInt(quantity) || 1,
-            fabricDiscount: 0,
-            components: {}
+            panels: isBlindType() ? 0 : calculatePanels(itemWidth, selectedCalcType?.fabric_multiplier || 2.4, selectedFabric?.maxWidth || 280),
+            quantity: parseFloat(quantity),
+            fabricDiscount: isBlindType() ? itemFabricDiscount : 0,
+            groupDiscount: isBlindType() ? itemGroupDiscount : 0,
+            selectedVariant: itemSelectedVariant, // Assign pre-selected variant
+            components: isBlindType() ? {} : initializeComponents() // Initialize components for standard flow
         };
 
         setItems([...items, newItem]);
@@ -357,9 +461,10 @@ export default function AdminDocumentCreate() {
         // Check for variants (Only for Global Fabric, not per-item product for now unless requested)
         // For Blind (per-item product), we might want to check variants but usually blind variants are different.
         // Let's stick to global fabric variant check for Smokaring/Kupu2 logic for now.
+        // Check for variants (Only if NOT already selected)
         const productToCheck = itemModalTargetProduct || selectedFabric;
 
-        if (productToCheck?.id) {
+        if (productToCheck?.id && !newItem.selectedVariant) { // Skip if variant already assigned (Blind Group Flow)
             try {
                 const variantsRes = await productVariantsApi.getByProduct(productToCheck.id);
                 const variants = variantsRes.data || [];
@@ -371,6 +476,9 @@ export default function AdminDocumentCreate() {
             } catch (error) {
                 console.error('Error checking variants:', error);
             }
+        } else if (tempGroupVariant) {
+            // Clear temp variant after successful add
+            setTempGroupVariant(null);
         }
     };
 
@@ -381,25 +489,96 @@ export default function AdminDocumentCreate() {
 
     // Select variant for item
     const handleSelectVariant = (variant: any) => {
-        if (!variantItemId) return;
-        setItems(items.map(item => {
-            if (item.id === variantItemId) {
-                return {
-                    ...item,
-                    selectedVariant: {
-                        id: variant.id,
-                        width: variant.width,
-                        height: variant.height,
-                        sibak: variant.sibak || 0,
-                        price: variant.price,
-                        name: variant.name || `${variant.width}x${variant.height}cm`
-                    }
-                };
-            }
-            return item;
-        }));
-        setShowVariantPicker(false);
-        setVariantItemId(null);
+        // Prepare variant data object
+        // Calculate discount from Gross vs Net
+        const gross = Number(variant.price_gross) || Number(variant.price_net) || 0;
+        const net = Number(variant.price_net) || gross;
+        const discountPercent = gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0;
+
+        // Parse JSON attributes for variant display name
+        const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
+        const attrDisplay = Object.entries(attrs).length > 0
+            ? Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')
+            : (variant.attribute_value || `${variant.width}x${variant.height}cm`);
+
+        const variantData = {
+            id: variant.id,
+            width: variant.width,
+            height: variant.height,
+            sibak: variant.sibak || 0,
+            price: gross, // Primary price is GROSS (before discount)
+            price_gross: variant.price_gross,
+            price_net: variant.price_net,
+            attributes: attrs, // Save attributes
+            name: itemModalTargetProduct?.name
+                ? `${itemModalTargetProduct.name} (${attrDisplay})`
+                : (variant.attribute_value
+                    ? `${variant.attribute_value} (${variant.attribute_name})`
+                    : `${variant.width}x${variant.height}cm`)
+        };
+
+        // Case 0: Component Variant Selection
+        if (variantSelectionMode === 'component') {
+            if (!editingItemId || editingComponentId === null) return;
+
+            setItems(items.map(item => {
+                if (item.id === editingItemId) {
+                    const existingSelection = item.components[editingComponentId];
+                    // We need the product object. 'itemModalTargetProduct' holds key product info during variant selection.
+                    // Or we can construct it from pending product.
+                    // In handleSelectComponent, we setItemModalTargetProduct(product).
+                    const productWithVariant = {
+                        ...itemModalTargetProduct,
+                        price: variantData.price, // Use variant price
+                        // We might want to store variant info specifically if needed, but for now override main product or treat as product option
+                        // Following CalculatorPage logic:
+                        name: variantData.name
+                    };
+
+                    return {
+                        ...item,
+                        components: {
+                            ...item.components,
+                            [editingComponentId]: {
+                                product: productWithVariant,
+                                qty: existingSelection?.qty || 1,
+                                discount: existingSelection?.discount || 0
+                            }
+                        }
+                    };
+                }
+                return item;
+            }));
+            setShowVariantPicker(false);
+            setItemModalTargetProduct(null); // Clear pending product
+            setVariantSelectionMode('item'); // Reset mode
+            return;
+        }
+
+        // Case 1: Selecting variant for specific item (Edit or Late Select)
+        if (variantItemId) {
+            setItems(items.map(item => {
+                if (item.id === variantItemId) {
+                    return {
+                        ...item,
+                        fabricDiscount: discountPercent, // Auto-set discount
+                        selectedVariant: variantData
+                    };
+                }
+                return item;
+            }));
+            setShowVariantPicker(false);
+            setVariantItemId(null);
+            return;
+        }
+
+        // Case 2: Initial Variant Selection for Blind Group (Before Item Creation)
+        if (isBlindType() && itemModalTargetProduct) {
+            setTempGroupVariant({ ...variantData, fabricDiscount: discountPercent });
+            setShowVariantPicker(false);
+            // Now open the Item Modal (Size Input)
+            handleOpenItemModal(itemModalTargetProduct);
+        }
     };
 
     // Update fabric discount percentage
@@ -421,9 +600,29 @@ export default function AdminDocumentCreate() {
     };
 
     // Select component product
-    const handleSelectComponent = (product: any) => {
+    const handleSelectComponent = async (product: any) => {
         if (!editingItemId || editingComponentId === null) return;
 
+        // Check variants
+        try {
+            // Basic fetch from productVariantsApi
+            const variantsRes = await productVariantsApi.getByProduct(product.id);
+            const variants = variantsRes.data || [];
+
+            if (variants.length > 0) {
+                // Has variants: Open variant picker
+                setItemModalTargetProduct(product);
+                setAvailableVariants(variants);
+                setVariantSelectionMode('component');
+                setShowComponentPicker(false);
+                setShowVariantPicker(true);
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        // No variants: Set product directly
         setItems(items.map(item => {
             if (item.id === editingItemId) {
                 const existingSelection = item.components[editingComponentId];
@@ -444,6 +643,27 @@ export default function AdminDocumentCreate() {
         setShowComponentPicker(false);
         setEditingItemId(null);
         setEditingComponentId(null);
+    };
+
+
+    // ================== HELPERS ==================
+
+    const calculatePanels = (width: number, multiplier: number, maxWidth: number) => {
+        const fabricWidth = width * (multiplier || 2.4);
+        const panels = Math.ceil(fabricWidth / (maxWidth || 280));
+        return Math.max(1, panels);
+    };
+
+    const initializeComponents = () => {
+        const comps: SelectedComponents = {};
+        if (selectedCalcType?.components) {
+            selectedCalcType.components.forEach(c => {
+                if (c.is_required) {
+                    // Empty for now
+                }
+            });
+        }
+        return comps;
     };
 
 
@@ -469,12 +689,15 @@ export default function AdminDocumentCreate() {
 
     const calculateItemPrice = (item: CalculatorItem) => {
         const product = item.product || selectedFabric; // PRIORITIZE ITEM PRODUCT
-        if (!product || !selectedCalcType) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0 };
+        if (!product || !selectedCalcType) return { fabricPricePerMeter: 0, fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0 };
 
         const widthM = item.width / 100;
         const heightM = item.height / 100;
 
-        const fabricPricePerMeter = item.selectedVariant?.price ?? product.price;
+        // Use variant price based on priceType selector, fallback to 0 if no variant
+        // Use variant price (which is set to GROSS in handleSelectVariant), fallback to 0
+        const variantPrice = item.selectedVariant ? (item.selectedVariant.price || 0) : 0;
+        const fabricPricePerMeter = variantPrice;
         const fabricMeters = widthM * (selectedCalcType.fabric_multiplier || 2.4) * heightM;
         const fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
         const fabricPrice = fabricPriceBeforeDiscount * (1 - (item.fabricDiscount || 0) / 100);  // Apply fabric discount
@@ -491,6 +714,7 @@ export default function AdminDocumentCreate() {
 
         const subtotal = fabricPrice + componentsPrice;
         const totalAfterItemDiscount = subtotal * (1 - (item.itemDiscount || 0) / 100);  // Apply item discount
+        const totalAfterGroupDiscount = totalAfterItemDiscount * (1 - (item.groupDiscount || 0) / 100); // Apply group discount
 
         return {
             fabricPricePerMeter, // ADD THIS
@@ -499,12 +723,13 @@ export default function AdminDocumentCreate() {
             fabricMeters,
             components: componentsPrice,
             total: subtotal,                      // Subtotal before item discount
-            totalAfterItemDiscount               // Total after item discount
+            totalAfterItemDiscount,               // Total after item discount
+            totalAfterGroupDiscount               // Total after group discount
         };
     };
 
     const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterItemDiscount, 0);
+        return items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterGroupDiscount, 0);
     };
 
     // ================== SUBMIT ==================
@@ -564,7 +789,7 @@ export default function AdminDocumentCreate() {
                     fabricType: item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja',
                     items: windowItems,
                     itemDiscount: item.itemDiscount || 0,
-                    subtotal: prices.totalAfterItemDiscount
+                    subtotal: prices.totalAfterGroupDiscount // Use final discounted price
                 };
             });
 
@@ -691,7 +916,13 @@ export default function AdminDocumentCreate() {
                                                         <img src={getProductImageUrl(selectedFabric.images || selectedFabric.image)} alt="" className="w-12 h-12 rounded object-cover bg-gray-100" />
                                                         <div>
                                                             <p className="font-medium">{selectedFabric.name}</p>
-                                                            <p className="text-sm text-[#EB216A]">Rp {Number(selectedFabric.price).toLocaleString('id-ID')}/m</p>
+                                                            <p className="text-sm text-[#EB216A]">
+                                                                {selectedFabric.minPrice ? (
+                                                                    <>Mulai Rp {Number(selectedFabric.minPrice).toLocaleString('id-ID')}/m</>
+                                                                ) : (
+                                                                    <>Pilih varian</>
+                                                                )}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -783,7 +1014,13 @@ export default function AdminDocumentCreate() {
                                                                         />
                                                                         <div>
                                                                             <h3 className="font-bold text-lg text-gray-900">{groupProduct?.name || 'Produk Custom'}</h3>
-                                                                            <p className="text-[#EB216A] font-medium">Rp {(groupProduct?.price ?? 0).toLocaleString('id-ID')}/m</p>
+                                                                            <p className="text-[#EB216A] font-medium">
+                                                                                {groupProduct?.minPrice ? (
+                                                                                    <>Mulai Rp {Number(groupProduct.minPrice).toLocaleString('id-ID')}/m</>
+                                                                                ) : (
+                                                                                    <>Pilih varian</>
+                                                                                )}
+                                                                            </p>
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex items-center gap-2">
@@ -867,9 +1104,48 @@ export default function AdminDocumentCreate() {
                                                                             {/* Footer Group */}
                                                                             <tfoot className="border-t border-gray-200">
                                                                                 <tr>
-                                                                                    <td colSpan={6} className="py-3 px-3 text-right font-semibold text-gray-600">Subtotal Grup</td>
+                                                                                    <td colSpan={5} className="py-3 px-3 text-right font-semibold text-gray-600">Diskon Grup</td>
+                                                                                    <td className="py-3 px-3 text-center">
+                                                                                        <div className="flex items-center justify-center gap-1">
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                max="100"
+                                                                                                value={groupItems[0]?.groupDiscount || 0}
+                                                                                                onChange={(e) => {
+                                                                                                    const newDisc = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                                                                    // Bulk update all items in this group
+                                                                                                    setItems(prevItems => prevItems.map(i =>
+                                                                                                        i.groupId === groupId ? { ...i, groupDiscount: newDisc } : i
+                                                                                                    ));
+                                                                                                }}
+                                                                                                className="w-14 h-9 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                placeholder="0"
+                                                                                            />
+                                                                                            <span className="text-gray-500 text-sm">%</span>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-3 px-3 text-right font-semibold text-gray-600">
+                                                                                        <div className="flex flex-col">
+                                                                                            <span>Subtotal Grup</span>
+                                                                                            {(groupItems[0]?.groupDiscount || 0) > 0 && (
+                                                                                                <span className="text-xs text-green-600 font-normal">
+                                                                                                    (Disc {groupItems[0].groupDiscount}%)
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </td>
                                                                                     <td className="py-3 px-3 text-right font-bold text-[#EB216A] text-lg">
-                                                                                        Rp {groupTotal.toLocaleString('id-ID')}
+                                                                                        <div className="flex flex-col items-end">
+                                                                                            {(groupItems[0]?.groupDiscount || 0) > 0 && (
+                                                                                                <span className="text-xs text-gray-400 line-through font-normal">
+                                                                                                    Rp {groupTotal.toLocaleString('id-ID')}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            <span>
+                                                                                                Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                            </span>
+                                                                                        </div>
                                                                                     </td>
                                                                                     <td></td>
                                                                                 </tr>
@@ -902,7 +1178,7 @@ export default function AdminDocumentCreate() {
                                         {items.some(i => !i.groupId) && (
                                             <div className="border rounded-xl overflow-hidden mt-6">
                                                 {/* NEW ITEM BLOCK LAYOUT FOR STANDARD CALCULATOR */}
-                                                {items.filter(i => !i.groupId).map((item, idx) => {
+                                                {items.filter(i => !i.groupId).map((item) => {
                                                     const prices = calculateItemPrice(item);
 
                                                     // Main Fabric Calculations
@@ -955,7 +1231,7 @@ export default function AdminDocumentCreate() {
                                                                 <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white shadow-sm">
                                                                     <div className="flex items-center gap-3 flex-1">
                                                                         <Button
-                                                                            onClick={() => {/* Maybe specific fabric picker or just edit item */ }}
+                                                                            onClick={() => handleEditItemProduct(item)}
                                                                             className={`text-xs px-3 h-8 shadow-sm ${item.product ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-[#EB216A] hover:bg-[#D41B5B] text-white'}`}
                                                                         >
                                                                             {item.product ? 'Ganti' : 'Pilih'}
@@ -966,7 +1242,19 @@ export default function AdminDocumentCreate() {
                                                                             {item.product ? (
                                                                                 <div className="flex flex-col leading-tight">
                                                                                     <span className="font-semibold text-gray-900">
-                                                                                        {item.selectedVariant ? item.selectedVariant.name : item.product.name}
+                                                                                        {(() => {
+                                                                                            if (item.selectedVariant) {
+                                                                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                                                                    return item.selectedVariant.name;
+                                                                                                }
+                                                                                                // Fallback: Parse attributes
+                                                                                                const attrs = safeJSONParse(item.selectedVariant.attributes, {}) as Record<string, any>;
+                                                                                                if (Object.keys(attrs).length > 0) {
+                                                                                                    return `${item.product.name} (${Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')})`;
+                                                                                                }
+                                                                                            }
+                                                                                            return item.product.name;
+                                                                                        })()}
                                                                                     </span>
                                                                                     {item.selectedVariant && (
                                                                                         <span className="text-[10px] text-gray-500">{item.product.name}</span>
@@ -984,7 +1272,18 @@ export default function AdminDocumentCreate() {
                                                                             <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
                                                                                 <img src={getProductImageUrl(item.product.image || item.product.images)} className="w-8 h-8 rounded object-cover border" />
                                                                                 <div className="flex flex-col leading-tight">
-                                                                                    <span className="text-[10px] text-gray-500">{item.selectedVariant ? `Varian: ${item.selectedVariant.name}` : 'Standard'}</span>
+                                                                                    <span className="text-[10px] text-gray-500">
+                                                                                        {item.selectedVariant ? (() => {
+                                                                                            if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                                                                return `Varian: ${item.selectedVariant.name}`;
+                                                                                            }
+                                                                                            const attrs = safeJSONParse(item.selectedVariant.attributes, {}) as Record<string, any>;
+                                                                                            if (Object.keys(attrs).length > 0) {
+                                                                                                return `Varian: ${Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
+                                                                                            }
+                                                                                            return 'Standard';
+                                                                                        })() : 'Standard'}
+                                                                                    </span>
                                                                                 </div>
                                                                             </div>
                                                                         ) : (
@@ -1222,6 +1521,8 @@ export default function AdminDocumentCreate() {
                         </div>
                     </div>
 
+                    {/* Price Type Selector removed */}
+
                     {/* Customer Info */}
                     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
                         <h3 className="font-semibold text-sm">Data Customer</h3>
@@ -1324,7 +1625,7 @@ export default function AdminDocumentCreate() {
                                             <img src={getProductImageUrl(product.images || product.image)} alt="" className="w-12 h-12 rounded object-cover bg-gray-100" />
                                             <div>
                                                 <p className="font-medium">{product.name}</p>
-                                                <p className="text-sm text-[#EB216A]">Rp {Number(product.price).toLocaleString('id-ID')}/m</p>
+                                                {/* Price removed as per request - handled by variants */}
                                             </div>
                                         </div>
                                     </div>
@@ -1348,14 +1649,26 @@ export default function AdminDocumentCreate() {
                                 <Input placeholder="Cari varian..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50" onClick={() => { setShowVariantPicker(false); setVariantItemId(null); }}>
-                                    <p className="font-medium">Harga Default</p>
-                                    <p className="text-sm text-gray-500">Gunakan harga produk utama - Rp {Number(selectedFabric?.price || 0).toLocaleString('id-ID')}/m</p>
-                                </div>
-                                {availableVariants.filter(v => `${v.width}x${v.height}`.includes(searchQuery) || String(v.sibak || '').includes(searchQuery)).map(v => (
+                                {/* Default price option removed as product level price is deprecated */}
+                                {availableVariants.filter(v =>
+                                    `${v.width}x${v.height}`.includes(searchQuery) ||
+                                    String(v.sibak || '').includes(searchQuery) ||
+                                    (v.attribute_value || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    (v.attribute_name || '').toLowerCase().includes(searchQuery.toLowerCase())
+                                ).map(v => (
                                     <div key={v.id} className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#EB216A]" onClick={() => handleSelectVariant(v)}>
-                                        <p className="font-medium">{v.width}x{v.height}cm {v.sibak ? `(sibak ${v.sibak}cm)` : ''}</p>
-                                        <p className="text-sm text-[#EB216A]">Rp {Number(v.price).toLocaleString('id-ID')}/m</p>
+                                        <p className="font-medium">
+                                            {(() => {
+                                                const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                                                if (Object.keys(attrs).length > 0) {
+                                                    return Object.entries(attrs).map(([k, val]) => `${k}: ${val}`).join(', ');
+                                                }
+                                                return v.attribute_value
+                                                    ? <>{v.attribute_value} <span className="text-xs text-gray-500 font-normal">({v.attribute_name})</span></>
+                                                    : `${v.width}x${v.height}cm ${v.sibak ? `(sibak ${v.sibak}cm)` : ''}`;
+                                            })()}
+                                        </p>
+                                        <p className="text-sm text-[#EB216A]">Rp {Number(v.price_gross || v.price_net || 0).toLocaleString('id-ID')}/m</p>
                                     </div>
                                 ))}
                             </div>
@@ -1386,7 +1699,7 @@ export default function AdminDocumentCreate() {
                                                 <img src={getProductImageUrl(product.images || product.image)} alt="" className="w-10 h-10 rounded object-cover bg-gray-100" />
                                                 <div>
                                                     <p className="font-medium">{product.name}</p>
-                                                    <p className="text-sm text-[#EB216A]">Rp {Number(product.price).toLocaleString('id-ID')}</p>
+                                                    {/* Price removed */}
                                                 </div>
                                             </div>
                                         </div>

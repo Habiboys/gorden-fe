@@ -11,6 +11,8 @@ interface ProductCardProps {
   id: string;
   name: string;
   price: number;
+  minPrice?: number;  // From cheapest variant
+  maxPrice?: number;  // From most expensive variant
   image?: string;
   images?: string[] | string;
   category: string;
@@ -20,7 +22,7 @@ interface ProductCardProps {
   newArrival?: boolean;
 }
 
-export function ProductCard({ id, name, price, image, images, featured, bestSeller, newArrival }: ProductCardProps) {
+export function ProductCard({ id, name, price, minPrice, maxPrice, image, images, featured, bestSeller, newArrival }: ProductCardProps) {
   const productImage = getProductImageUrl(images || image);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -28,14 +30,21 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
 
   const inWishlist = isInWishlist(id);
 
+  // Only show price if minPrice exists (from variants)
+  const hasVariants = minPrice !== undefined && minPrice > 0;
+  const hasPriceRange = hasVariants && maxPrice && maxPrice > minPrice;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // Only add to cart if has variant price
+    if (!hasVariants) return;
+
     addToCart({
       id,
       name,
-      price: Number(price),
+      price: Number(minPrice),
       image: productImage,
     });
   };
@@ -107,10 +116,20 @@ export function ProductCard({ id, name, price, image, images, featured, bestSell
           {/* Price Section */}
           <div className="flex items-end justify-between mt-auto">
             <div className="flex flex-col gap-1">
-              <span className="text-lg lg:text-xl text-[#EB216A]">
-                Rp {Number(price).toLocaleString('id-ID')}
-              </span>
-              <span className="text-xs text-gray-500">Per meter</span>
+              {hasVariants ? (
+                <>
+                  <span className="text-lg lg:text-xl text-[#EB216A]">
+                    {hasPriceRange ? (
+                      <>Rp {Number(minPrice).toLocaleString('id-ID')} - {Number(maxPrice).toLocaleString('id-ID')}</>
+                    ) : (
+                      <>Mulai Rp {Number(minPrice).toLocaleString('id-ID')}</>
+                    )}
+                  </span>
+                  <span className="text-xs text-gray-500">Berdasarkan varian</span>
+                </>
+              ) : (
+                <span className="text-sm text-gray-500">Pilih varian</span>
+              )}
             </div>
             <button
               onClick={handleWishlistToggle}

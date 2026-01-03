@@ -116,7 +116,8 @@ export const generateCalculatorMessage = ({
 
         message += `*PRODUK: ${product.name}*\n`;
         message += `Link: ${baseUrl}/product/${product.id}\n`;
-        message += `Harga: Rp ${product.price?.toLocaleString('id-ID')}/m\n\n`;
+        // Price per item is now variant-based, so we just show the product info
+        message += `\n`;
 
         message += `*DAFTAR ITEM & UKURAN:*\n`;
         groupItems.forEach((item, idx) => {
@@ -126,9 +127,12 @@ export const generateCalculatorMessage = ({
             message += `${idx + 1}. ${item.itemType === 'pintu' ? 'Pintu' : 'Jendela'} ${item.width}cm x ${item.height}cm\n`;
             message += `   Jumlah: ${item.quantity} unit\n`;
 
-            // Variant
+            // Variant (now with JSON attributes)
             if (item.selectedVariant) {
                 message += `   - Varian: ${item.selectedVariant.name}\n`;
+                // Show price from variant
+                const variantPrice = item.selectedVariant.price_net || item.selectedVariant.price || 0;
+                message += `   - Harga: Rp ${variantPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
             }
 
             // Components

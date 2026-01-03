@@ -519,7 +519,9 @@ export default function AdminDocumentDetail() {
                                                 const items = groupItems as any[];
                                                 const firstItem = items[0];
                                                 const groupProduct = firstItem.product || baseFabric;
-                                                const groupTotal = items.reduce((sum, item) => sum + calculateItemPriceRich(item).total, 0);
+                                                const groupDiscount = firstItem.groupDiscount || 0; // Get group discount
+                                                const groupTotalRaw = items.reduce((sum, item) => sum + calculateItemPriceRich(item).total, 0);
+                                                const groupTotalAfterGroupDisc = groupTotalRaw * (1 - groupDiscount / 100);
 
                                                 return (
                                                     <div key={groupId} className="bg-white border rounded-xl shadow-sm overflow-hidden mb-6">
@@ -559,7 +561,43 @@ export default function AdminDocumentDetail() {
                                                                             return (
                                                                                 <tr key={item.id} className="hover:bg-gray-50/50">
                                                                                     <td className="py-3 px-3 relative">
-                                                                                        <p className="font-medium text-gray-900">{item.name || '-'}</p>
+                                                                                        <p className="font-medium text-gray-900">
+                                                                                            {(() => {
+                                                                                                // Name Fix Logic
+                                                                                                let displayName = item.name;
+
+                                                                                                // If name is missing or broken (contains 'undefined'), try to reconstruct
+                                                                                                if (!displayName || displayName.includes('undefined')) {
+                                                                                                    if (item.selectedVariant) {
+                                                                                                        // Try variant name first
+                                                                                                        if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                                                                            return `${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} (${item.selectedVariant.name})`;
+                                                                                                        }
+
+                                                                                                        // Fallback: Parse Attributes
+                                                                                                        try {
+                                                                                                            const attrs = typeof item.selectedVariant.attributes === 'string'
+                                                                                                                ? JSON.parse(item.selectedVariant.attributes)
+                                                                                                                : item.selectedVariant.attributes;
+
+                                                                                                            if (attrs && Object.keys(attrs).length > 0) {
+                                                                                                                // Format: "Warna: Gold, Motif: Bunga"
+                                                                                                                const attrString = Object.entries(attrs)
+                                                                                                                    .map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                                                                                return `${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} (${attrString})`;
+                                                                                                            }
+                                                                                                        } catch (e) { }
+                                                                                                    }
+
+                                                                                                    // Last Resort: Dimensions
+                                                                                                    if (item.width && item.height) {
+                                                                                                        return `${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} (${item.width}cm x ${item.height}cm)`;
+                                                                                                    }
+                                                                                                }
+
+                                                                                                return displayName || '-';
+                                                                                            })()}
+                                                                                        </p>
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-center">
                                                                                         {item.width} x {item.height}
@@ -588,9 +626,21 @@ export default function AdminDocumentDetail() {
                                                                     </tbody>
                                                                     <tfoot className="border-t border-gray-200">
                                                                         <tr>
-                                                                            <td colSpan={7} className="py-3 px-3 text-right font-semibold text-gray-600">Subtotal Grup</td>
+                                                                            <td colSpan={7} className="py-3 px-3 text-right font-semibold text-gray-600">
+                                                                                Subtotal Grup
+                                                                                {groupDiscount > 0 && (
+                                                                                    <span className="ml-2 text-green-600 text-xs font-normal">(Disc {groupDiscount}%)</span>
+                                                                                )}
+                                                                            </td>
                                                                             <td className="py-3 px-3 text-right font-bold text-[#EB216A] text-lg">
-                                                                                Rp {groupTotal.toLocaleString('id-ID')}
+                                                                                <div className="flex flex-col items-end">
+                                                                                    {groupDiscount > 0 && (
+                                                                                        <span className="text-xs text-gray-400 line-through font-normal">
+                                                                                            Rp {groupTotalRaw.toLocaleString('id-ID')}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span>Rp {groupTotalAfterGroupDisc.toLocaleString('id-ID')}</span>
+                                                                                </div>
                                                                             </td>
                                                                         </tr>
                                                                     </tfoot>
@@ -658,10 +708,46 @@ export default function AdminDocumentDetail() {
                                                             <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
                                                                 <div className="flex flex-col leading-tight">
                                                                     <span className="font-medium text-gray-900 line-clamp-1">
-                                                                        {item.selectedVariant?.name || item.product?.name || item.productName || 'Produk'}
+                                                                        {(() => {
+                                                                            let displayName = item.selectedVariant?.name || item.product?.name || item.productName || 'Produk';
+                                                                            if (displayName.includes('undefined') && item.selectedVariant) {
+                                                                                // Fallback
+                                                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                                                    return item.selectedVariant.name;
+                                                                                }
+                                                                                return 'Produk Custom';
+                                                                            }
+                                                                            return displayName;
+                                                                        })()}
                                                                     </span>
                                                                     <span className="text-[10px] text-gray-500">
-                                                                        Varian: {item.selectedVariant?.name || item.variant || '-'}
+                                                                        Varian: {(() => {
+                                                                            let variantName = item.selectedVariant?.name || item.variant || '-';
+
+                                                                            if (variantName.includes('undefined') && item.selectedVariant) {
+                                                                                // Try to find correct name
+                                                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                                                    return item.selectedVariant.name;
+                                                                                }
+
+                                                                                // Try attributes
+                                                                                try {
+                                                                                    const attrs = typeof item.selectedVariant.attributes === 'string'
+                                                                                        ? JSON.parse(item.selectedVariant.attributes)
+                                                                                        : item.selectedVariant.attributes;
+
+                                                                                    if (attrs && Object.keys(attrs).length > 0) {
+                                                                                        return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                                                    }
+                                                                                } catch (e) { }
+
+                                                                                // Try dimensions
+                                                                                if (item.width && item.height) {
+                                                                                    return `${item.width}cm x ${item.height}cm`;
+                                                                                }
+                                                                            }
+                                                                            return variantName;
+                                                                        })()}
                                                                     </span>
                                                                 </div>
                                                             </div>

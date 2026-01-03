@@ -197,25 +197,33 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
                   {/* Price Section */}
                   <div className="flex items-end justify-between mt-auto">
                     <div className="flex flex-col gap-0.5 lg:gap-1">
-                      {product.original_price && Number(product.original_price) > Number(product.price) ? (
+                      {product.original_price && Number(product.original_price) > Number(product.minPrice || product.price) ? (
                         <>
                           <div className="flex items-center gap-1 lg:gap-2">
                             <span className="text-xs text-gray-400 line-through">
                               Rp {Number(product.original_price).toLocaleString('id-ID')}
                             </span>
                             <span className="text-[10px] lg:text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">
-                              -{Math.round((1 - Number(product.price) / Number(product.original_price)) * 100)}%
+                              -{Math.round((1 - Number(product.minPrice || product.price) / Number(product.original_price)) * 100)}%
                             </span>
                           </div>
                           <span className="text-base lg:text-xl text-[#EB216A]">
-                            Rp {Number(product.price).toLocaleString('id-ID')}
+                            {product.minPrice ? (
+                              <>Mulai Rp {Number(product.minPrice).toLocaleString('id-ID')}</>
+                            ) : (
+                              <>Rp {Number(product.price).toLocaleString('id-ID')}</>
+                            )}
                           </span>
                         </>
                       ) : (
                         <>
                           <div className="h-4 lg:h-5" />
                           <span className="text-base lg:text-xl text-[#EB216A]">
-                            Rp {Number(product.price).toLocaleString('id-ID')}
+                            {product.minPrice ? (
+                              <>Mulai Rp {Number(product.minPrice).toLocaleString('id-ID')}</>
+                            ) : (
+                              <>Rp {Number(product.price).toLocaleString('id-ID')}</>
+                            )}
                           </span>
                         </>
                       )}

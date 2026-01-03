@@ -97,6 +97,10 @@ export const productsApi = {
     incrementView: (id: string) => apiCall(`/products/${id}/view`, {
         method: 'POST',
     }),
+
+    duplicate: (id: string) => apiCall(`/products/${id}/duplicate`, {
+        method: 'POST',
+    }),
 };
 
 // Product Variants API
@@ -109,6 +113,11 @@ export const productVariantsApi = {
     create: (productId: string, variant: any) => apiCall(`/products/${productId}/variants`, {
         method: 'POST',
         body: JSON.stringify(variant),
+    }),
+
+    bulkCreate: (productId: string, variants: any[]) => apiCall(`/products/${productId}/variants/bulk`, {
+        method: 'POST',
+        body: JSON.stringify({ variants }),
     }),
 
     update: (id: string, variant: any) => apiCall(`/variants/${id}`, {

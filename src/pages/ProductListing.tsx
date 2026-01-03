@@ -26,6 +26,8 @@ export default function ProductListing() {
           image: p.image_url, // map snake_case to camelCase for component
           category: p.category_id || p.category, // fallback
           price: typeof p.price_self_measure === 'string' ? parseFloat(p.price_self_measure) : p.price_self_measure, // ensure number
+          minPrice: p.minPrice, // From cheapest variant
+          maxPrice: p.maxPrice, // From most expensive variant
           featured: p.is_featured,
           bestSeller: p.is_best_seller,
           newArrival: p.is_new_arrival
