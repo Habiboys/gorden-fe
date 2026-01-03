@@ -171,28 +171,33 @@ export function TopProducts() {
                         <>
                           <div className="flex items-center gap-1 lg:gap-2">
                             <span className="text-xs lg:text-sm text-gray-400 line-through">
-                              <span className="text-[10px]">Mulai </span>
                               Rp {Number(product.minPriceGross).toLocaleString('id-ID')}
                             </span>
                             <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 lg:px-2 py-0.5 rounded">
                               -{Math.round((1 - (Number(product.minPrice) / Number(product.minPriceGross))) * 100)}%
                             </span>
                           </div>
-                          <span className="text-lg lg:text-xl text-[#EB216A] font-semibold">
-                            <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(product.minPrice).toLocaleString('id-ID')}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
+                            <span className="text-lg lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                              Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                            </span>
+                          </div>
                         </>
                       ) : product.minPrice && !isNaN(Number(product.minPrice)) ? (
                         <>
                           <div className="h-4 lg:h-5" />
-                          <span className="text-lg lg:text-xl text-[#EB216A] font-semibold">
-                            <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(product.minPrice).toLocaleString('id-ID')}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
+                            <span className="text-lg lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                              Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                            </span>
+                          </div>
                         </>
                       ) : (
                         <span className="text-sm text-gray-500">Lihat varian</span>
                       )}
-                      <span className="text-xs text-gray-500">Per {product.price_unit || 'meter'}</span>
+                      <span className="text-[10px] text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 mt-1 self-start">Per {product.price_unit || 'meter'}</span>
                     </div>
                     <button
                       onClick={(e) => {

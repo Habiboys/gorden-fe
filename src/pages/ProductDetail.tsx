@@ -1,4 +1,7 @@
+import Autoplay from 'embla-carousel-autoplay';
+import useEmblaCarousel from 'embla-carousel-react';
 import {
+  ChevronLeft,
   ChevronRight,
   Heart,
   MessageCircle,
@@ -167,7 +170,7 @@ export default function ProductDetail() {
 
       try {
         console.log('🔄 Fetching related products...');
-        const response = await productsApi.getAll({ limit: 15 });
+        const response = await productsApi.getAll({ limit: 25 });
         console.log('✅ Related products fetched:', response);
         setRelatedProducts(response.data || []);
       } catch (error) {
@@ -234,13 +237,13 @@ export default function ProductDetail() {
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
                   {product.name}
                 </h1>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                <div className="flex flex-col gap-1 text-sm text-gray-600">
                   {product.sku && (
-                    <span>SKU: <span className="font-medium text-gray-800">{product.sku}</span></span>
+                    <div>SKU: <span className="font-medium text-gray-800">{product.sku}</span></div>
                   )}
-                  <span>Kategori: <span className="font-medium text-gray-800">{product.category}</span></span>
+                  <div>Kategori: <span className="font-medium text-gray-800">{product.category}</span></div>
                   {product.subcategory && (
-                    <span>Sub: <span className="font-medium text-gray-800">{product.subcategory}</span></span>
+                    <div>Sub Kategori: <span className="font-medium text-gray-800">{product.subcategory}</span></div>
                   )}
                 </div>
               </div>
@@ -429,24 +432,7 @@ export default function ProductDetail() {
               </div>
 
               {/* Calculator CTA */}
-              <div className="border-2 border-dashed border-[#EB216A]/30 rounded-xl p-4 bg-[#EB216A]/5">
-                <p className="text-sm text-gray-700 mb-3">
-                  Anda bisa hitung sendiri biaya gorden dan memilih bahan yang sesuai dengan budget.
-                  Klik tombol di bawah untuk menghitung.
-                </p>
-                <button
-                  onClick={() => navigate('/calculator')}
-                  onMouseEnter={() => setCalcHovered(true)}
-                  onMouseLeave={() => setCalcHovered(false)}
-                  className="w-full py-2.5 px-4 rounded-lg border-2 border-[#EB216A] font-medium transition-all"
-                  style={{
-                    backgroundColor: calcHovered ? '#EB216A' : 'white',
-                    color: calcHovered ? 'white' : '#EB216A'
-                  }}
-                >
-                  🧮 Hitung dengan Kalkulator
-                </button>
-              </div>
+
 
               {/* Subtotal */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
@@ -533,6 +519,26 @@ export default function ProductDetail() {
                     <span className="hidden sm:inline">Wishlist</span>
                   </Button>
                 </div>
+              </div>
+
+              {/* Calculator CTA - Moved to bottom */}
+              <div className="border-2 border-dashed border-[#EB216A]/30 rounded-xl p-4 bg-[#EB216A]/5">
+                <p className="text-sm text-gray-700 mb-3">
+                  Anda bisa hitung sendiri biaya gorden dan memilih bahan yang sesuai dengan budget.
+                  Klik tombol di bawah untuk menghitung.
+                </p>
+                <button
+                  onClick={() => navigate('/calculator')}
+                  onMouseEnter={() => setCalcHovered(true)}
+                  onMouseLeave={() => setCalcHovered(false)}
+                  className="w-full py-2.5 px-4 rounded-lg border-2 border-[#EB216A] font-medium transition-all"
+                  style={{
+                    backgroundColor: calcHovered ? '#EB216A' : 'white',
+                    color: calcHovered ? 'white' : '#EB216A'
+                  }}
+                >
+                  🧮 Hitung dengan Kalkulator
+                </button>
               </div>
             </div>
           </div>
@@ -694,110 +700,171 @@ export default function ProductDetail() {
               Lihat Semua
             </Button>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-3">
-            {relatedProducts.map((relatedProduct) => (
-              <div key={relatedProduct.id} className="group relative h-full">
-                {/* Card Container */}
-                <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
-                  {/* Image Section */}
-                  <div className="relative aspect-square overflow-hidden bg-gray-100">
-                    <img
-                      src={getProductImageUrl(relatedProduct.images)}
-                      alt={relatedProduct.name}
-                      className="w-full h-full object-cover"
-                    />
 
-                    {/* Gradient Overlay on Hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    {/* Badge */}
-                    {(relatedProduct.badge || relatedProduct.featured || relatedProduct.bestSeller || relatedProduct.newArrival) && (
-                      <Badge className="absolute top-3 left-3 bg-[#EB216A] text-white border-0 shadow-lg text-xs">
-                        {relatedProduct.badge || (relatedProduct.bestSeller ? 'Best Seller' : relatedProduct.newArrival ? 'New' : 'Featured')}
-                      </Badge>
-                    )}
-
-                    {/* Wishlist Button */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isInWishlist(relatedProduct.id)) {
-                          removeFromWishlist(relatedProduct.id);
-                        } else {
-                          addToWishlist(relatedProduct.id);
-                        }
-                      }}
-                      className={`absolute top-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isInWishlist(relatedProduct.id) ? 'text-[#EB216A] opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
-                        }`}
-                    >
-                      <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(relatedProduct.id) ? 'fill-current' : ''}`} />
-                    </button>
-
-                    {/* Quick View Button - Shows on Hover */}
-                    <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                      <Button
-                        className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl text-xs lg:text-sm"
-                        size="sm"
-                        onClick={() => navigate(`/product/${relatedProduct.id}`)}
-                      >
-                        <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
-                        <span className="hidden lg:inline">Lihat Detail</span>
-                        <span className="lg:hidden">Detail</span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Content Section */}
-                  <div className="p-3 lg:p-4 flex flex-col flex-grow">
-                    <h3 className="text-sm lg:text-base font-semibold text-gray-900 mb-2 lg:mb-3 line-clamp-2 min-h-[40px] lg:min-h-[48px]">
-                      {relatedProduct.name}
-                    </h3>
-
-                    {/* Price Section */}
-                    <div className="flex items-end justify-between mt-auto">
-                      <div className="flex flex-col gap-0.5 lg:gap-1">
-                        {/* Show discount if Gross > Net */}
-                        {relatedProduct.minPriceGross && relatedProduct.minPrice && Number(relatedProduct.minPriceGross) > Number(relatedProduct.minPrice) ? (
-                          <>
-                            <div className="flex items-center gap-1 lg:gap-2">
-                              <span className="text-xs text-gray-400 line-through">
-                                <span className="text-[10px]">Mulai </span>
-                                Rp {Number(relatedProduct.minPriceGross).toLocaleString('id-ID')}
-                              </span>
-                              <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 py-0.5 rounded">
-                                -{Math.round((1 - Number(relatedProduct.minPrice) / Number(relatedProduct.minPriceGross)) * 100)}%
-                              </span>
-                            </div>
-                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold">
-                              <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(relatedProduct.minPrice).toLocaleString('id-ID')}
-                            </span>
-                          </>
-                        ) : relatedProduct.minPrice && !isNaN(Number(relatedProduct.minPrice)) ? (
-                          <>
-                            <div className="h-4 lg:h-5" />
-                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold">
-                              <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(relatedProduct.minPrice).toLocaleString('id-ID')}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-gray-500">Lihat varian</span>
-                        )}
-                        <span className="text-[10px] lg:text-xs text-gray-500">
-                          Per {relatedProduct.price_unit || 'meter'}
-                        </span>
-                      </div>
-                      <button className="text-gray-400 hover:text-[#EB216A] transition-colors lg:hidden">
-                        <Heart className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Grid Section - First 10 Items */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-3 mb-8">
+            {relatedProducts.slice(0, 10).map((relatedProduct) => (
+              <ProductCardForDetail key={relatedProduct.id} product={relatedProduct} navigate={navigate} addToWishlist={addToWishlist} removeFromWishlist={removeFromWishlist} isInWishlist={isInWishlist} />
             ))}
           </div>
-        </div >
-      </div >
-    </div >
+
+          {/* Slider Section - Remaining Items */}
+          {relatedProducts.length > 10 && (
+            <div className="relative">
+              <RelatedProductsSlider products={relatedProducts.slice(10)} navigate={navigate} addToWishlist={addToWishlist} removeFromWishlist={removeFromWishlist} isInWishlist={isInWishlist} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sub-component for Product Card to reduce duplication
+function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWishlist, isInWishlist }: any) {
+  return (
+    <div className="group relative h-full">
+      {/* Card Container */}
+      <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
+        {/* Image Section */}
+        <div className="relative aspect-square overflow-hidden bg-gray-100">
+          <img
+            src={getProductImageUrl(product.images)}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+
+          {/* Gradient Overlay on Hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {/* Badge */}
+          {(product.badge || product.featured || product.bestSeller || product.newArrival) && (
+            <Badge className="absolute top-3 left-3 bg-[#EB216A] text-white border-0 shadow-lg text-xs">
+              {product.badge || (product.bestSeller ? 'Best Seller' : product.newArrival ? 'New' : 'Featured')}
+            </Badge>
+          )}
+
+          {/* Wishlist Button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isInWishlist(product.id)) {
+                removeFromWishlist(product.id);
+              } else {
+                addToWishlist(product.id);
+              }
+            }}
+            className={`absolute top-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isInWishlist(product.id) ? 'text-[#EB216A] opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
+              }`}
+          >
+            <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+          </button>
+
+          {/* Quick View Button - Shows on Hover */}
+          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+            <Button
+              className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl text-xs lg:text-sm"
+              size="sm"
+              onClick={() => navigate(`/product/${product.id}`)}
+            >
+              <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+              <span className="hidden lg:inline">Lihat Detail</span>
+              <span className="lg:hidden">Detail</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="p-3 lg:p-4 flex flex-col flex-grow">
+          <h3 className="text-sm lg:text-base font-semibold text-gray-900 mb-2 lg:mb-3 line-clamp-2 min-h-[40px] lg:min-h-[48px]">
+            {product.name}
+          </h3>
+
+          {/* Price Section */}
+          <div className="flex items-end justify-between mt-auto">
+            <div className="flex flex-col gap-0.5 lg:gap-1">
+              {/* Show discount if Gross > Net */}
+              {product.minPriceGross && product.minPrice && Number(product.minPriceGross) > Number(product.minPrice) ? (
+                <>
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <span className="text-xs text-gray-400 line-through">
+                      Rp {Number(product.minPriceGross).toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 py-0.5 rounded">
+                      -{Math.round((1 - Number(product.minPrice) / Number(product.minPriceGross)) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
+                    <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                      Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </>
+              ) : product.minPrice && !isNaN(Number(product.minPrice)) ? (
+                <>
+                  <div className="h-4 lg:h-5" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
+                    <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                      Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <span className="text-sm text-gray-500">Lihat varian</span>
+              )}
+              <span className="text-[10px] text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 mt-1 self-start">
+                Per {product.price_unit || 'meter'}
+              </span>
+            </div>
+            <button className="text-gray-400 hover:text-[#EB216A] transition-colors lg:hidden">
+              <Heart className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Slider Component
+function RelatedProductsSlider({ products, navigate, addToWishlist, removeFromWishlist, isInWishlist }: any) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    loop: false,
+    dragFree: true,
+    breakpoints: {
+      '(min-width: 1024px)': { align: 'start' }
+    }
+  }, [Autoplay({ delay: 4000, stopOnInteraction: true })]);
+
+  return (
+    <div className="relative group/slider">
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex -ml-2 lg:-ml-3 py-4"> {/* Negative margin to offset padding */}
+          {products.map((product: any) => (
+            <div key={product.id} className="flex-[0_0_50%] sm:flex-[0_0_33.33%] lg:flex-[0_0_20%] min-w-0 pl-2 lg:pl-3">
+              <ProductCardForDetail product={product} navigate={navigate} addToWishlist={addToWishlist} removeFromWishlist={removeFromWishlist} isInWishlist={isInWishlist} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation Buttons */}
+      <button
+        className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 lg:-ml-4 w-8 h-8 lg:w-10 lg:h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#EB216A] disabled:opacity-0 transition-all z-10 opacity-0 group-hover/slider:opacity-100"
+        onClick={() => emblaApi?.scrollPrev()}
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+      <button
+        className="absolute right-0 top-1/2 -translate-y-1/2 -mr-2 lg:-mr-4 w-8 h-8 lg:w-10 lg:h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#EB216A] disabled:opacity-0 transition-all z-10 opacity-0 group-hover/slider:opacity-100"
+        onClick={() => emblaApi?.scrollNext()}
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+    </div>
   );
 }
