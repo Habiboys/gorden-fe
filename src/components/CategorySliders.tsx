@@ -117,13 +117,13 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
         <div
           ref={scrollContainerRef}
           onScroll={checkScroll}
-          className="flex overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+          className="flex gap-2 lg:gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {products.map((product) => (
             <div
               key={product.id}
-              className="flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)] mr-2 lg:mr-3 last:mr-0"
+              className="flex-shrink-0 w-[calc(50%_-_4px)] lg:w-[calc(20%_-_9.6px)]"
             >
               <ProductCard
                 id={product.id}
