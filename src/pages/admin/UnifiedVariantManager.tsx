@@ -20,6 +20,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
     const [currentPage, setCurrentPage] = useState(1);
     const [bulkPriceGross, setBulkPriceGross] = useState('');
     const [bulkPriceNet, setBulkPriceNet] = useState('');
+    const [bulkSatuan, setBulkSatuan] = useState('');
 
     useEffect(() => {
         if (Array.isArray(variantOptions) && JSON.stringify(variantOptions) !== JSON.stringify(options)) {
@@ -31,14 +32,20 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
     // Also infer options from attributes if they are empty
     useEffect(() => {
         if (Array.isArray(variants) && variants.length > 0 && generatedVariants.length === 0) {
-            setGeneratedVariants(variants);
+            // Normalize variants from API - ensure attributes are parsed
+            const normalizedVariants = variants.map(v => ({
+                ...v,
+                attributes: typeof v.attributes === 'string' ? safeJSONParse(v.attributes, {}) : (v.attributes || {}),
+                satuan: v.satuan || '',
+            }));
+            setGeneratedVariants(normalizedVariants);
 
             // If options are empty but variants have attributes, infer options from them
-            const firstVariantAttrs = safeJSONParse(variants[0]?.attributes, {});
+            const firstVariantAttrs = normalizedVariants[0]?.attributes || {};
             if (options.length === 0 && Object.keys(firstVariantAttrs).length > 0) {
                 const inferredOptions = Object.keys(firstVariantAttrs).map(key => ({
                     name: key,
-                    values: [...new Set(variants.map(v => (safeJSONParse(v.attributes, {}) as Record<string, any>)[key]).filter(Boolean))]
+                    values: [...new Set(normalizedVariants.map(v => v.attributes?.[key]).filter(Boolean))]
                 }));
                 if (inferredOptions.length > 0) {
                     setOptions(inferredOptions);
@@ -129,7 +136,8 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                 attributes,
                 price_gross: existing?.price_gross || 0,
                 price_net: existing?.price_net || 0,
-                is_active: true
+                satuan: existing?.satuan ?? '',
+                is_active: existing?.is_active ?? true
             };
         });
 
@@ -158,7 +166,9 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
     const handleBulkApply = () => {
         const pGross = parseInt(bulkPriceGross);
         const pNet = parseInt(bulkPriceNet);
-        if (isNaN(pGross) && isNaN(pNet)) return;
+        const hasSatuan = bulkSatuan.trim() !== '';
+
+        if (isNaN(pGross) && isNaN(pNet) && !hasSatuan) return;
 
         // Validate: Gross must be > Net if both are provided
         if (!isNaN(pGross) && !isNaN(pNet) && pGross <= pNet) {
@@ -170,13 +180,15 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
             ...v,
             price_gross: !isNaN(pGross) ? pGross : v.price_gross,
             price_net: !isNaN(pNet) ? pNet : v.price_net,
+            satuan: hasSatuan ? bulkSatuan.trim() : v.satuan,
         }));
 
         setGeneratedVariants(newVariants);
         onVariantsChange(newVariants, options);
-        toast.success('Harga massal berhasil diterapkan!');
+        toast.success('Pengaturan massal berhasil diterapkan!');
         setBulkPriceGross('');
         setBulkPriceNet('');
+        setBulkSatuan('');
     };
 
     const totalPages = Math.ceil(generatedVariants.length / ITEMS_PER_PAGE);
@@ -291,7 +303,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                     {/* 2. Bulk Edit Bar - Pink Theme */}
                     <div className="flex flex-wrap items-end gap-3 bg-gradient-to-r from-pink-50 to-pink-100/50 p-3 rounded-lg border border-pink-200">
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-xs text-[#EB216A] font-semibold mb-1.5 block">⚡ Atur Harga Massal</label>
+                            <label className="text-xs text-[#EB216A] font-semibold mb-1.5 block">⚡ Atur Massal</label>
                             <div className="flex gap-2">
                                 <Input
                                     placeholder="Harga Gross..."
@@ -306,6 +318,13 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                     type="number"
                                     value={bulkPriceNet}
                                     onChange={(e) => setBulkPriceNet(e.target.value)}
+                                />
+                                <Input
+                                    placeholder="Satuan..."
+                                    className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A] w-24"
+                                    value={bulkSatuan}
+                                    onChange={(e) => setBulkSatuan(e.target.value)}
+                                    list="satuan-options"
                                 />
                             </div>
                         </div>
@@ -326,6 +345,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                     <th className="px-4 py-2.5 w-2/5">Kombinasi Variasi</th>
                                     <th className="px-4 py-2.5 text-right">Harga Gross (Rp)</th>
                                     <th className="px-4 py-2.5 text-right">Harga Net (Rp)</th>
+                                    <th className="px-4 py-2.5 text-center">Satuan</th>
                                     <th className="px-4 py-2.5 text-center w-16">Aktif</th>
                                 </tr>
                             </thead>
@@ -358,6 +378,16 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                                 value={variant.price_net}
                                                 onChange={(e) => handleVariantChange(idx, 'price_net', parseFloat(e.target.value) || 0)}
                                                 className="text-right h-8 text-sm font-medium border-gray-200 focus:border-[#EB216A] focus:ring-[#EB216A]"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-1.5">
+                                            <Input
+                                                type="text"
+                                                value={variant.satuan ?? ''}
+                                                onChange={(e) => handleVariantChange(idx, 'satuan', e.target.value)}
+                                                placeholder="meter"
+                                                className="text-center h-8 text-sm border-gray-200 focus:border-[#EB216A] focus:ring-[#EB216A] w-20"
+                                                list="satuan-options"
                                             />
                                         </td>
                                         <td className="px-4 py-1.5 text-center">
@@ -407,6 +437,16 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                     </div>
                 </div>
             )}
+
+            {/* Datalist for satuan suggestions */}
+            <datalist id="satuan-options">
+                <option value="meter" />
+                <option value="pcs" />
+                <option value="set" />
+                <option value="box" />
+                <option value="lembar" />
+                <option value="rol" />
+            </datalist>
         </div>
     );
 }

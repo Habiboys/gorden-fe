@@ -125,6 +125,7 @@ function DetailModalContent({ product, onClose }: { product: any; onClose: () =>
                           <div className="text-xs text-gray-500 mt-1">
                             {v.price_gross > 0 && <span>Gross: Rp {Number(v.price_gross).toLocaleString('id-ID')}</span>}
                             {v.price_net > 0 && <span className="ml-2 text-[#EB216A]">Net: Rp {Number(v.price_net).toLocaleString('id-ID')}</span>}
+                            {v.satuan && <span className="ml-2 text-gray-500 text-xs bg-gray-100 px-1 py-0.5 rounded">/{v.satuan}</span>}
                           </div>
                         </div>
                       ))}
@@ -181,6 +182,7 @@ export default function AdminProducts() {
     attribute_value: '',
     price_gross: 0,
     price_net: 0,
+    satuan: '',
   });
 
   // Form states
@@ -1298,7 +1300,7 @@ export default function AdminProducts() {
                       onClick={() => {
                         setEditingVariant(null);
                         setEditingPendingIndex(null);
-                        setVariantForm({ attribute_name: '', attribute_value: '', price_gross: 0, price_net: 0 });
+                        setVariantForm({ attribute_name: '', attribute_value: '', price_gross: 0, price_net: 0, satuan: '' });
                         setIsVariantModalOpen(true);
                       }}
                       className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
@@ -1320,6 +1322,7 @@ export default function AdminProducts() {
                               <span className="font-medium">{pv.attribute_value}</span>
                               <span className="text-gray-500 ml-3">Gross: Rp {Number(pv.price_gross).toLocaleString('id-ID')}</span>
                               <span className="text-gray-500 ml-2">Net: Rp {Number(pv.price_net).toLocaleString('id-ID')}</span>
+                              <span className="text-gray-500 ml-2">/{pv.satuan || '-'}</span>
                             </div>
                             <div className="flex gap-2">
                               <Button variant="ghost" size="sm" onClick={() => {
@@ -1362,6 +1365,7 @@ export default function AdminProducts() {
                               <th className="px-4 py-3 text-left">Nilai</th>
                               <th className="px-4 py-3 text-right">Harga Gross</th>
                               <th className="px-4 py-3 text-right">Harga Net</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
                               <th className="px-4 py-3 text-right">Aksi</th>
                             </tr>
                           </thead>
@@ -1376,6 +1380,11 @@ export default function AdminProducts() {
                                 <td className="px-4 py-3 font-medium">{v.attribute_value || '-'}</td>
                                 <td className="px-4 py-3 text-right">Rp {Number(v.price_gross || 0).toLocaleString('id-ID')}</td>
                                 <td className="px-4 py-3 text-right text-[#EB216A]">Rp {Number(v.price_net || 0).toLocaleString('id-ID')}</td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded">
+                                    {v.satuan || 'meter'}
+                                  </span>
+                                </td>
                                 <td className="px-4 py-3 text-right">
                                   <div className="flex gap-2 justify-end">
                                     <Button
@@ -1389,6 +1398,7 @@ export default function AdminProducts() {
                                           attribute_value: v.attribute_value || '',
                                           price_gross: v.price_gross || 0,
                                           price_net: v.price_net || 0,
+                                          satuan: v.satuan || '',
                                         });
                                         setIsVariantModalOpen(true);
                                       }}
@@ -1516,6 +1526,27 @@ export default function AdminProducts() {
                     placeholder="0"
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label>Satuan / Unit</Label>
+                <div className="relative">
+                  <Input
+                    value={variantForm.satuan}
+                    onChange={(e) => setVariantForm({ ...variantForm, satuan: e.target.value })}
+                    placeholder="Contoh: meter, pcs, set, box (Atau ketik sendiri)"
+                    list="satuan-suggestions"
+                  />
+                  <datalist id="satuan-suggestions">
+                    <option value="meter" />
+                    <option value="pcs" />
+                    <option value="set" />
+                    <option value="box" />
+                    <option value="lembar" />
+                    <option value="rol" />
+                  </datalist>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Satuan unit untuk varian ini (opsional)</p>
               </div>
             </div>
 

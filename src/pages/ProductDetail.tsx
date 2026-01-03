@@ -1,5 +1,4 @@
 import {
-  Check,
   ChevronRight,
   Heart,
   MessageCircle,
@@ -17,13 +16,11 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Textarea } from '../components/ui/textarea';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { safeJSONParse } from '../utils/jsonHelper';
-import { chatAdminAboutProduct } from '../utils/whatsappHelper';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +35,8 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [showAllVariants, setShowAllVariants] = useState(false);
+  const [calcHovered, setCalcHovered] = useState(false);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -168,7 +167,7 @@ export default function ProductDetail() {
 
       try {
         console.log('🔄 Fetching related products...');
-        const response = await productsApi.getAll({ limit: 5 });
+        const response = await productsApi.getAll({ limit: 15 });
         console.log('✅ Related products fetched:', response);
         setRelatedProducts(response.data || []);
       } catch (error) {
@@ -232,16 +231,22 @@ export default function ProductDetail() {
             <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8 space-y-6 lg:sticky lg:top-24">
               {/* Product Name & Category */}
               <div>
-                <h1 className="text-2xl lg:text-3xl text-gray-900 mb-2">
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
                   {product.name}
                 </h1>
-                <p className="text-sm text-gray-600">
-                  {product.category} | {product.subcategory}
-                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                  {product.sku && (
+                    <span>SKU: <span className="font-medium text-gray-800">{product.sku}</span></span>
+                  )}
+                  <span>Kategori: <span className="font-medium text-gray-800">{product.category}</span></span>
+                  {product.subcategory && (
+                    <span>Sub: <span className="font-medium text-gray-800">{product.subcategory}</span></span>
+                  )}
+                </div>
               </div>
 
               {/* Price Section - Based on selected variant */}
-              <div>
+              <div className="bg-gray-50 rounded-xl p-4">
                 {selectedVariant ? (
                   <>
                     {/* Main Price (Net = Discounted Price) */}
@@ -281,7 +286,7 @@ export default function ProductDetail() {
               {/* Variant Selection */}
               {variants.length > 0 && (
                 <div>
-                  <h3 className="text-base mb-3 text-gray-900">
+                  <h3 className="text-base font-semibold mb-3 text-gray-900">
                     Pilih Varian
                   </h3>
                   {(() => {
@@ -319,7 +324,7 @@ export default function ProductDetail() {
 
                         return (
                           <div key={key} className="mb-4">
-                            <p className="text-sm text-gray-600 mb-2">{key}</p>
+                            <p className="text-sm font-semibold text-gray-900 mb-2">{key}</p>
                             <div className="flex flex-wrap gap-2">
                               {availableValues.map((val: any) => {
                                 const isSelected = selectedAttributes[key] === val;
@@ -371,7 +376,7 @@ export default function ProductDetail() {
                       });
                       return Object.entries(grouped).map(([attrName, varList]) => (
                         <div key={attrName} className="mb-4">
-                          <p className="text-sm text-gray-600 mb-2">{attrName}</p>
+                          <p className="text-sm font-semibold text-gray-900 mb-2">{attrName}</p>
                           <div className="flex flex-wrap gap-2">
                             {varList.map((v: any) => (
                               <button
@@ -423,15 +428,24 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              {/* Notes */}
-              <div>
-                <h3 className="text-base mb-3 text-gray-900">Catatan</h3>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Tambahkan catatan khusus..."
-                  className="resize-none h-20 focus:border-[#EB216A] focus:ring-[#EB216A]"
-                />
+              {/* Calculator CTA */}
+              <div className="border-2 border-dashed border-[#EB216A]/30 rounded-xl p-4 bg-[#EB216A]/5">
+                <p className="text-sm text-gray-700 mb-3">
+                  Anda bisa hitung sendiri biaya gorden dan memilih bahan yang sesuai dengan budget.
+                  Klik tombol di bawah untuk menghitung.
+                </p>
+                <button
+                  onClick={() => navigate('/calculator')}
+                  onMouseEnter={() => setCalcHovered(true)}
+                  onMouseLeave={() => setCalcHovered(false)}
+                  className="w-full py-2.5 px-4 rounded-lg border-2 border-[#EB216A] font-medium transition-all"
+                  style={{
+                    backgroundColor: calcHovered ? '#EB216A' : 'white',
+                    color: calcHovered ? 'white' : '#EB216A'
+                  }}
+                >
+                  🧮 Hitung dengan Kalkulator
+                </button>
               </div>
 
               {/* Subtotal */}
@@ -455,11 +469,11 @@ export default function ProductDetail() {
                   Keranjang
                 </Button>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500"
+                    className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500 px-2"
                     onClick={() => {
                       // Build price string from selected variant
                       const price = selectedVariant
@@ -481,25 +495,32 @@ export default function ProductDetail() {
                         ? `${product.name} (${variantInfo})`
                         : product.name;
 
-                      chatAdminAboutProduct(fullProductName, priceStr);
+                      // Create message with product link
+                      const productLink = window.location.href;
+                      const message = `Halo kak, saya tertarik dengan produk "${fullProductName}" seharga ${priceStr}. Boleh minta info lebih lanjut?\n\nLink: ${productLink}`;
+
+                      // Open WhatsApp directly
+                      const phoneNumber = '6285142247464';
+                      const encodedMessage = encodeURIComponent(message);
+                      window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
                     }}
                   >
-                    <MessageCircle className="w-5 h-5 mr-2" />
-                    Chat Admin
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Chat</span>
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50 px-2"
                     onClick={handleShare}
                   >
-                    <Share2 className="w-5 h-5 mr-2" />
-                    Share
+                    <Share2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Share</span>
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
-                    className={`border-gray-300 ${isInWishlist(product.id) ? 'text-[#EB216A] border-[#EB216A] bg-[#EB216A]/5' : 'text-gray-700 hover:bg-gray-50'}`}
+                    className={`px-2 border-gray-300 ${isInWishlist(product.id) ? 'text-[#EB216A] border-[#EB216A] bg-[#EB216A]/5' : 'text-gray-700 hover:bg-gray-50'}`}
                     onClick={() => {
                       if (isInWishlist(product.id)) {
                         removeFromWishlist(product.id);
@@ -508,8 +529,8 @@ export default function ProductDetail() {
                       }
                     }}
                   >
-                    <Heart className={`w-5 h-5 mr-2 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                    Wishlist
+                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                    <span className="hidden sm:inline">Wishlist</span>
                   </Button>
                 </div>
               </div>
@@ -547,8 +568,10 @@ export default function ProductDetail() {
               <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8 space-y-6">
                 {/* Description */}
                 <div>
-                  <h3 className="text-xl text-gray-900 mb-4">Deskripsi Produk</h3>
-                  <p className="text-gray-700 leading-relaxed">{product.description}</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Deskripsi Produk</h3>
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {product.information || product.description || 'Deskripsi produk belum tersedia.'}
+                  </div>
                 </div>
 
                 <Separator />
@@ -556,21 +579,6 @@ export default function ProductDetail() {
 
                 {/* Separator only if dimensions exist */}
                 {(product.min_width || product.max_width || product.min_length || product.max_length) && <Separator />}
-
-                {/* Features */}
-                <div>
-                  <h3 className="text-xl text-gray-900 mb-4">Keunggulan Produk</h3>
-                  <ul className="space-y-3">
-                    {product.features.map((feature: string, index: number) => (
-                      <li key={index} className="flex items-start gap-3 text-gray-700">
-                        <div className="w-5 h-5 rounded-full bg-[#EB216A]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Check className="w-3 h-3 text-[#EB216A]" />
-                        </div>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               </div>
             </TabsContent>
 
@@ -598,53 +606,68 @@ export default function ProductDetail() {
 
                   {/* Group variants by first attribute key or show all */}
                   {(() => {
-                    return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {variants.map((variant: any) => {
-                          const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
-                          const attrDisplay = Object.entries(attrs)
-                            .map(([k, v]) => `${k}: ${v}`)
-                            .join(' - ');
+                    const INITIAL_SHOW = 6;
+                    const displayedVariants = showAllVariants ? variants : variants.slice(0, INITIAL_SHOW);
+                    const hasMore = variants.length > INITIAL_SHOW;
 
-                          return (
-                            <div
-                              key={variant.id}
-                              className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-[#EB216A]/5 transition-colors cursor-pointer"
-                              onClick={() => {
-                                // Set all attributes for this variant
-                                // Ensure attrs is a proper object, not a string
-                                const safeAttrs = typeof attrs === 'object' && attrs !== null && !Array.isArray(attrs)
-                                  ? attrs
-                                  : safeJSONParse(attrs, {}) as Record<string, any>;
-                                setSelectedAttributes(safeAttrs);
-                                setSelectedVariant(variant);
-                              }}
-                            >
-                              <p className="font-medium text-gray-900 mb-2">
-                                {attrDisplay || 'Varian'}
-                              </p>
-                              <div className="flex flex-col gap-1">
-                                {Number(variant.price_gross) > 0 && (
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Harga Gross:</span>
-                                    <span className="font-semibold text-gray-700">
-                                      Rp {Number(variant.price_gross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    </span>
-                                  </div>
-                                )}
-                                {Number(variant.price_net) > 0 && (
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Harga Net:</span>
-                                    <span className="font-semibold text-[#EB216A]">
-                                      Rp {Number(variant.price_net).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    </span>
-                                  </div>
-                                )}
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {displayedVariants.map((variant: any) => {
+                            const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
+                            const attrDisplay = Object.entries(attrs)
+                              .map(([k, v]) => `${k}: ${v}`)
+                              .join(' - ');
+
+                            return (
+                              <div
+                                key={variant.id}
+                                className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-[#EB216A]/5 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  const safeAttrs = typeof attrs === 'object' && attrs !== null && !Array.isArray(attrs)
+                                    ? attrs
+                                    : safeJSONParse(attrs, {}) as Record<string, any>;
+                                  setSelectedAttributes(safeAttrs);
+                                  setSelectedVariant(variant);
+                                }}
+                              >
+                                <p className="font-medium text-gray-900 mb-2">
+                                  {attrDisplay || 'Varian'}
+                                </p>
+                                <div className="flex flex-col gap-1">
+                                  {Number(variant.price_gross) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-500">Harga Gross:</span>
+                                      <span className="font-semibold text-gray-700">
+                                        Rp {Number(variant.price_gross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {Number(variant.price_net) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-500">Harga Net:</span>
+                                      <span className="font-semibold text-[#EB216A]">
+                                        Rp {Number(variant.price_net).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                        {hasMore && (
+                          <div className="mt-4 text-center">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowAllVariants(!showAllVariants)}
+                              className="border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
+                            >
+                              {showAllVariants ? 'Sembunyikan' : `Lihat Selengkapnya (${variants.length - INITIAL_SHOW} lainnya)`}
+                            </Button>
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
 
@@ -681,7 +704,7 @@ export default function ProductDetail() {
                     <img
                       src={getProductImageUrl(relatedProduct.images)}
                       alt={relatedProduct.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover"
                     />
 
                     {/* Gradient Overlay on Hover */}
@@ -727,25 +750,42 @@ export default function ProductDetail() {
 
                   {/* Content Section */}
                   <div className="p-3 lg:p-4 flex flex-col flex-grow">
-                    <h3 className="text-sm lg:text-base text-gray-900 mb-2 lg:mb-3 group-hover:text-[#EB216A] transition-colors line-clamp-2 min-h-[40px] lg:min-h-[48px]">
+                    <h3 className="text-sm lg:text-base font-semibold text-gray-900 mb-2 lg:mb-3 line-clamp-2 min-h-[40px] lg:min-h-[48px]">
                       {relatedProduct.name}
                     </h3>
 
                     {/* Price Section */}
                     <div className="flex items-end justify-between mt-auto">
                       <div className="flex flex-col gap-0.5 lg:gap-1">
-                        {relatedProduct.minPrice ? (
+                        {/* Show discount if Gross > Net */}
+                        {relatedProduct.minPriceGross && relatedProduct.minPrice && Number(relatedProduct.minPriceGross) > Number(relatedProduct.minPrice) ? (
                           <>
-                            <span className="text-base lg:text-xl text-[#EB216A]">
-                              Mulai Rp {Number(relatedProduct.minPrice).toLocaleString('id-ID')}
+                            <div className="flex items-center gap-1 lg:gap-2">
+                              <span className="text-xs text-gray-400 line-through">
+                                <span className="text-[10px]">Mulai </span>
+                                Rp {Number(relatedProduct.minPriceGross).toLocaleString('id-ID')}
+                              </span>
+                              <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 py-0.5 rounded">
+                                -{Math.round((1 - Number(relatedProduct.minPrice) / Number(relatedProduct.minPriceGross)) * 100)}%
+                              </span>
+                            </div>
+                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold">
+                              <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(relatedProduct.minPrice).toLocaleString('id-ID')}
                             </span>
-                            <span className="text-[10px] lg:text-xs text-gray-500">
-                              Berdasarkan varian
+                          </>
+                        ) : relatedProduct.minPrice && !isNaN(Number(relatedProduct.minPrice)) ? (
+                          <>
+                            <div className="h-4 lg:h-5" />
+                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold">
+                              <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(relatedProduct.minPrice).toLocaleString('id-ID')}
                             </span>
                           </>
                         ) : (
-                          <span className="text-sm text-gray-500">Pilih varian</span>
+                          <span className="text-sm text-gray-500">Lihat varian</span>
                         )}
+                        <span className="text-[10px] lg:text-xs text-gray-500">
+                          Per {relatedProduct.price_unit || 'meter'}
+                        </span>
                       </div>
                       <button className="text-gray-400 hover:text-[#EB216A] transition-colors lg:hidden">
                         <Heart className="w-4 h-4" />

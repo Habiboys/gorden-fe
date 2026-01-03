@@ -17,12 +17,16 @@ interface ProductCardProps {
   images?: string[] | string;
   category: string;
   comparePrice?: number;
+  original_price?: number;
+  price_unit?: string;
+  satuan?: string;
+  minPriceGross?: number;
   featured?: boolean;
   bestSeller?: boolean;
   newArrival?: boolean;
 }
 
-export function ProductCard({ id, name, price, minPrice, maxPrice, image, images, featured, bestSeller, newArrival }: ProductCardProps) {
+export function ProductCard({ id, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan }: ProductCardProps) {
   const productImage = getProductImageUrl(images || image);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -32,7 +36,7 @@ export function ProductCard({ id, name, price, minPrice, maxPrice, image, images
 
   // Only show price if minPrice exists (from variants)
   const hasVariants = minPrice !== undefined && minPrice > 0;
-  const hasPriceRange = hasVariants && maxPrice && maxPrice > minPrice;
+  // const hasPriceRange = hasVariants && maxPrice && maxPrice > minPrice;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -65,7 +69,7 @@ export function ProductCard({ id, name, price, minPrice, maxPrice, image, images
           <ImageWithFallback
             src={productImage}
             alt={name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className="w-full h-full object-cover"
           />
 
           {/* Gradient Overlay on Hover */}
@@ -109,27 +113,40 @@ export function ProductCard({ id, name, price, minPrice, maxPrice, image, images
 
         {/* Content Section - Fixed Height */}
         <div className="p-4 lg:p-5 flex flex-col flex-grow">
-          <h3 className="text-sm lg:text-base text-gray-900 mb-2 lg:mb-3 group-hover:text-[#EB216A] transition-colors line-clamp-2 min-h-[40px] lg:min-h-[48px]">
+          <h3 className="text-sm lg:text-base font-semibold text-gray-900 mb-2 lg:mb-3 line-clamp-2 min-h-[40px] lg:min-h-[48px]">
             {name}
           </h3>
 
           {/* Price Section */}
           <div className="flex items-end justify-between mt-auto">
             <div className="flex flex-col gap-1">
-              {hasVariants ? (
+              {/* Show discount if Gross > Net */}
+              {minPriceGross && minPrice && Number(minPriceGross) > Number(minPrice) ? (
                 <>
-                  <span className="text-lg lg:text-xl text-[#EB216A]">
-                    {hasPriceRange ? (
-                      <>Rp {Number(minPrice).toLocaleString('id-ID')} - {Number(maxPrice).toLocaleString('id-ID')}</>
-                    ) : (
-                      <>Mulai Rp {Number(minPrice).toLocaleString('id-ID')}</>
-                    )}
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <span className="text-xs lg:text-sm text-gray-400 line-through">
+                      <span className="text-[10px]">Mulai </span>
+                      Rp {Number(minPriceGross).toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 lg:px-2 py-0.5 rounded">
+                      -{Math.round((1 - (Number(minPrice) / Number(minPriceGross))) * 100)}%
+                    </span>
+                  </div>
+                  <span className="text-lg lg:text-xl text-[#EB216A] font-semibold">
+                    <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(minPrice).toLocaleString('id-ID')}
                   </span>
-                  <span className="text-xs text-gray-500">Berdasarkan varian</span>
+                </>
+              ) : minPrice && !isNaN(Number(minPrice)) ? (
+                <>
+                  <div className="h-4 lg:h-5" />
+                  <span className="text-lg lg:text-xl text-[#EB216A] font-semibold">
+                    <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(minPrice).toLocaleString('id-ID')}
+                  </span>
                 </>
               ) : (
-                <span className="text-sm text-gray-500">Pilih varian</span>
+                <span className="text-sm text-gray-500">Lihat varian</span>
               )}
+              <span className="text-xs text-gray-500">Per {price_unit || satuan || 'meter'}</span>
             </div>
             <button
               onClick={handleWishlistToggle}

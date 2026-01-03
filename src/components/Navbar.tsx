@@ -111,7 +111,7 @@ export function Navbar() {
                 <a
                   key={item.name}
                   href={item.path}
-                  className={`text-sm tracking-wide transition-colors relative group py-2 ${isSolidNav
+                  className={`text-sm font-semibold tracking-wide transition-colors relative group py-2 ${isSolidNav
                     ? 'text-gray-600 hover:text-[#EB216A]'
                     : 'text-white/90 hover:text-white'
                     }`}
@@ -124,7 +124,7 @@ export function Navbar() {
                 <Link
                   key={item.name}
                   to={item.path}
-                  className={`text-sm tracking-wide transition-colors relative group py-2 ${isSolidNav
+                  className={`text-sm font-semibold tracking-wide transition-colors relative group py-2 ${isSolidNav
                     ? isActive
                       ? 'text-[#EB216A]'
                       : 'text-gray-600 hover:text-[#EB216A]'
@@ -250,7 +250,7 @@ export function Navbar() {
                   <a
                     key={item.name}
                     href={item.path}
-                    className={`block py-3 transition-colors border-l-2 border-transparent pl-4 ${isSolidNav
+                    className={`block py-3 font-semibold transition-colors border-l-2 border-transparent pl-4 ${isSolidNav
                       ? 'text-gray-600 hover:text-[#EB216A] hover:border-[#EB216A]'
                       : 'text-white/90 hover:text-white hover:border-white'
                       }`}
@@ -262,7 +262,7 @@ export function Navbar() {
                   <Link
                     key={item.name}
                     to={item.path}
-                    className={`block py-3 transition-colors border-l-2 pl-4 ${isActive ? 'border-[#EB216A]' : 'border-transparent'
+                    className={`block py-3 font-semibold transition-colors border-l-2 pl-4 ${isActive ? 'border-[#EB216A]' : 'border-transparent'
                       } ${isSolidNav
                         ? isActive
                           ? 'text-[#EB216A]'

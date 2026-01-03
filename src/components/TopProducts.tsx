@@ -102,7 +102,7 @@ export function TopProducts() {
                   <ImageWithFallback
                     src={getProductImageUrl(product.images)}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="w-full h-full object-cover"
                   />
 
                   {/* Gradient Overlay on Hover */}
@@ -159,44 +159,40 @@ export function TopProducts() {
 
                 {/* Content Section - Fixed Height */}
                 <div className="p-3 lg:p-5 flex flex-col flex-grow">
-                  <h3 className="text-sm lg:text-base text-gray-900 mb-2 lg:mb-3 group-hover:text-[#EB216A] transition-colors line-clamp-2 min-h-[40px] lg:min-h-[48px]">
+                  <h3 className="text-sm lg:text-base font-semibold text-gray-900 mb-2 lg:mb-3 line-clamp-2 min-h-[40px] lg:min-h-[48px]">
                     {product.name}
                   </h3>
 
                   {/* Price Section */}
                   <div className="flex items-end justify-between mt-auto">
                     <div className="flex flex-col gap-1">
-                      {product.original_price && Number(product.original_price) > (Number(product.minPrice || product.price)) ? (
+                      {/* Show discount if Gross > Net */}
+                      {product.minPriceGross && product.minPrice && Number(product.minPriceGross) > Number(product.minPrice) ? (
                         <>
                           <div className="flex items-center gap-1 lg:gap-2">
                             <span className="text-xs lg:text-sm text-gray-400 line-through">
-                              Rp {Number(product.original_price).toLocaleString('id-ID')}
+                              <span className="text-[10px]">Mulai </span>
+                              Rp {Number(product.minPriceGross).toLocaleString('id-ID')}
                             </span>
-                            <span className="text-[10px] lg:text-xs bg-green-500 text-white px-1.5 lg:px-2 py-0.5 rounded">
-                              -{Math.round((1 - (Number(product.minPrice || product.price) / Number(product.original_price))) * 100)}%
+                            <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 lg:px-2 py-0.5 rounded">
+                              -{Math.round((1 - (Number(product.minPrice) / Number(product.minPriceGross))) * 100)}%
                             </span>
                           </div>
-                          <span className="text-lg lg:text-xl text-[#EB216A]">
-                            {product.minPrice ? (
-                              <>Mulai Rp {Number(product.minPrice).toLocaleString('id-ID')}</>
-                            ) : (
-                              <>Rp {Number(product.price).toLocaleString('id-ID')}</>
-                            )}
+                          <span className="text-lg lg:text-xl text-[#EB216A] font-semibold">
+                            <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                          </span>
+                        </>
+                      ) : product.minPrice && !isNaN(Number(product.minPrice)) ? (
+                        <>
+                          <div className="h-4 lg:h-5" />
+                          <span className="text-lg lg:text-xl text-[#EB216A] font-semibold">
+                            <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(product.minPrice).toLocaleString('id-ID')}
                           </span>
                         </>
                       ) : (
-                        <>
-                          <div className="h-4 lg:h-5" />
-                          <span className="text-lg lg:text-xl text-[#EB216A]">
-                            {product.minPrice ? (
-                              <>Mulai Rp {Number(product.minPrice).toLocaleString('id-ID')}</>
-                            ) : (
-                              <>Rp {Number(product.price).toLocaleString('id-ID')}</>
-                            )}
-                          </span>
-                        </>
+                        <span className="text-sm text-gray-500">Lihat varian</span>
                       )}
-                      <span className="text-xs text-gray-500">Per meter</span>
+                      <span className="text-xs text-gray-500">Per {product.price_unit || 'meter'}</span>
                     </div>
                     <button
                       onClick={(e) => {
