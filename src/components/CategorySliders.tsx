@@ -127,7 +127,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
           {products.map((product) => (
             <div
               key={product.id}
-              className="group relative flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)]"
+              className="group relative flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)] h-full"
             >
               {/* Card Container */}
               <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
@@ -202,28 +202,33 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
                         <>
                           <div className="flex items-center gap-1 lg:gap-2">
                             <span className="text-xs text-gray-400 line-through">
-                              <span className="text-[10px]">Mulai </span>
                               Rp {Number(product.minPriceGross).toLocaleString('id-ID')}
                             </span>
                             <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 py-0.5 rounded">
                               -{Math.round((1 - Number(product.minPrice) / Number(product.minPriceGross)) * 100)}%
                             </span>
                           </div>
-                          <span className="text-base lg:text-xl text-[#EB216A] font-semibold">
-                            <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(product.minPrice).toLocaleString('id-ID')}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
+                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                              Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                            </span>
+                          </div>
                         </>
                       ) : product.minPrice && !isNaN(Number(product.minPrice)) ? (
                         <>
                           <div className="h-4 lg:h-5" />
-                          <span className="text-base lg:text-xl text-[#EB216A] font-semibold">
-                            <span className="text-xs font-normal text-gray-500">Mulai </span>Rp {Number(product.minPrice).toLocaleString('id-ID')}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
+                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                              Rp {Number(product.minPrice).toLocaleString('id-ID')}
+                            </span>
+                          </div>
                         </>
                       ) : (
                         <span className="text-sm text-gray-500">Lihat varian</span>
                       )}
-                      <span className="text-[10px] lg:text-xs text-gray-500">
+                      <span className="text-[10px] text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 mt-1 self-start">
                         Per {product.price_unit || 'meter'}
                       </span>
                     </div>
