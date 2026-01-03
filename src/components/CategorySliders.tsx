@@ -1,10 +1,8 @@
-import { ChevronLeft, ChevronRight, Heart, ShoppingCart, Sparkles, Star, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, Star, TrendingUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWishlist } from '../context/WishlistContext';
 import { categoriesApi, productsApi } from '../utils/api';
-import { getProductImageUrl } from '../utils/imageHelper';
-import { Badge } from './ui/badge';
+import { ProductCard } from './ProductCard';
 import { Button } from './ui/button';
 
 interface ProductSliderProps {
@@ -17,11 +15,9 @@ interface ProductSliderProps {
 
 function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSliderProps) {
   const navigate = useNavigate();
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [hoveredBtnId, setHoveredBtnId] = useState<string | null>(null);
 
   const checkScroll = () => {
     if (scrollContainerRef.current) {
@@ -127,128 +123,22 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
           {products.map((product) => (
             <div
               key={product.id}
-              className="group relative flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)] h-full"
+              className="flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)]"
             >
-              {/* Card Container */}
-              <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
-                {/* Image Section */}
-                <div className="relative aspect-square overflow-hidden bg-gray-100">
-                  <img
-                    src={getProductImageUrl(product.images || product.image)}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Gradient Overlay on Hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                  {/* Badge */}
-                  {(product.is_best_seller || product.is_new_arrival || product.is_featured) && (
-                    <Badge className="absolute top-3 left-3 bg-[#EB216A] text-white border-0 shadow-lg text-xs">
-                      {product.is_best_seller ? 'Best Seller' : product.is_new_arrival ? 'Baru' : 'Unggulan'}
-                    </Badge>
-                  )}
-
-                  {/* Wishlist Button */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (isInWishlist(product.id)) {
-                        removeFromWishlist(product.id);
-                      } else {
-                        addToWishlist(product.id);
-                      }
-                    }}
-                    className={`absolute top-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isInWishlist(product.id) ? 'text-[#EB216A] opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
-                      }`}
-                  >
-                    <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                  </button>
-
-                  {/* Quick View Button - Shows on Hover */}
-                  <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                    <button
-                      className="w-full shadow-xl text-xs lg:text-sm rounded-md py-2 px-3 font-medium flex items-center justify-center gap-1 lg:gap-2 transition-all"
-                      style={{
-                        backgroundColor: hoveredBtnId === product.id ? '#EB216A' : 'white',
-                        color: hoveredBtnId === product.id ? 'white' : '#EB216A'
-                      }}
-                      onMouseEnter={() => setHoveredBtnId(product.id)}
-                      onMouseLeave={() => setHoveredBtnId(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/product/${product.id}`);
-                      }}
-                    >
-                      <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4" />
-                      <span className="hidden lg:inline">Lihat Detail</span>
-                      <span className="lg:hidden">Detail</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Content Section */}
-                <div className="p-3 lg:p-4 flex flex-col flex-grow">
-                  <h3 className="text-sm lg:text-base font-semibold text-gray-900 mb-2 lg:mb-3 line-clamp-2 min-h-[40px] lg:min-h-[48px]">
-                    {product.name}
-                  </h3>
-
-                  {/* Price Section */}
-                  <div className="flex items-end justify-between mt-auto">
-                    <div className="flex flex-col gap-0.5 lg:gap-1">
-                      {/* Show discount if Gross > Net */}
-                      {product.minPriceGross && product.minPrice && Number(product.minPriceGross) > Number(product.minPrice) ? (
-                        <>
-                          <div className="flex items-center gap-1 lg:gap-2">
-                            <span className="text-xs text-gray-400 line-through">
-                              Rp {Number(product.minPriceGross).toLocaleString('id-ID')}
-                            </span>
-                            <span className="text-[10px] lg:text-xs bg-[#EB216A] text-white px-1.5 py-0.5 rounded">
-                              -{Math.round((1 - Number(product.minPrice) / Number(product.minPriceGross)) * 100)}%
-                            </span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
-                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
-                              Rp {Number(product.minPrice).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                        </>
-                      ) : product.minPrice && !isNaN(Number(product.minPrice)) ? (
-                        <>
-                          <div className="h-4 lg:h-5" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
-                            <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
-                              Rp {Number(product.minPrice).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <span className="text-sm text-gray-500">Lihat varian</span>
-                      )}
-                      <span className="text-[10px] text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 mt-1 self-start">
-                        Per {product.price_unit || 'meter'}
-                      </span>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isInWishlist(product.id)) {
-                          removeFromWishlist(product.id);
-                        } else {
-                          addToWishlist(product.id);
-                        }
-                      }}
-                      className={`transition-colors lg:hidden ${isInWishlist(product.id) ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'}`}
-                    >
-                      <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ProductCard
+                id={product.id}
+                name={product.name}
+                price={Number(product.minPrice) || Number(product.price)}
+                minPrice={Number(product.minPrice)}
+                minPriceGross={Number(product.minPriceGross)}
+                image={product.image}
+                images={product.images}
+                category={product.category?.name || product.category || ''}
+                price_unit={product.price_unit}
+                bestSeller={product.is_best_seller}
+                newArrival={product.is_new_arrival}
+                featured={product.is_featured}
+              />
             </div>
           ))}
         </div>

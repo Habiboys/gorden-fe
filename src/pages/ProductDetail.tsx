@@ -108,6 +108,7 @@ export default function ProductDetail() {
           ...productData,
           // Default values if not present
           subtitle: productData.subtitle || 'Ukur & Pasang Sendiri',
+          category: productData.category || productData.Category?.name || '-',
           subcategory: productData.subcategory || productData.category,
           originalPrice: productData.comparePrice || productData.price * 2,
           discount: productData.comparePrice ? Math.round((1 - productData.price / productData.comparePrice) * 100) : 0,
@@ -241,7 +242,7 @@ export default function ProductDetail() {
                   {product.sku && (
                     <div>SKU: <span className="font-medium text-gray-800">{product.sku}</span></div>
                   )}
-                  <div>Kategori: <span className="font-medium text-gray-800">{typeof product.category === 'object' ? product.category?.name : product.category}</span></div>
+                  <div>Kategori: <span className="font-medium text-gray-800">{product.category}</span></div>
                   {product.subcategory && (
                     <div>Sub Kategori: <span className="font-medium text-gray-800">{product.subcategory}</span></div>
                   )}
@@ -845,7 +846,7 @@ function RelatedProductsSlider({ products, navigate, addToWishlist, removeFromWi
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex -ml-2 lg:-ml-3 py-4"> {/* Negative margin to offset padding */}
           {products.map((product: any) => (
-            <div key={product.id} className="flex-[0_0_50%] sm:flex-[0_0_33.33%] lg:flex-[0_0_20%] min-w-0 pl-2 lg:pl-3 h-full">
+            <div key={product.id} className="flex-[0_0_50%] sm:flex-[0_0_33.33%] lg:flex-[0_0_20%] min-w-0 pl-2 lg:pl-3">
               <ProductCardForDetail product={product} navigate={navigate} addToWishlist={addToWishlist} removeFromWishlist={removeFromWishlist} isInWishlist={isInWishlist} />
             </div>
           ))}
