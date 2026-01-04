@@ -19,6 +19,11 @@ export default function ProductListing() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [gridCols, setGridCols] = useState<3 | 4>(4);
 
+  // Pagination state
+  const ITEMS_PER_PAGE = 20;
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   // Fetch products from backend
   useEffect(() => {
     const fetchProducts = async () => {
@@ -122,6 +127,26 @@ export default function ProductListing() {
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setSearchQuery('');
+    setDisplayCount(ITEMS_PER_PAGE);
+  };
+
+  // Reset displayCount when filters change
+  useEffect(() => {
+    setDisplayCount(ITEMS_PER_PAGE);
+  }, [selectedCategory, selectedSubcategory, searchQuery, sortBy]);
+
+  // Products to display (paginated)
+  const displayedProducts = sortedProducts.slice(0, displayCount);
+  const hasMore = displayCount < sortedProducts.length;
+
+  // Load more handler
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    // Simulate slight delay for UX
+    setTimeout(() => {
+      setDisplayCount(prev => prev + ITEMS_PER_PAGE);
+      setLoadingMore(false);
+    }, 300);
   };
 
   // Sidebar Filter Component
@@ -327,7 +352,7 @@ export default function ProductListing() {
             {/* Results Info */}
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-600">
-                Menampilkan <span className="font-semibold text-gray-900">{sortedProducts.length}</span> produk
+                Menampilkan <span className="font-semibold text-gray-900">{displayedProducts.length}</span> dari <span className="font-semibold text-gray-900">{sortedProducts.length}</span> produk
                 {selectedCategory && (
                   <span> dalam <span className="font-semibold text-[#EB216A]">{categories.find(c => String(c.id) === String(selectedCategory))?.name}</span></span>
                 )}
@@ -348,11 +373,34 @@ export default function ProductListing() {
                 ))}
               </div>
             ) : sortedProducts.length > 0 ? (
-              <div className={`grid grid-cols-2 ${gridCols === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2 lg:gap-4`}>
-                {sortedProducts.map((product) => (
-                  <ProductCard key={product.id} {...product} />
-                ))}
-              </div>
+              <>
+                <div className={`grid grid-cols-2 ${gridCols === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2 lg:gap-4`}>
+                  {displayedProducts.map((product) => (
+                    <ProductCard key={product.id} {...product} />
+                  ))}
+                </div>
+
+                {/* Load More Button */}
+                {hasMore && (
+                  <div className="mt-8 text-center">
+                    <Button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      variant="outline"
+                      className="border-[#EB216A] text-[#EB216A] hover:!bg-[#EB216A] hover:!text-white px-8 py-3"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <span className="animate-spin mr-2">⏳</span>
+                          Memuat...
+                        </>
+                      ) : (
+                        `Muat Lebih Banyak (${sortedProducts.length - displayCount} lainnya)`
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
                 <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />

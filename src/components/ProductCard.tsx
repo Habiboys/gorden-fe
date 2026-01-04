@@ -133,7 +133,7 @@ export function ProductCard({ id, name, price, minPrice, minPriceGross, image, i
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
-                    <span className="text-lg lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                    <span className="text-sm lg:text-base text-[#EB216A] font-semibold leading-tight">
                       Rp {Number(minPrice).toLocaleString('id-ID')}
                     </span>
                   </div>
@@ -143,7 +143,7 @@ export function ProductCard({ id, name, price, minPrice, minPriceGross, image, i
                   <div className="h-4 lg:h-5" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
-                    <span className="text-lg lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                    <span className="text-sm lg:text-base text-[#EB216A] font-semibold leading-tight">
                       Rp {Number(minPrice).toLocaleString('id-ID')}
                     </span>
                   </div>

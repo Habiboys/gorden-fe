@@ -255,12 +255,12 @@ export default function ProductDetail() {
                   <>
                     {/* Main Price (Net = Discounted Price) */}
                     <div className="flex items-baseline gap-3 flex-wrap">
-                      <span className="text-3xl lg:text-4xl font-bold text-[#EB216A]">
+                      <span className="text-2xl lg:text-3xl font-bold text-[#EB216A]">
                         Rp{(Number(selectedVariant.price_net) || Number(selectedVariant.price_gross) || 0).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </span>
                       {/* Strikethrough Original Price (Gross) */}
                       {Number(selectedVariant.price_gross) > Number(selectedVariant.price_net) && Number(selectedVariant.price_net) > 0 && (
-                        <span className="text-lg text-gray-400 line-through">
+                        <span className="text-base text-gray-400 line-through">
                           Rp{Number(selectedVariant.price_gross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </span>
                       )}
@@ -696,7 +696,7 @@ export default function ProductDetail() {
             <Button
               onClick={() => navigate('/products')}
               variant="outline"
-              className="border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
+              className="border-[#EB216A] text-[#EB216A] hover:!bg-[#EB216A] hover:!text-white"
             >
               Lihat Semua
             </Button>
@@ -805,7 +805,7 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
-                    <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                    <span className="text-sm lg:text-base text-[#EB216A] font-semibold leading-tight">
                       Rp {Number(product.minPrice).toLocaleString('id-ID')}
                     </span>
                   </div>
@@ -815,7 +815,7 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
                   <div className="h-4 lg:h-5" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 font-normal leading-tight">Mulai dari</span>
-                    <span className="text-base lg:text-xl text-[#EB216A] font-semibold leading-tight">
+                    <span className="text-sm lg:text-base text-[#EB216A] font-semibold leading-tight">
                       Rp {Number(product.minPrice).toLocaleString('id-ID')}
                     </span>
                   </div>
