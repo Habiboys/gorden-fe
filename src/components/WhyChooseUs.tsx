@@ -1,6 +1,6 @@
-import { Card, CardContent } from './ui/card';
-import { Award, Users, DollarSign, Briefcase } from 'lucide-react';
+import { Award, Briefcase, DollarSign, Users } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
+import { Card, CardContent } from './ui/card';
 
 const features = [
   {
@@ -41,14 +41,14 @@ export function WhyChooseUs() {
             return (
               <Card
                 key={feature.title}
-                className="text-center hover:shadow-xl transition-all hover:-translate-y-2 duration-300"
+                className="text-center hover:shadow-lg transition-all hover:-translate-y-1 duration-300"
               >
-                <CardContent className="p-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <Icon className="h-10 w-10 text-white" />
+                <CardContent className="p-5">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
+                    <Icon className="h-7 w-7 text-white" />
                   </div>
-                  <h3 className="mb-3">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
+                  <h3 className="mb-2 font-semibold text-gray-900">{feature.title}</h3>
+                  <p className="text-sm text-gray-600">{feature.description}</p>
                 </CardContent>
               </Card>
             );

@@ -53,7 +53,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
                 {badgeIcon}
                 <span className="text-xs">{badge}</span>
               </div>
-              <h2 className="text-3xl text-gray-900">{title}</h2>
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">{title}</h2>
             </div>
           </div>
           <div className="flex gap-2 lg:gap-3 overflow-hidden">
@@ -80,7 +80,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
               {badgeIcon}
               <span className="text-xs">{badge}</span>
             </div>
-            <h2 className="text-3xl text-gray-900">{title}</h2>
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">{title}</h2>
           </div>
 
           {/* Navigation Arrows - Desktop */}
@@ -138,6 +138,8 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
                 bestSeller={product.is_best_seller}
                 newArrival={product.is_new_arrival}
                 featured={product.is_featured}
+                is_custom={product.is_custom}
+                is_warranty={product.is_warranty}
               />
             </div>
           ))}
@@ -236,7 +238,13 @@ export function CategorySliders() {
           key={category.id}
           title={category.name}
           badge={category.description || 'Koleksi Lengkap'}
-          badgeIcon={<Star className="w-4 h-4" />}
+          badgeIcon={
+            category.icon_url ? (
+              <img src={category.icon_url} alt="" className="w-4 h-4 object-contain" />
+            ) : (
+              <Star className="w-4 h-4" />
+            )
+          }
           products={productsByCategory[category.id] || []}
           loading={loading}
         />

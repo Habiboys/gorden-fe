@@ -55,18 +55,18 @@ export default function ContactPage() {
         <div className="bg-white">
             {/* Header */}
             <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
+                <div className="absolute top-0 right-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-4 py-2 rounded-full mb-6">
+                    <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-3 py-1.5 rounded-full mb-4">
                         <Mail className="w-4 h-4" />
-                        <span className="text-sm">Hubungi Kami</span>
+                        <span className="text-xs">Hubungi Kami</span>
                     </div>
-                    <h1 className="text-5xl lg:text-6xl text-gray-900 mb-6">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4 font-bold">
                         Kami Siap Membantu
                     </h1>
-                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                    <p className="text-sm sm:text-base text-gray-600 max-w-xl mx-auto">
                         Punya pertanyaan seputar produk atau ingin konsultasi gorden gratis? Jangan ragu untuk menghubungi kami.
                     </p>
                 </div>

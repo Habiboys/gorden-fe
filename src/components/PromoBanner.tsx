@@ -1,4 +1,4 @@
-import { Gift, Truck, ShieldCheck } from 'lucide-react';
+import { Gift, ShieldCheck, Truck } from 'lucide-react';
 import { Button } from './ui/button';
 
 export function PromoBanner() {
@@ -22,7 +22,7 @@ export function PromoBanner() {
               </div>
 
               {/* Headline */}
-              <h2 className="text-4xl lg:text-5xl text-white mb-4">
+              <h2 className="text-3xl lg:text-4xl text-white mb-4 font-bold">
                 Gratis Survey & Pasang!
               </h2>
 
@@ -32,7 +32,7 @@ export function PromoBanner() {
               </p>
 
               {/* CTA Button */}
-              <Button 
+              <Button
                 size="lg"
                 className="bg-white text-[#EB216A] hover:bg-gray-100 px-8 py-6 text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
               >

@@ -107,36 +107,36 @@ export default function GalleryPage() {
       {/* Header Section */}
       <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-4 py-2 rounded-full mb-6">
+          <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-3 py-1.5 rounded-full mb-4">
             <Camera className="w-4 h-4" />
-            <span className="text-sm">Portofolio Kami</span>
+            <span className="text-xs">Portofolio Kami</span>
           </div>
 
-          <h1 className="text-5xl lg:text-6xl text-gray-900 mb-6">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4 font-bold">
             Galeri Proyek Amagriya
           </h1>
 
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-gray-600 max-w-xl mx-auto">
             Kumpulan dokumentasi pemasangan gorden dari berbagai klien.
           </p>
         </div>
       </section>
 
       {/* Filter Section */}
-      <section className="py-12 bg-white border-b border-gray-100">
+      <section className="py-8 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center">
-            <div className="inline-flex bg-gray-100 rounded-2xl p-1.5 gap-1.5 flex-wrap">
+            <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1 flex-wrap">
               {categories.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-6 py-3 rounded-xl transition-all duration-300 ${selectedCategory === category.id
-                    ? 'bg-[#EB216A] text-white shadow-lg'
+                  className={`px-4 py-2 rounded-lg transition-all duration-300 text-sm ${selectedCategory === category.id
+                    ? 'bg-[#EB216A] text-white shadow-md'
                     : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
@@ -147,8 +147,8 @@ export default function GalleryPage() {
           </div>
 
           {/* Counter */}
-          <div className="text-center mt-6">
-            <p className="text-gray-600">
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-600">
               Menampilkan <span className="text-[#EB216A]">{filteredGallery.length}</span> proyek
             </p>
           </div>
@@ -166,7 +166,7 @@ export default function GalleryPage() {
                 className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 cursor-pointer"
               >
                 {/* Image */}
-                <div className="relative h-72 overflow-hidden bg-gray-100">
+                <div className="relative h-56 overflow-hidden bg-gray-100">
                   <img
                     src={item.image}
                     alt={item.title}
@@ -223,30 +223,30 @@ export default function GalleryPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-pink-50 via-white to-pink-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border border-gray-100">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <MessageCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+      <section className="py-12 bg-gradient-to-br from-pink-50 via-white to-pink-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <MessageCircle className="w-6 h-6 text-white" />
             </div>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4">
+            <h2 className="text-xl sm:text-2xl text-gray-900 mb-3 font-semibold">
               Ingin Pasang Gorden Seperti Ini?
             </h2>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-sm text-gray-600 mb-6 max-w-xl mx-auto">
               Konsultasikan kebutuhan gorden Anda dengan tim profesional kami sekarang
             </p>
 
             <Button
               size="lg"
-              className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-xl text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-5 sm:py-6 shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
+              className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-lg text-sm sm:text-base px-6 py-3 shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
             >
-              <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+              <MessageCircle className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Hubungi Kami Sekarang</span>
               <span className="sm:hidden">Hubungi Kami</span>
             </Button>
 
-            <p className="text-xs sm:text-sm text-gray-500 mt-6">
+            <p className="text-xs text-gray-500 mt-4">
               Gratis konsultasi • Survey & pengukuran • Instalasi profesional
             </p>
           </div>

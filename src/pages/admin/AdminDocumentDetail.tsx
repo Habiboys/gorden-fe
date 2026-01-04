@@ -239,7 +239,11 @@ export default function AdminDocumentDetail() {
             }
         })();
         const priceBeforeDiscount = basePrice * selection.qty;
-        return priceBeforeDiscount * (1 - (selection.discount || 0) / 100);
+        // Apply variant multiplier if component is configured to follow it
+        const variantMultiplier = (comp.multiply_with_variant && selection.variantMultiplier)
+            ? selection.variantMultiplier
+            : 1;
+        return priceBeforeDiscount * variantMultiplier * (1 - (selection.discount || 0) / 100);
     };
 
     const calculateItemPriceRich = (item: any) => {
@@ -250,8 +254,28 @@ export default function AdminDocumentDetail() {
         const heightM = item.height / 100;
 
         const fabricPricePerMeter = item.selectedVariant?.price ?? product.price;
-        const fabricMeters = widthM * (calculatorSchema.fabric_multiplier || 2.4) * heightM;
-        const fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+        const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+
+        let fabricPriceBeforeDiscount = 0;
+        let fabricMeters = 0;
+
+        // Check if this is Blind flow (simpler pricing)
+        const isBlind = calculatorSchema.slug?.toLowerCase().includes('blind') || calculatorSchema.has_item_type === false;
+
+        if (isBlind) {
+            // BLIND FLOW: Simple Price × Qty (no area, no multiplier)
+            fabricPriceBeforeDiscount = fabricPricePerMeter * item.quantity;
+            fabricMeters = 0;
+        } else if (variantMultiplier > 1) {
+            // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
+            fabricPriceBeforeDiscount = fabricPricePerMeter * variantMultiplier * item.quantity;
+            fabricMeters = 0;
+        } else {
+            // GORDEN FLOW standard: Area Calculation
+            fabricMeters = widthM * (calculatorSchema.fabric_multiplier || 2.4) * heightM;
+            fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+        }
+
         const fabricPrice = fabricPriceBeforeDiscount * (1 - (item.fabricDiscount || 0) / 100);
 
         let componentsPrice = 0;
@@ -259,7 +283,9 @@ export default function AdminDocumentDetail() {
             calculatorSchema.components.forEach((comp: any) => {
                 const selection = item.components ? item.components[comp.id] : null;
                 if (selection) {
-                    componentsPrice += calculateComponentPrice(item, comp, selection);
+                    // Pass variant multiplier to component calculation
+                    const selectionWithMultiplier = { ...selection, variantMultiplier };
+                    componentsPrice += calculateComponentPrice(item, comp, selectionWithMultiplier);
                 }
             });
         }

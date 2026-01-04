@@ -124,15 +124,18 @@ export const generateCalculatorMessage = ({
             const prices = calculateItemPrice(item);
 
             // Item Header
+            const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+            const effectiveQty = variantMultiplier * item.quantity;
             message += `${idx + 1}. ${item.itemType === 'pintu' ? 'Pintu' : 'Jendela'} ${item.width}cm x ${item.height}cm\n`;
-            message += `   Jumlah: ${item.quantity} unit\n`;
+            message += `   Jumlah: ${effectiveQty} unit\n`;
 
             // Variant (now with JSON attributes)
             if (item.selectedVariant) {
                 message += `   - Varian: ${item.selectedVariant.name}\n`;
-                // Show price from variant
+                // Show calculated price (price × multiplier)
                 const variantPrice = item.selectedVariant.price_net || item.selectedVariant.price || 0;
-                message += `   - Harga: Rp ${variantPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+                const calculatedPrice = variantPrice * variantMultiplier * item.quantity;
+                message += `   - Harga: Rp ${calculatedPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
             }
 
             // Components

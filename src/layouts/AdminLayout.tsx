@@ -5,6 +5,7 @@ import {
   Calculator,
   Camera,
   ChevronDown,
+  ExternalLink,
   FileText,
   FolderTree,
   Gift,
@@ -15,6 +16,7 @@ import {
   Menu,
   Package,
   Settings,
+  Sparkles,
   X
 } from 'lucide-react';
 import { useState } from 'react';
@@ -30,6 +32,7 @@ const navigation = [
   { name: 'Jenis Kalkulator', href: '/admin/calculator-types', icon: Box },
   { name: 'Dokumen', href: '/admin/documents', icon: FileText },
   { name: 'Artikel', href: '/admin/articles', icon: BookOpen },
+  { name: 'Layanan', href: '/admin/services', icon: Sparkles },
   { name: 'Galeri', href: '/admin/gallery', icon: Camera },
   { name: 'FAQ', href: '/admin/faqs', icon: HelpCircle },
   { name: 'Kontak', href: '/admin/contacts', icon: Mail },
@@ -160,15 +163,28 @@ export function AdminLayout() {
       <div className="lg:pl-64">
         {/* Top bar */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden"
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden"
+            >
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
+            <h1 className="text-xl text-gray-900 hidden lg:block">
+              Amagriya Gorden - Admin Panel
+            </h1>
+          </div>
+
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-[#EB216A] hover:bg-[#EB216A]/10 rounded-lg transition-colors"
+            title="Buka Website Live"
           >
-            <Menu className="w-6 h-6 text-gray-600" />
-          </button>
-          <h1 className="text-xl text-gray-900 hidden lg:block">
-            Amagriya Gorden - Admin Panel
-          </h1>
+            <ExternalLink className="w-4 h-4" />
+            Lihat Website
+          </a>
         </header>
 
         {/* Page content */}

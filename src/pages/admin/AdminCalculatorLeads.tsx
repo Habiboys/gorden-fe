@@ -479,7 +479,9 @@ export default function AdminCalculatorLeads() {
           product: {
             id: comp.productId,
             name: comp.productName,
-            price: comp.productPrice
+            price: comp.productPrice,
+            price_gross: comp.productPriceGross || comp.productPrice,
+            price_net: comp.productPriceNet || comp.productPrice
           },
           qty: comp.qty || 1,
           discount: comp.discount || 0

@@ -50,6 +50,7 @@ interface ComponentFromDB {
   is_required: boolean;
   price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
   display_order: number;
+  multiply_with_variant: boolean;
   subcategory?: { id: number; name: string; slug: string };
 }
 
@@ -92,6 +93,7 @@ interface CalculatorItem {
     price: number;
     price_gross?: number;
     price_net?: number;
+    quantity_multiplier?: number;
     name: string;
   };
 }
@@ -316,6 +318,27 @@ export default function CalculatorPageV2() {
       ? targetGroupId
       : (isBlindFlow ? Date.now().toString() + '-group' : undefined);
 
+    // For Blind flow with existing group, inherit variant from first item in group
+    let inheritedVariant = undefined;
+    if (isBlindFlow && targetGroupId) {
+      const existingGroupItem = items.find(item => item.groupId === targetGroupId);
+      if (existingGroupItem?.selectedVariant) {
+        inheritedVariant = existingGroupItem.selectedVariant;
+      }
+    }
+    // If tempSelectedProduct has variant data (from Blind product selection), use that
+    if (isBlindFlow && tempSelectedProduct && (tempSelectedProduct as any).price_net) {
+      inheritedVariant = {
+        id: (tempSelectedProduct as any).id,
+        price: (tempSelectedProduct as any).price || (tempSelectedProduct as any).price_net,
+        price_net: (tempSelectedProduct as any).price_net,
+        price_gross: (tempSelectedProduct as any).price_gross,
+        name: tempSelectedProduct.name,
+        attributes: (tempSelectedProduct as any).attributes,
+        quantity_multiplier: 1 // Blind flow doesn't use multiplier
+      };
+    }
+
     const newItem: CalculatorItem = {
       id: Date.now().toString(),
       groupId,
@@ -327,7 +350,8 @@ export default function CalculatorPageV2() {
       panels: parseInt(panels) || 1,
       quantity: parseInt(quantity),
       components: {},
-      product: isBlindFlow && tempSelectedProduct ? tempSelectedProduct : undefined
+      product: isBlindFlow && tempSelectedProduct ? tempSelectedProduct : undefined,
+      selectedVariant: inheritedVariant
     };
 
     setItems([...items, newItem]);
@@ -335,7 +359,8 @@ export default function CalculatorPageV2() {
     setIsAddItemModalOpen(false);
 
     // Check if selected fabric has variants - show picker based on dimensions
-    if (selectedFabric?.id) {
+    // SKIP for Blind flow (variant already selected upfront or inherited)
+    if (selectedFabric?.id && !isBlindFlow) {
       try {
         const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
         const variants = variantsRes.data || [];
@@ -490,7 +515,7 @@ export default function CalculatorPageV2() {
     const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
     const attrDisplay = Object.entries(attrs).length > 0
       ? Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')
-      : (variant.attribute_value || `Varian ${variant.id}`);
+      : (variant.attribute_value || variant.name || `Varian ${variant.id}`);
 
     // Use Net price as primary (discounted), Gross as fallback
     const variantPrice = Number(variant.price_net) || Number(variant.price_gross) || 0;
@@ -523,7 +548,31 @@ export default function CalculatorPageV2() {
 
       setItems(items.map(item => {
         if (item.id === editingVariantItemId) {
-          return { ...item, selectedVariant: variantData };
+          const newMultiplier = Number(variant.quantity_multiplier) || 1;
+          const updatedComponents = { ...item.components };
+
+          // Sync components that should multiply with variant
+          if (currentType && currentType.components && newMultiplier > 1) {
+            currentType.components.forEach(comp => {
+              if (comp.multiply_with_variant && updatedComponents[comp.id]) {
+                updatedComponents[comp.id] = {
+                  ...updatedComponents[comp.id],
+                  qty: newMultiplier
+                };
+              }
+            });
+          }
+
+          const variantDataWithMultiplier = {
+            ...variantData,
+            quantity_multiplier: newMultiplier
+          };
+
+          return {
+            ...item,
+            selectedVariant: variantDataWithMultiplier,
+            components: updatedComponents
+          };
         }
         return item;
       }));
@@ -535,25 +584,39 @@ export default function CalculatorPageV2() {
 
       const productWithVariant = {
         ...pendingProductForVariant,
-        price: variantPrice,
+        price: variantPrice, // Net price for calculations
+        price_gross: Number(variant.price_gross) || variantPrice,
+        price_net: Number(variant.price_net) || variantPrice,
+        quantity_multiplier: Number(variant.quantity_multiplier) || 1,
         name: `${pendingProductForVariant.name} (${attrDisplay})`,
       };
 
       setItems(items.map(item => {
         if (item.id === editingItemId) {
+          // Check if this component should multiply with variant
+          const componentConfig = currentType?.components?.find(c => c.id === editingComponentId);
+          const shouldMultiply = componentConfig?.multiply_with_variant === true;
+          const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+          const initialQty = shouldMultiply ? variantMultiplier : 1;
+
           return {
             ...item,
             components: {
               ...item.components,
               [editingComponentId]: {
                 product: productWithVariant as ProductOption,
-                qty: 1
+                qty: initialQty
               }
             }
           };
         }
         return item;
       }));
+    }
+
+    // Auto-update quantity from multiplier if present
+    if (variant.quantity_multiplier && variant.quantity_multiplier > 1) {
+      setQuantity(variant.quantity_multiplier.toString());
     }
 
     setIsVariantModalOpen(false);
@@ -564,21 +627,21 @@ export default function CalculatorPageV2() {
   // Calculate component price based on price_calculation type
   const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
     const widthM = item.width / 100;
-    const basePrice = (() => {
+    const basePricePerItem = (() => { // Price for one item's component
       switch (comp.price_calculation) {
         case 'per_meter':
           // Min 1 meter rule: usage < 1m counts as 1m
-          return Math.max(1, widthM) * selection.product.price * item.quantity;
+          return Math.max(1, widthM) * selection.product.price;
         case 'per_unit':
-          return selection.product.price * item.quantity;
+          return selection.product.price;
         case 'per_10_per_meter':
-          return Math.ceil(widthM * 10) * selection.product.price * item.quantity;
+          return Math.ceil(widthM * 10) * selection.product.price;
         default:
           return 0;
       }
     })();
-    // Multiply by component quantity
-    return basePrice * selection.qty;
+    // Multiply by component quantity (which might include variant multiplier) and item quantity
+    return basePricePerItem * selection.qty * item.quantity;
   };
 
   // Calculate item price
@@ -595,9 +658,27 @@ export default function CalculatorPageV2() {
     const fabricPricePerMeter = item.selectedVariant?.price ?? productToUse.price;
     const fabricName = item.selectedVariant?.name ?? productToUse.name;
 
-    // Fabric calculation with multiplier
-    const fabricMeters = widthM * currentType.fabric_multiplier * heightM;
-    const fabricPrice = fabricMeters * fabricPricePerMeter * item.quantity;
+    // Fabric calculation
+    let fabricPrice = 0;
+    let fabricMeters = 0;
+    const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+
+    // Check if this is Blind flow (simpler pricing)
+    const isBlindType = currentType.slug?.toLowerCase().includes('blind') || currentType.has_item_type === false;
+
+    if (isBlindType) {
+      // BLIND FLOW: Simple Price × Qty (no area, no multiplier)
+      fabricPrice = fabricPricePerMeter * item.quantity;
+      fabricMeters = 0;
+    } else if (variantMultiplier > 1) {
+      // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
+      fabricPrice = fabricPricePerMeter * variantMultiplier * item.quantity;
+      fabricMeters = 0; // Not calculated by area when using multiplier
+    } else {
+      // GORDEN FLOW standard: Area Calculation
+      fabricMeters = widthM * currentType.fabric_multiplier * heightM;
+      fabricPrice = fabricMeters * fabricPricePerMeter * item.quantity;
+    }
 
     // Components calculation
     let componentsPrice = 0;
@@ -682,7 +763,8 @@ export default function CalculatorPageV2() {
                 attributes: item.selectedVariant.attributes,
                 price: item.selectedVariant.price,
                 price_gross: item.selectedVariant.price_gross,
-                price_net: item.selectedVariant.price_net
+                price_net: item.selectedVariant.price_net,
+                quantity_multiplier: item.selectedVariant.quantity_multiplier
               } : null,
               fabricName: (prices as any).fabricName || selectedFabric?.name,
               fabricPricePerMeter: (prices as any).fabricPricePerMeter || selectedFabric?.price,
@@ -696,7 +778,10 @@ export default function CalculatorPageV2() {
                   productId: selection.product.id,
                   productName: selection.product.name,
                   productPrice: selection.product.price,
+                  productPriceGross: (selection.product as any).price_gross || selection.product.price,
+                  productPriceNet: (selection.product as any).price_net || selection.product.price,
                   qty: selection.qty,
+                  discount: selection.discount || 0,
                   priceCalculation: comp?.price_calculation || 'per_unit'
                 };
               }),
@@ -770,87 +855,87 @@ export default function CalculatorPageV2() {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
 
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl text-gray-900 mb-6 font-bold">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4 font-bold">
             Kalkulator Biaya Gorden
           </h1>
 
-          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-gray-600 max-w-xl mx-auto">
             Hitung kebutuhan dan estimasi biaya secara otomatis dengan komponen yang dapat disesuaikan.
           </p>
         </div>
       </section>
 
       {/* How to Use Section */}
-      <section className="py-16 bg-white border-b border-gray-100">
+      <section className="py-12 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl text-gray-900 mb-3 font-semibold">Cara Menggunakan Kalkulator</h2>
-            <p className="text-gray-600">Ikuti 4 langkah mudah untuk menghitung biaya gorden Anda</p>
+          <div className="text-center mb-8">
+            <h2 className="text-xl sm:text-2xl text-gray-900 mb-2 font-semibold">Cara Menggunakan Kalkulator</h2>
+            <p className="text-sm text-gray-600">Ikuti 4 langkah mudah untuk menghitung biaya gorden Anda</p>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center group">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Calculator className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mx-auto mb-2 shadow-md group-hover:scale-105 transition-transform">
+                <Calculator className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg text-gray-900 mb-2 font-medium">Pilih Jenis</h3>
-              <p className="text-sm text-gray-600">Smokering, Kupu-kupu, atau Blind</p>
+              <h3 className="text-sm text-gray-900 mb-1 font-medium">Pilih Jenis</h3>
+              <p className="text-xs text-gray-600">Smokering, Kupu-kupu, atau Blind</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Package className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mx-auto mb-2 shadow-md group-hover:scale-105 transition-transform">
+                <Package className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg text-gray-900 mb-2 font-medium">Pilih Kain</h3>
-              <p className="text-sm text-gray-600">Pilih dari berbagai pilihan kain</p>
+              <h3 className="text-sm text-gray-900 mb-1 font-medium">Pilih Kain</h3>
+              <p className="text-xs text-gray-600">Pilih dari berbagai pilihan kain</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Ruler className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mx-auto mb-2 shadow-md group-hover:scale-105 transition-transform">
+                <Ruler className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg text-gray-900 mb-2 font-medium">Input Ukuran</h3>
-              <p className="text-sm text-gray-600">Masukkan lebar dan tinggi</p>
+              <h3 className="text-sm text-gray-900 mb-1 font-medium">Input Ukuran</h3>
+              <p className="text-xs text-gray-600">Masukkan lebar dan tinggi</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Layers className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mx-auto mb-2 shadow-md group-hover:scale-105 transition-transform">
+                <Layers className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg text-gray-900 mb-2 font-medium">Pilih Komponen</h3>
-              <p className="text-sm text-gray-600">Tambahkan rel, hook, tassel, dll</p>
+              <h3 className="text-sm text-gray-900 mb-1 font-medium">Pilih Komponen</h3>
+              <p className="text-xs text-gray-600">Tambahkan rel, hook, tassel, dll</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Main Calculator Section */}
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-12 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Step 1: Calculator Type */}
           <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#EB216A] rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-xl text-white font-bold">1</span>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-[#EB216A] rounded-lg flex items-center justify-center shadow-sm">
+                <span className="text-base text-white font-bold">1</span>
               </div>
-              <h2 className="text-xl sm:text-2xl text-gray-900 font-semibold">Pilih Jenis Kalkulator</h2>
+              <h2 className="text-lg sm:text-xl text-gray-900 font-semibold">Pilih Jenis Kalkulator</h2>
             </div>
 
             <div className="w-full overflow-x-auto">
-              <div className="inline-flex bg-white rounded-2xl p-1.5 gap-1.5 border border-gray-200 shadow-md min-w-full sm:min-w-0">
+              <div className="inline-flex bg-white rounded-xl p-1 gap-1 border border-gray-200 shadow-sm min-w-full sm:min-w-0">
                 {calculatorTypes.map(type => (
                   <button
                     key={type.id}
                     onClick={() => handleTypeChange(type.slug)}
-                    className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 text-sm sm:text-base whitespace-nowrap font-medium ${selectedTypeSlug === type.slug
-                      ? 'bg-[#EB216A] text-white shadow-lg'
+                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg transition-all duration-300 text-xs sm:text-sm whitespace-nowrap font-medium ${selectedTypeSlug === type.slug
+                      ? 'bg-[#EB216A] text-white shadow-md'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                       }`}
                   >
@@ -865,18 +950,18 @@ export default function CalculatorPageV2() {
           {/* Step 2: Fabric Selection (Only for Curtain Types) */}
           {!isBlindFlow && (
             <div className="mb-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-[#EB216A] rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-xl text-white font-bold">2</span>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 bg-[#EB216A] rounded-lg flex items-center justify-center shadow-sm">
+                  <span className="text-base text-white font-bold">2</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl text-gray-900 font-semibold">Pilih Produk Gorden</h2>
+                <h2 className="text-lg sm:text-xl text-gray-900 font-semibold">Pilih Produk Gorden</h2>
               </div>
 
               {selectedFabric ? (
-                <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-[#EB216A] shadow-lg">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                <div className="bg-white rounded-xl p-3 sm:p-4 border-2 border-[#EB216A] shadow-md">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                         <img
                           src={getProductImageUrl(selectedFabric.images || selectedFabric.image)}
                           alt={selectedFabric.name}
@@ -884,12 +969,12 @@ export default function CalculatorPageV2() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Badge className="bg-[#EB216A]/10 text-[#EB216A] border-0 mb-1">
+                        <Badge className="bg-[#EB216A]/10 text-[#EB216A] border-0 mb-1 text-xs">
                           {selectedFabric.category || 'Kain Gorden'}
                         </Badge>
-                        <h3 className="text-lg sm:text-xl text-gray-900 font-medium truncate">{selectedFabric.name}</h3>
-                        <div className="flex items-baseline gap-2 mt-1">
-                          <span className="text-[#EB216A] font-bold text-lg">
+                        <h3 className="text-base sm:text-lg text-gray-900 font-medium truncate">{selectedFabric.name}</h3>
+                        <div className="flex items-baseline gap-2 mt-0.5">
+                          <span className="text-[#EB216A] font-bold text-sm sm:text-base">
                             {selectedFabric.minPrice && selectedFabric.minPrice > 0
                               ? `Mulai Rp ${selectedFabric.minPrice.toLocaleString('id-ID')}`
                               : selectedFabric.price > 0
@@ -911,9 +996,9 @@ export default function CalculatorPageV2() {
               ) : (
                 <Button
                   onClick={() => setIsProductModalOpen(true)}
-                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-8 py-6 rounded-xl text-lg"
+                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-5 py-4 rounded-lg text-sm"
                 >
-                  <Package className="w-5 h-5 mr-2" /> Pilih Produk Gorden
+                  <Package className="w-4 h-4 mr-2" /> Pilih Produk Gorden
                 </Button>
               )}
             </div>
@@ -921,12 +1006,12 @@ export default function CalculatorPageV2() {
 
           {/* Step 3: Add Items */}
           <div className="mb-10">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#EB216A] rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-xl text-white font-bold">{isBlindFlow ? '2' : '3'}</span>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#EB216A] rounded-lg flex items-center justify-center shadow-sm">
+                  <span className="text-base text-white font-bold">{isBlindFlow ? '2' : '3'}</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl text-gray-900 font-semibold">Daftar Item ({items.length})</h2>
+                <h2 className="text-lg sm:text-xl text-gray-900 font-semibold">Daftar Item ({items.length})</h2>
               </div>
               <Button
                 onClick={() => {
@@ -1102,7 +1187,7 @@ export default function CalculatorPageV2() {
                                       {!isBlindFlow && (item.packageType === 'gorden-lengkap' ? ' - Paket Lengkap' : ' - Gorden Saja')}
                                     </h3>
                                     <p className="text-sm text-gray-500">
-                                      {item.width} cm × {item.height} cm • Jumlah: {item.quantity}x
+                                      {item.width} cm × {item.height} cm • Jumlah: {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}x
                                     </p>
                                   </div>
                                 </div>
@@ -1117,119 +1202,163 @@ export default function CalculatorPageV2() {
 
                             {/* Item Details */}
                             <div className="p-4 sm:p-6 space-y-3">
-                              <h4 className="text-xs text-gray-500 uppercase tracking-wide font-medium">Rincian Komponen</h4>
-
-                              {/* Fabric / Main Product */}
-                              <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    {/* Product Image for Blind Flow */}
-                                    {isBlindFlow && item.product && (
-                                      <img src={getProductImageUrl(item.product.images || item.product.image)} className="w-8 h-8 rounded object-cover" />
-                                    )}
-                                    <p className="text-gray-900 font-medium">{(prices as any).fabricName || item.product?.name || selectedFabric?.name}</p>
-                                    {selectedFabric && !isBlindFlow && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
-                                        onClick={async () => {
-                                          try {
-                                            const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
-                                            const variants = variantsRes.data || [];
-                                            if (variants.length > 0) {
-                                              setEditingVariantItemId(item.id);
-                                              setPendingProductForVariant(selectedFabric);
-                                              setAvailableVariants(variants);
-                                              setVariantSelectionMode('fabric');
-                                              setIsVariantModalOpen(true);
-                                            }
-                                          } catch (error) {
-                                            console.error('Error loading variants:', error);
-                                          }
-                                        }}
-                                      >
-                                        {item.selectedVariant ? 'Ganti Varian' : 'Pilih Varian'}
-                                      </Button>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-500">
-                                    {(prices as any).fabricMeters?.toFixed(2) || 0}m × Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')} × {item.quantity}
-                                  </p>
-                                </div>
-                                <p className="text-lg font-semibold text-gray-900">
-                                  Rp {prices.fabric.toLocaleString('id-ID')}
-                                </p>
-                              </div>
-
-                              {/* Dynamic Components */}
-                              {item.packageType === 'gorden-lengkap' && currentType?.components?.map(comp => {
-                                const selection = item.components[comp.id];
-                                const products = componentProducts[comp.subcategory_id] || [];
-                                const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
-
-                                return (
-                                  <div key={comp.id} className={`flex justify-between items-center py-3 border-b border-gray-100 ${!selection ? 'opacity-60' : ''}`}>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <p className="text-gray-900 font-medium">
-                                          {selection ? selection.product.name : comp.label}
-                                        </p>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-6 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
-                                          onClick={() => openComponentModal(item.id, comp.id)}
-                                          disabled={products.length === 0}
-                                        >
-                                          {selection ? 'Ganti' : 'Pilih'}
-                                        </Button>
-                                      </div>
-                                      {selection ? (
-                                        <div className="flex items-center gap-3">
-                                          <p className="text-sm text-gray-500">
-                                            {comp.price_calculation === 'per_meter' && `${(item.width / 100).toFixed(2)}m × Rp ${selection.product.price.toLocaleString('id-ID')}`}
-                                            {comp.price_calculation === 'per_unit' && `Rp ${selection.product.price.toLocaleString('id-ID')} × ${item.quantity}`}
-                                            {comp.price_calculation === 'per_10_per_meter' && `${Math.ceil((item.width / 100) * 10)} pcs × Rp ${selection.product.price.toLocaleString('id-ID')}`}
-                                          </p>
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-xs text-gray-500">×</span>
-                                            <input
-                                              type="number"
-                                              min="1"
-                                              value={selection.qty}
-                                              onClick={(e) => e.stopPropagation()}
-                                              onChange={(e) => {
-                                                const newQty = Math.max(1, parseInt(e.target.value) || 1);
-                                                setItems(items.map(i => {
-                                                  if (i.id === item.id) {
-                                                    return {
-                                                      ...i,
-                                                      components: {
-                                                        ...i.components,
-                                                        [comp.id]: { ...selection, qty: newQty }
-                                                      }
-                                                    };
-                                                  }
-                                                  return i;
-                                                }));
-                                              }}
-                                              className="w-14 h-7 px-2 border border-gray-300 rounded text-center text-sm focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                            />
+                              {/* Dynamic Components - Table Layout */}
+                              {item.packageType === 'gorden-lengkap' && (
+                                <div className="border rounded-lg overflow-hidden bg-white">
+                                  <table className="w-full text-sm">
+                                    <tbody className="divide-y divide-gray-100">
+                                      {/* Main Fabric Row */}
+                                      <tr className="hover:bg-gray-50">
+                                        <td className="px-3 py-2.5 w-24">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white w-full"
+                                            onClick={async () => {
+                                              if (!selectedFabric || isBlindFlow) return;
+                                              try {
+                                                const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
+                                                const variants = variantsRes.data || [];
+                                                if (variants.length > 0) {
+                                                  setEditingVariantItemId(item.id);
+                                                  setPendingProductForVariant(selectedFabric);
+                                                  setAvailableVariants(variants);
+                                                  setVariantSelectionMode('fabric');
+                                                  setIsVariantModalOpen(true);
+                                                }
+                                              } catch (error) {
+                                                console.error('Error loading variants:', error);
+                                              }
+                                            }}
+                                          >
+                                            {item.selectedVariant ? 'Ganti' : 'Pilih'}
+                                          </Button>
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium text-gray-700">
+                                          {isBlindFlow ? 'Produk' : 'Gorden'}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                          <div className="flex items-center gap-2">
+                                            {isBlindFlow && item.product && (
+                                              <img src={getProductImageUrl(item.product.image)} className="w-10 h-10 rounded object-cover" alt="" />
+                                            )}
+                                            <span className="text-gray-600 text-xs">
+                                              {(prices as any).fabricName || item.product?.name || selectedFabric?.name || '-'}
+                                            </span>
                                           </div>
-                                        </div>
-                                      ) : (
-                                        <p className="text-sm text-gray-400">
-                                          {products.length === 0 ? 'Tidak ada produk tersedia' : `Pilih ${comp.label.toLowerCase()}`}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <p className="text-lg font-semibold text-gray-900">
-                                      Rp {compPrice.toLocaleString('id-ID')}
-                                    </p>
-                                  </div>
-                                );
-                              })}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right text-gray-600">
+                                          Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center w-20">
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            value={item.selectedVariant?.quantity_multiplier || 1}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => {
+                                              const newMultiplier = Math.max(1, parseFloat(e.target.value) || 1);
+                                              setItems(items.map(i => {
+                                                if (i.id === item.id && i.selectedVariant) {
+                                                  // Sync Components
+                                                  const updatedComponents = { ...i.components };
+                                                  if (currentType?.components) {
+                                                    currentType.components.forEach(comp => {
+                                                      if (comp.multiply_with_variant && updatedComponents[comp.id]) {
+                                                        updatedComponents[comp.id] = {
+                                                          ...updatedComponents[comp.id],
+                                                          qty: newMultiplier
+                                                        };
+                                                      }
+                                                    });
+                                                  }
+                                                  return {
+                                                    ...i,
+                                                    selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
+                                                    components: updatedComponents
+                                                  };
+                                                }
+                                                return i;
+                                              }));
+                                            }}
+                                            className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                          />
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                                          Rp{prices.fabric.toLocaleString('id-ID')}
+                                        </td>
+                                      </tr>
+
+                                      {/* Component Rows */}
+                                      {currentType?.components?.map(comp => {
+                                        const selection = item.components[comp.id];
+                                        const products = componentProducts[comp.subcategory_id] || [];
+                                        const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
+
+                                        return (
+                                          <tr key={comp.id} className={`hover:bg-gray-50 ${!selection ? 'opacity-60' : ''}`}>
+                                            <td className="px-3 py-2.5 w-24">
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className={`h-7 px-2 text-xs w-full ${selection
+                                                  ? 'border-gray-300 text-gray-600 hover:bg-gray-100'
+                                                  : 'border-[#EB216A] text-[#EB216A] bg-[#EB216A]/10 hover:bg-[#EB216A] hover:text-white'}`}
+                                                onClick={() => openComponentModal(item.id, comp.id)}
+                                                disabled={products.length === 0}
+                                              >
+                                                {selection ? 'Ganti' : 'Pilih'}
+                                              </Button>
+                                            </td>
+                                            <td className="px-3 py-2.5 font-medium text-gray-700">
+                                              {comp.label}
+                                            </td>
+                                            <td className="px-3 py-2.5">
+                                              <span className="text-gray-600 text-xs">
+                                                {selection ? selection.product.name : (products.length === 0 ? 'Tidak ada produk' : '-')}
+                                              </span>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-right text-gray-600">
+                                              {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : 'Rp.0'}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-center w-20">
+                                              {selection ? (
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  value={selection.qty}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  onChange={(e) => {
+                                                    const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                    setItems(items.map(i => {
+                                                      if (i.id === item.id) {
+                                                        return {
+                                                          ...i,
+                                                          components: {
+                                                            ...i.components,
+                                                            [comp.id]: { ...selection, qty: newQty }
+                                                          }
+                                                        };
+                                                      }
+                                                      return i;
+                                                    }));
+                                                  }}
+                                                  className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                                />
+                                              ) : (
+                                                <span className="text-gray-400">0</span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                                              Rp{compPrice.toLocaleString('id-ID')}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
 
                               {/* Subtotal */}
                               <div className="flex justify-between items-center pt-3">
@@ -1249,14 +1378,14 @@ export default function CalculatorPageV2() {
             )} {/* Grand Total & WhatsApp */}
             {items.length > 0 && (
               <div className="space-y-4">
-                {/* Grand Total - Transparent Background */}
-                <div className="bg-transparent p-6 sm:p-8 text-[#EB216A] border-2 border-[#EB216A] rounded-2xl shadow-sm">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                {/* Grand Total - Compact */}
+                <div className="bg-transparent p-4 text-[#EB216A] border-2 border-[#EB216A] rounded-xl shadow-sm">
+                  <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-gray-800 font-semibold">Total Keseluruhan</p>
-                      <p className="text-sm text-gray-500">Untuk {items.length} item ({items.reduce((s, i) => s + i.quantity, 0)} unit)</p>
+                      <p className="text-gray-800 font-medium text-sm">Total Keseluruhan</p>
+                      <p className="text-xs text-gray-500">Untuk {items.length} item ({items.reduce((s, i) => s + i.quantity, 0)} unit)</p>
                     </div>
-                    <p className="text-3xl sm:text-4xl font-bold">
+                    <p className="text-xl sm:text-2xl font-bold">
                       Rp {grandTotal.toLocaleString('id-ID')}
                     </p>
                   </div>

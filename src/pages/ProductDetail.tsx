@@ -238,6 +238,12 @@ export default function ProductDetail() {
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
                   {product.name}
                 </h1>
+
+                {/* Short Description */}
+                {product.description && (
+                  <p className="text-gray-600 text-sm mb-3">{product.description}</p>
+                )}
+
                 <div className="flex flex-col gap-1 text-sm text-gray-600">
                   {product.sku && (
                     <div>SKU: <span className="font-medium text-gray-800">{product.sku}</span></div>
@@ -247,6 +253,29 @@ export default function ProductDetail() {
                     <div>Sub Kategori: <span className="font-medium text-gray-800">{product.subcategory}</span></div>
                   )}
                 </div>
+
+                {/* Badges - Garansi & Custom */}
+                {(product.is_warranty || product.is_custom) && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {product.is_warranty && (
+                        <Badge className="bg-blue-100 text-blue-700 border-0">
+                          Garansi 1 Tahun
+                        </Badge>
+                      )}
+                      {product.is_custom && (
+                        <Badge className="bg-pink-100 text-pink-700 border-0">
+                          Gorden Custom
+                        </Badge>
+                      )}
+                    </div>
+                    {product.is_custom && (
+                      <p className="text-xs text-gray-500">
+                        Produk ini dapat dihitung menggunakan <a href="/calculator" className="text-[#EB216A] hover:underline font-medium">Kalkulator Gorden</a>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Price Section - Based on selected variant */}
@@ -493,7 +522,7 @@ export default function ProductDetail() {
                     }}
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span className="hidden sm:inline">Chat</span>
+                    Chat
                   </Button>
                   <Button
                     size="lg"
@@ -502,7 +531,7 @@ export default function ProductDetail() {
                     onClick={handleShare}
                   >
                     <Share2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Share</span>
+                    Share
                   </Button>
                   <Button
                     size="lg"
@@ -517,7 +546,7 @@ export default function ProductDetail() {
                     }}
                   >
                     <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                    <span className="hidden sm:inline">Wishlist</span>
+                    Wishlist
                   </Button>
                 </div>
               </div>
@@ -538,7 +567,7 @@ export default function ProductDetail() {
                     color: calcHovered ? 'white' : '#EB216A'
                   }}
                 >
-                  🧮 Hitung dengan Kalkulator
+                  Hitung dengan Kalkulator
                 </button>
               </div>
             </div>
@@ -746,6 +775,20 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
               {product.badge || (product.bestSeller ? 'Best Seller' : product.newArrival ? 'New' : 'Featured')}
             </Badge>
           )}
+
+          {/* Custom & Warranty Badges */}
+          <div className="absolute bottom-3 left-3 flex flex-row gap-1 items-center">
+            {product.is_warranty && (
+              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
+                Garansi
+              </Badge>
+            )}
+            {product.is_custom && (
+              <Badge className="bg-pink-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
+                Custom
+              </Badge>
+            )}
+          </div>
 
           {/* Wishlist Button */}
           <button

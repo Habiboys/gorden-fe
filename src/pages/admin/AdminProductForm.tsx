@@ -504,36 +504,78 @@ export default function AdminProductForm() {
                 </div>
             </Card>
 
+
+
             {/* Section: SEO & Meta */}
             <Card className="p-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">SEO & Meta</h2>
-                <div className="space-y-4">
-                    <div>
-                        <Label>Meta Title</Label>
-                        <Input
-                            value={formData.metaTitle}
-                            onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
-                            maxLength={60}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">{formData.metaTitle.length}/60</p>
+                <div className="grid lg:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Meta Title</Label>
+                            <Input
+                                value={formData.metaTitle}
+                                onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
+                                maxLength={60}
+                                placeholder="Judul halaman di hasil pencarian"
+                            />
+                            <div className="flex justify-between mt-1">
+                                <p className="text-xs text-gray-500">Disarankan 50-60 karakter</p>
+                                <p className={`text-xs ${formData.metaTitle.length > 60 ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {formData.metaTitle.length}/60
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                            <Label>Meta Description</Label>
+                            <Textarea
+                                value={formData.metaDescription}
+                                onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
+                                rows={3}
+                                maxLength={160}
+                                placeholder="Deskripsi singkat yang muncul di hasil pencarian"
+                            />
+                            <div className="flex justify-between mt-1">
+                                <p className="text-xs text-gray-500">Disarankan 150-160 karakter</p>
+                                <p className={`text-xs ${formData.metaDescription.length > 160 ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {formData.metaDescription.length}/160
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                            <Label>Meta Keywords</Label>
+                            <Input
+                                value={formData.metaKeywords}
+                                onChange={(e) => setFormData({ ...formData, metaKeywords: e.target.value })}
+                                placeholder="keyword1, keyword2, ..."
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Pisahkan dengan koma</p>
+                        </div>
                     </div>
+
+                    {/* Google Search Preview */}
                     <div>
-                        <Label>Meta Description</Label>
-                        <Textarea
-                            value={formData.metaDescription}
-                            onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
-                            rows={2}
-                            maxLength={160}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">{formData.metaDescription.length}/160</p>
-                    </div>
-                    <div>
-                        <Label>Meta Keywords</Label>
-                        <Input
-                            value={formData.metaKeywords}
-                            onChange={(e) => setFormData({ ...formData, metaKeywords: e.target.value })}
-                            placeholder="keyword1, keyword2, ..."
-                        />
+                        <Label className="mb-4 block">Preview Google Search</Label>
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm select-none">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="bg-gray-100 rounded-full w-7 h-7 flex items-center justify-center p-1">
+                                    <img src="/logo.svg" alt="Icon" className="w-4 h-4 opacity-50" onError={(e) => (e.currentTarget.src = 'https://www.google.com/favicon.ico')} />
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-800 font-medium">Amagriya Gorden</div>
+                                    <div className="text-[10px] text-gray-500">amagriyagorden.com {'>'} products {'>'} {formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'nama-produk'}</div>
+                                </div>
+                            </div>
+                            <h3 className="text-[#1a0dab] text-lg font-medium hover:underline cursor-pointer truncate leading-tight">
+                                {formData.metaTitle || formData.name || 'Judul Produk'}
+                            </h3>
+                            <p className="text-sm text-[#4d5156] mt-1 line-clamp-2 leading-relaxed">
+                                {formData.metaDescription || formData.description || 'Deskripsi produk akan tampil di sini...'}
+                            </p>
+                        </div>
+                        <div className="mt-4 bg-blue-50 text-blue-800 p-3 rounded-md text-xs border border-blue-100">
+                            <p>ℹ️ <strong>Tips SEO:</strong> Gunakan kata kunci yang relevan di judul dan deskripsi untuk meningkatkan visibilitas produk Anda di mesin pencari.</p>
+                        </div>
                     </div>
                 </div>
             </Card>
@@ -584,6 +626,6 @@ export default function AdminProductForm() {
                     {saving ? 'Menyimpan...' : isEditMode ? 'Update Produk' : 'Simpan Produk'}
                 </Button>
             </div>
-        </div>
+        </div >
     );
 }

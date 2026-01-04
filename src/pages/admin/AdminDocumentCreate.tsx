@@ -35,6 +35,7 @@ interface ComponentFromDB {
     is_required: boolean;
     price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
     display_order: number;
+    multiply_with_variant?: boolean;
 }
 
 interface CalculatorTypeFromDB {
@@ -90,6 +91,7 @@ interface CalculatorItem {
         price_net?: number;
         name: string;
         attributes?: any; // JSON attributes
+        quantity_multiplier?: number; // Multiplier for Smokering/Kupu-kupu
     };
 }
 
@@ -141,6 +143,10 @@ export default function AdminDocumentCreate() {
 
     // Grouping State
     const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
+
+    // Delete Confirmation Modal
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteTargetGroupId, setDeleteTargetGroupId] = useState<string | null>(null);
 
     // ================== DOCUMENT FORM STATE ==================
     const [docType, setDocType] = useState<'QUOTATION' | 'INVOICE'>('QUOTATION');
@@ -290,19 +296,35 @@ export default function AdminDocumentCreate() {
 
         if (product) {
             setItemModalTargetProduct(product);
+            // Don't reset targetGroupId here - it might be set by handleAddSizeToGroup
         } else {
             setItemModalTargetProduct(null);
+            setTargetGroupId(null); // Only reset group target when opening fresh (no product)
         }
-        setTargetGroupId(null); // Reset group target when opening fresh
-
 
         setShowItemModal(true);
     };
 
     // Handler to start editing an item's product/variant
-    const handleEditItemProduct = (item: CalculatorItem) => {
+    const handleEditItemProduct = async (item: CalculatorItem) => {
         setEditingItemId(item.id);
         setSearchQuery('');
+
+        if (item.product) {
+            try {
+                const variantsRes = await productVariantsApi.getByProduct(item.product.id);
+                if (variantsRes.data?.length > 0) {
+                    setAvailableVariants(variantsRes.data);
+                    setVariantItemId(item.id);
+                    setItemModalTargetProduct(item.product);
+                    setShowVariantPicker(true);
+                    return;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         setShowFabricPicker(true);
     };
 
@@ -332,9 +354,16 @@ export default function AdminDocumentCreate() {
 
     // Remove entire group
     const handleRemoveGroup = (groupId: string) => {
-        if (confirm('Hapus seluruh grup item ini?')) {
-            setItems(items.filter(i => i.groupId !== groupId));
+        setDeleteTargetGroupId(groupId);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteGroup = () => {
+        if (deleteTargetGroupId) {
+            setItems(items.filter(i => i.groupId !== deleteTargetGroupId));
         }
+        setShowDeleteConfirm(false);
+        setDeleteTargetGroupId(null);
     };
 
     // Select fabric
@@ -384,6 +413,7 @@ export default function AdminDocumentCreate() {
                     setItemModalTargetProduct(product); // Set target product
                     setAvailableVariants(variants);
                     setTempGroupVariant(null); // Reset temp variant
+                    setVariantSelectionMode('item'); // Ensure mode is 'item' for Blind flow
                     setShowVariantPicker(true);
                     setShowFabricPicker(false);
                     return; // Stop here, wait for variant selection
@@ -497,9 +527,17 @@ export default function AdminDocumentCreate() {
 
         // Parse JSON attributes for variant display name
         const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
+        const multiplier = Number(variant.quantity_multiplier) || 1;
+
+        // Build display string from attributes, or fallback to multiplier/sibak info
         const attrDisplay = Object.entries(attrs).length > 0
             ? Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')
-            : (variant.attribute_value || `${variant.width}x${variant.height}cm`);
+            : (variant.attribute_value
+                || variant.name
+                || (multiplier > 1 ? `Sibak: ${multiplier}` : null)
+                || (variant.sibak ? `Sibak: ${variant.sibak}` : null)
+                || (variant.width ? `${variant.width}x${variant.height}cm` : null)
+                || `ID: ${String(variant.id).slice(0, 8)}`);
 
         const variantData = {
             id: variant.id,
@@ -510,30 +548,35 @@ export default function AdminDocumentCreate() {
             price_gross: variant.price_gross,
             price_net: variant.price_net,
             attributes: attrs, // Save attributes
+            quantity_multiplier: multiplier, // Extract multiplier
             name: itemModalTargetProduct?.name
                 ? `${itemModalTargetProduct.name} (${attrDisplay})`
-                : (variant.attribute_value
-                    ? `${variant.attribute_value} (${variant.attribute_name})`
-                    : `${variant.width}x${variant.height}cm`)
+                : attrDisplay
         };
 
         // Case 0: Component Variant Selection
         if (variantSelectionMode === 'component') {
             if (!editingItemId || editingComponentId === null) return;
 
+            // Calculate discount from Gross vs Net for component
+            const compDiscountPercent = gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0;
+
             setItems(items.map(item => {
                 if (item.id === editingItemId) {
                     const existingSelection = item.components[editingComponentId];
-                    // We need the product object. 'itemModalTargetProduct' holds key product info during variant selection.
-                    // Or we can construct it from pending product.
-                    // In handleSelectComponent, we setItemModalTargetProduct(product).
                     const productWithVariant = {
                         ...itemModalTargetProduct,
-                        price: variantData.price, // Use variant price
-                        // We might want to store variant info specifically if needed, but for now override main product or treat as product option
-                        // Following CalculatorPage logic:
+                        price: net, // Use NET price as primary for calculations
+                        price_gross: gross,
+                        price_net: net,
                         name: variantData.name
                     };
+
+                    // Check if this component should multiply with variant
+                    const componentConfig = selectedCalcType?.components?.find(c => c.id === editingComponentId);
+                    const shouldMultiply = componentConfig?.multiply_with_variant === true;
+                    const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+                    const initialQty = shouldMultiply ? variantMultiplier : 1;
 
                     return {
                         ...item,
@@ -541,8 +584,8 @@ export default function AdminDocumentCreate() {
                             ...item.components,
                             [editingComponentId]: {
                                 product: productWithVariant,
-                                qty: existingSelection?.qty || 1,
-                                discount: existingSelection?.discount || 0
+                                qty: existingSelection?.qty || initialQty,
+                                discount: compDiscountPercent // Auto-set discount from Gross/Net
                             }
                         }
                     };
@@ -550,19 +593,33 @@ export default function AdminDocumentCreate() {
                 return item;
             }));
             setShowVariantPicker(false);
-            setItemModalTargetProduct(null); // Clear pending product
-            setVariantSelectionMode('item'); // Reset mode
+            setItemModalTargetProduct(null);
+            setVariantSelectionMode('item');
             return;
         }
 
         // Case 1: Selecting variant for specific item (Edit or Late Select)
         if (variantItemId) {
+            const newMultiplier = Number(variant.quantity_multiplier) || 1;
             setItems(items.map(item => {
                 if (item.id === variantItemId) {
+                    // Sync components that should multiply with variant
+                    const updatedComponents = { ...item.components };
+                    if (selectedCalcType?.components && newMultiplier > 1) {
+                        selectedCalcType.components.forEach(comp => {
+                            if (comp.multiply_with_variant && updatedComponents[comp.id]) {
+                                updatedComponents[comp.id] = {
+                                    ...updatedComponents[comp.id],
+                                    qty: newMultiplier
+                                };
+                            }
+                        });
+                    }
                     return {
                         ...item,
                         fabricDiscount: discountPercent, // Auto-set discount
-                        selectedVariant: variantData
+                        selectedVariant: variantData,
+                        components: updatedComponents
                     };
                 }
                 return item;
@@ -626,14 +683,20 @@ export default function AdminDocumentCreate() {
         setItems(items.map(item => {
             if (item.id === editingItemId) {
                 const existingSelection = item.components[editingComponentId];
+                // Check if this component should multiply with variant
+                const componentConfig = selectedCalcType?.components?.find(c => c.id === editingComponentId);
+                const shouldMultiply = componentConfig?.multiply_with_variant === true;
+                const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+                const initialQty = shouldMultiply ? variantMultiplier : 1;
+
                 return {
                     ...item,
                     components: {
                         ...item.components,
                         [editingComponentId]: {
                             product,
-                            qty: existingSelection?.qty || 1,       // Default to 1 if new
-                            discount: existingSelection?.discount || 0 // Default to 0 if new
+                            qty: existingSelection?.qty || initialQty,
+                            discount: existingSelection?.discount || 0
                         }
                     }
                 };
@@ -671,35 +734,62 @@ export default function AdminDocumentCreate() {
 
     const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
         const widthM = item.width / 100;
-        const basePrice = (() => {
+        // Use price_gross if available (for variant products), otherwise use price
+        const basePrice = (selection.product as any)?.price_gross || selection.product.price || 0;
+        const netPrice = (selection.product as any)?.price_net || basePrice;
+
+        // Calculate effective discount from gross/net ratio if selection.discount is 0
+        const effectiveDiscount = selection.discount || (basePrice > 0 ? Math.round(((basePrice - netPrice) / basePrice) * 100) : 0);
+
+        const basePricePerItem = (() => {
             switch (comp.price_calculation) {
                 case 'per_meter':
-                    return Math.max(1, widthM) * selection.product.price * item.quantity;
+                    return Math.max(1, widthM) * basePrice;
                 case 'per_unit':
-                    return selection.product.price * item.quantity;
+                    return basePrice;
                 case 'per_10_per_meter':
-                    return Math.ceil(widthM * 10) * selection.product.price * item.quantity;
+                    return Math.ceil(widthM * 10) * basePrice;
                 default:
                     return 0;
             }
         })();
-        const priceBeforeDiscount = basePrice * selection.qty;
-        return priceBeforeDiscount * (1 - (selection.discount || 0) / 100);  // Apply component discount
+        // Component qty should already include multiplier if set via handleSelectComponent
+        const priceBeforeDiscount = basePricePerItem * selection.qty * item.quantity;
+        return priceBeforeDiscount * (1 - effectiveDiscount / 100);  // Apply effective component discount
     };
 
     const calculateItemPrice = (item: CalculatorItem) => {
         const product = item.product || selectedFabric; // PRIORITIZE ITEM PRODUCT
-        if (!product || !selectedCalcType) return { fabricPricePerMeter: 0, fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0 };
+        if (!product || !selectedCalcType) return { fabricPricePerMeter: 0, fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0, totalAfterGroupDiscount: 0 };
 
         const widthM = item.width / 100;
         const heightM = item.height / 100;
 
-        // Use variant price based on priceType selector, fallback to 0 if no variant
         // Use variant price (which is set to GROSS in handleSelectVariant), fallback to 0
         const variantPrice = item.selectedVariant ? (item.selectedVariant.price || 0) : 0;
         const fabricPricePerMeter = variantPrice;
-        const fabricMeters = widthM * (selectedCalcType.fabric_multiplier || 2.4) * heightM;
-        const fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+        const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+
+        // Check if this is Blind flow (simpler pricing)
+        const isBlind = selectedCalcType.slug?.toLowerCase().includes('blind') || selectedCalcType.has_item_type === false;
+
+        let fabricMeters = 0;
+        let fabricPriceBeforeDiscount = 0;
+
+        if (isBlind) {
+            // BLIND FLOW: Simple Price × Qty (no area, no multiplier)
+            fabricPriceBeforeDiscount = fabricPricePerMeter * item.quantity;
+            fabricMeters = 0;
+        } else if (variantMultiplier > 1) {
+            // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
+            fabricPriceBeforeDiscount = fabricPricePerMeter * variantMultiplier * item.quantity;
+            fabricMeters = 0; // Not calculated by area when using multiplier
+        } else {
+            // GORDEN FLOW standard: Area Calculation
+            fabricMeters = widthM * (selectedCalcType.fabric_multiplier || 2.4) * heightM;
+            fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+        }
+
         const fabricPrice = fabricPriceBeforeDiscount * (1 - (item.fabricDiscount || 0) / 100);  // Apply fabric discount
 
         let componentsPrice = 0;
@@ -717,14 +807,15 @@ export default function AdminDocumentCreate() {
         const totalAfterGroupDiscount = totalAfterItemDiscount * (1 - (item.groupDiscount || 0) / 100); // Apply group discount
 
         return {
-            fabricPricePerMeter, // ADD THIS
+            fabricPricePerMeter,
+            variantMultiplier,
             fabric: fabricPrice,
             fabricBeforeDiscount: fabricPriceBeforeDiscount,
             fabricMeters,
             components: componentsPrice,
-            total: subtotal,                      // Subtotal before item discount
-            totalAfterItemDiscount,               // Total after item discount
-            totalAfterGroupDiscount               // Total after group discount
+            total: subtotal,
+            totalAfterItemDiscount,
+            totalAfterGroupDiscount
         };
     };
 
@@ -1182,10 +1273,7 @@ export default function AdminDocumentCreate() {
                                                     const prices = calculateItemPrice(item);
 
                                                     // Main Fabric Calculations
-                                                    const fabricGross = prices.fabricBeforeDiscount || prices.total || 0;
-                                                    const fabricNet = prices.fabric || 0;
-                                                    const unitGross = fabricGross / (item.quantity || 1);
-                                                    const unitNet = fabricNet / (item.quantity || 1);
+                                                    // (Calculations moved inline to layout)
 
                                                     return (
                                                         <div key={item.id} className="mb-8 border rounded-xl overflow-hidden shadow-sm bg-white">
@@ -1217,181 +1305,49 @@ export default function AdminDocumentCreate() {
                                                             {/* COMPONENT LIST (Card Style) */}
                                                             <div className="p-4 space-y-3">
                                                                 {/* Column Headers */}
-                                                                <div className="flex items-center justify-between p-3 text-xs font-medium text-gray-500 border-b border-dashed mb-2">
+                                                                <div className="flex items-center justify-between p-3 text-xs font-medium text-gray-500 border-b border-dashed mb-2 gap-4">
                                                                     <div className="flex-1">Produk</div>
-                                                                    <div className="flex items-center gap-6">
-                                                                        <div className="w-24 text-right">Harga</div>
-                                                                        <div className="w-16 text-center">Disc</div>
-                                                                        <div className="w-16 text-center">Qty</div>
-                                                                        <div className="w-28 text-right">Total</div>
-                                                                    </div>
+                                                                    <div className="w-28 text-right">Harga</div>
+                                                                    <div className="w-16 text-center">Disc(%)</div>
+                                                                    <div className="w-28 text-right">Harga Net</div>
+                                                                    <div className="w-16 text-center">Qty</div>
+                                                                    <div className="w-28 text-right">Total</div>
                                                                 </div>
 
                                                                 {/* 1. Main Fabric Row */}
-                                                                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white shadow-sm">
-                                                                    <div className="flex items-center gap-3 flex-1">
+                                                                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white shadow-sm gap-4">
+                                                                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
                                                                         <Button
                                                                             onClick={() => handleEditItemProduct(item)}
-                                                                            className={`text-xs px-3 h-8 shadow-sm ${item.product ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-[#EB216A] hover:bg-[#D41B5B] text-white'}`}
+                                                                            className={`text-xs px-3 h-8 shadow-sm flex-shrink-0 ${item.product ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-[#EB216A] hover:bg-[#D41B5B] text-white'}`}
                                                                         >
                                                                             {item.product ? 'Ganti' : 'Pilih'}
                                                                         </Button>
 
-                                                                        {/* Name Display Logic: Show product name + variant if selected */}
-                                                                        <div className="min-w-[120px]">
-                                                                            {item.product ? (
-                                                                                <div className="flex flex-col leading-tight">
-                                                                                    <span className="font-semibold text-gray-900">
-                                                                                        {(() => {
-                                                                                            if (item.selectedVariant) {
-                                                                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                                                                    return item.selectedVariant.name;
-                                                                                                }
-                                                                                                // Fallback: Parse attributes
-                                                                                                const attrs = safeJSONParse(item.selectedVariant.attributes, {}) as Record<string, any>;
-                                                                                                if (Object.keys(attrs).length > 0) {
-                                                                                                    return `${item.product.name} (${Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')})`;
-                                                                                                }
-                                                                                            }
-                                                                                            return item.product.name;
-                                                                                        })()}
-                                                                                    </span>
-                                                                                    {item.selectedVariant && (
-                                                                                        <span className="text-[10px] text-gray-500">{item.product.name}</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            ) : (
-                                                                                <span className="font-semibold text-gray-700">
-                                                                                    Gorden {selectedCalcType?.name}
+                                                                        <div className="flex flex-col leading-tight min-w-0">
+                                                                            <span className="font-semibold text-gray-900 truncate" title={item.product?.name}>
+                                                                                {item.product?.name || `Gorden ${selectedCalcType?.name}`}
+                                                                            </span>
+                                                                            {item.selectedVariant && (
+                                                                                <span className="text-[10px] text-gray-500 truncate">
+                                                                                    {item.selectedVariant.name || 'Standard'}
                                                                                 </span>
                                                                             )}
                                                                         </div>
-
-                                                                        {/* Selected Product Info (Image & Variant Details) */}
-                                                                        {item.product ? (
-                                                                            <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
-                                                                                <img src={getProductImageUrl(item.product.image || item.product.images)} className="w-8 h-8 rounded object-cover border" />
-                                                                                <div className="flex flex-col leading-tight">
-                                                                                    <span className="text-[10px] text-gray-500">
-                                                                                        {item.selectedVariant ? (() => {
-                                                                                            if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                                                                return `Varian: ${item.selectedVariant.name}`;
-                                                                                            }
-                                                                                            const attrs = safeJSONParse(item.selectedVariant.attributes, {}) as Record<string, any>;
-                                                                                            if (Object.keys(attrs).length > 0) {
-                                                                                                return `Varian: ${Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
-                                                                                            }
-                                                                                            return 'Standard';
-                                                                                        })() : 'Standard'}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
-                                                                                <span className="text-gray-400 italic">Belum dipilih</span>
-                                                                            </div>
-                                                                        )}
                                                                     </div>
 
-                                                                    {/* Price & Qty Section */}
-                                                                    <div className="flex items-center gap-4">
-                                                                        {/* Harga Gross */}
-                                                                        <div className="w-24 text-right flex flex-col justify-center">
-                                                                            <span className="text-sm font-medium text-gray-600">Rp {Math.round(unitGross).toLocaleString('id-ID')}</span>
-                                                                            {item.fabricDiscount > 0 && (
-                                                                                <span className="text-[10px] text-gray-400 line-through">Rp {Math.round(unitGross * (100 / (100 - item.fabricDiscount))).toLocaleString('id-ID')}</span>
-                                                                            )}
-                                                                        </div>
+                                                                    {/* Pricing Columns */}
+                                                                    {(() => {
+                                                                        // Calculate effective discount from price_gross/price_net if fabricDiscount is 0
+                                                                        const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                                                        const net = Number(item.selectedVariant?.price_net) || gross;
+                                                                        const effectiveDiscount = item.fabricDiscount || (gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0);
 
-                                                                        {/* Disc */}
-                                                                        <div className="w-16 flex justify-center">
-                                                                            <input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                max="100"
-                                                                                value={item.fabricDiscount || 0}
-                                                                                onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
-                                                                                className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                placeholder="Disc%"
-                                                                                title="Diskon %"
-                                                                            />
-                                                                        </div>
-
-                                                                        {/* Qty */}
-                                                                        <div className="w-16 flex justify-center">
-                                                                            <input
-                                                                                type="number"
-                                                                                min="1"
-                                                                                value={item.quantity || 1}
-                                                                                onChange={(e) => {
-                                                                                    const newQty = Math.max(1, parseInt(e.target.value) || 1);
-                                                                                    setItems(prevItems => prevItems.map(i =>
-                                                                                        i.id === item.id ? { ...i, quantity: newQty } : i
-                                                                                    ));
-                                                                                }}
-                                                                                className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                title="Quantity"
-                                                                            />
-                                                                        </div>
-
-                                                                        {/* Total */}
-                                                                        <div className="w-28 text-right font-bold text-gray-900">
-                                                                            Rp {Math.round(fabricNet).toLocaleString('id-ID')}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* 2. Components Rows */}
-                                                                {item.packageType === 'gorden-lengkap' && selectedCalcType.components && selectedCalcType.components.map(comp => {
-                                                                    const selection = item.components[comp.id];
-
-                                                                    // Default values for unselected component
-                                                                    let compTotal = 0;
-                                                                    let unitPriceGross = 0;
-                                                                    let compDiscount = 0;
-                                                                    let isSelected = false;
-
-                                                                    if (selection && selection.product) {
-                                                                        isSelected = true;
-                                                                        compDiscount = selection.discount || 0;
-                                                                        const compPrices = calculateComponentPrice(item, comp, selection);
-                                                                        compTotal = compPrices;
-                                                                        unitPriceGross = selection.product.price;
-                                                                    }
-
-                                                                    return (
-                                                                        <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white shadow-sm">
-                                                                            <div className="flex items-center gap-3 flex-1">
-                                                                                <Button
-                                                                                    onClick={() => openComponentPicker(item.id, comp.id)}
-                                                                                    className={`text-xs px-3 h-8 shadow-sm ${isSelected ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-[#EB216A] hover:bg-[#D41B5B] text-white'}`}
-                                                                                >
-                                                                                    {isSelected ? 'Ganti' : 'Pilih'}
-                                                                                </Button>
-                                                                                <span className="font-semibold text-gray-700 min-w-[120px]">
-                                                                                    {comp.label}
-                                                                                </span>
-                                                                                {/* Selected Component Info */}
-                                                                                <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
-                                                                                    {isSelected ? (
-                                                                                        <>
-                                                                                            <img src={getProductImageUrl(selection!.product.images || selection!.product.image)} className="w-8 h-8 rounded object-cover border" />
-                                                                                            <div className="flex flex-col leading-tight">
-                                                                                                <span className="font-medium text-gray-900 line-clamp-1">{selection!.product.name}</span>
-                                                                                                <span className="text-[10px] text-gray-500">Qty: {selection!.qty}</span>
-                                                                                            </div>
-                                                                                        </>
-                                                                                    ) : (
-                                                                                        <span className="text-gray-400 italic text-xs">Belum dipilih</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-
-                                                                            {/* Price & Qty Section */}
-                                                                            <div className="flex items-center gap-4">
+                                                                        return (
+                                                                            <>
                                                                                 {/* Harga Gross */}
-                                                                                <div className="w-24 text-right">
-                                                                                    <span className="text-sm font-medium text-gray-600">Rp {Math.round(unitPriceGross).toLocaleString('id-ID')}</span>
+                                                                                <div className="w-28 text-right text-sm text-gray-600">
+                                                                                    Rp {gross.toLocaleString('id-ID')}
                                                                                 </div>
 
                                                                                 {/* Disc */}
@@ -1400,54 +1356,161 @@ export default function AdminDocumentCreate() {
                                                                                         type="number"
                                                                                         min="0"
                                                                                         max="100"
-                                                                                        disabled={!isSelected}
-                                                                                        value={isSelected ? compDiscount : ''}
-                                                                                        onChange={(e) => {
-                                                                                            if (!isSelected || !selection) return;
-                                                                                            const newDisc = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                                                                                            setItems(prevItems => prevItems.map(i => {
-                                                                                                if (i.id === item.id) {
-                                                                                                    const newComponents = { ...i.components };
-                                                                                                    newComponents[comp.id] = { ...selection, discount: newDisc };
-                                                                                                    return { ...i, components: newComponents };
-                                                                                                }
-                                                                                                return i;
-                                                                                            }));
-                                                                                        }}
-                                                                                        className={`w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none ${!isSelected ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                                                        placeholder="-"
+                                                                                        value={effectiveDiscount}
+                                                                                        onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
+                                                                                        className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
                                                                                     />
                                                                                 </div>
 
-                                                                                {/* Qty */}
-                                                                                <div className="w-16 flex justify-center">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="1"
-                                                                                        disabled={!isSelected}
-                                                                                        value={isSelected ? selection!.qty : ''}
-                                                                                        onChange={(e) => {
-                                                                                            if (!isSelected || !selection) return;
-                                                                                            const newQty = Math.max(1, parseInt(e.target.value) || 1);
-                                                                                            setItems(prevItems => prevItems.map(i => {
-                                                                                                if (i.id === item.id) {
-                                                                                                    const newComponents = { ...i.components };
-                                                                                                    newComponents[comp.id] = { ...selection, qty: newQty };
-                                                                                                    return { ...i, components: newComponents };
-                                                                                                }
-                                                                                                return i;
-                                                                                            }));
-                                                                                        }}
-                                                                                        className={`w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none ${!isSelected ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                                                        placeholder="-"
-                                                                                    />
+                                                                                {/* Harga Net */}
+                                                                                <div className="w-28 text-right text-sm font-medium text-gray-800">
+                                                                                    Rp {net.toLocaleString('id-ID')}
                                                                                 </div>
+                                                                            </>
+                                                                        );
+                                                                    })()}
 
-                                                                                {/* Total */}
-                                                                                <div className="w-28 text-right font-bold text-gray-900">
-                                                                                    Rp {Math.round(compTotal).toLocaleString('id-ID')}
+                                                                    {/* Qty */}
+                                                                    <div className="w-16 flex justify-center">
+                                                                        <input
+                                                                            type="number"
+                                                                            min="1"
+                                                                            step="0.1"
+                                                                            value={item.selectedVariant?.quantity_multiplier || 1}
+                                                                            onChange={(e) => {
+                                                                                const newTotal = parseFloat(e.target.value) || 0;
+                                                                                if (item.selectedVariant) {
+                                                                                    const newMultiplier = newTotal / (item.quantity || 1);
+                                                                                    setItems(items.map(i => {
+                                                                                        if (i.id === item.id && i.selectedVariant) {
+                                                                                            // Sync Components
+                                                                                            const updatedComponents = { ...i.components };
+                                                                                            if (selectedCalcType?.components) {
+                                                                                                selectedCalcType.components.forEach(comp => {
+                                                                                                    if (comp.multiply_with_variant && updatedComponents[comp.id]) {
+                                                                                                        updatedComponents[comp.id] = {
+                                                                                                            ...updatedComponents[comp.id],
+                                                                                                            qty: newMultiplier
+                                                                                                        };
+                                                                                                    }
+                                                                                                });
+                                                                                            }
+                                                                                            return {
+                                                                                                ...i,
+                                                                                                selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
+                                                                                                components: updatedComponents
+                                                                                            };
+                                                                                        }
+                                                                                        return i;
+                                                                                    }));
+                                                                                } else {
+                                                                                    setItems(items.map(i => {
+                                                                                        if (i.id === item.id) {
+                                                                                            return { ...i, quantity: newTotal };
+                                                                                        }
+                                                                                        return i;
+                                                                                    }));
+                                                                                }
+                                                                            }}
+                                                                            className="w-14 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                        />
+                                                                    </div>
+
+                                                                    {/* Total */}
+                                                                    <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
+                                                                        Rp {prices.fabric.toLocaleString('id-ID')}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* 2. Components Rows */}
+                                                                {selectedCalcType?.components?.map(comp => {
+                                                                    const selection = item.components[comp.id];
+
+                                                                    // Calculate display values with effective discount from gross/net
+                                                                    const compGross = (selection?.product as any)?.price_gross || selection?.product?.price || 0;
+                                                                    const compNetActual = (selection?.product as any)?.price_net || compGross;
+                                                                    const effectiveCompDisc = selection?.discount || (compGross > 0 ? Math.round(((compGross - compNetActual) / compGross) * 100) : 0);
+
+                                                                    const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
+
+                                                                    return (
+                                                                        <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white gap-4">
+                                                                            <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                                                                                <Button
+                                                                                    variant="outline"
+                                                                                    size="sm"
+                                                                                    onClick={() => openComponentPicker(item.id, comp.id)}
+                                                                                    className={`text-xs px-3 h-8 w-16 flex-shrink-0 ${selection ? 'bg-white' : 'border-dashed text-gray-400'}`}
+                                                                                >
+                                                                                    {selection ? 'Ganti' : 'Pilih'}
+                                                                                </Button>
+                                                                                <div className="flex flex-col leading-tight min-w-0">
+                                                                                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
+                                                                                    <span className="text-sm font-medium text-gray-900 truncate" title={selection?.product?.name}>
+                                                                                        {selection?.product?.name || '-'}
+                                                                                    </span>
                                                                                 </div>
                                                                             </div>
+
+                                                                            {selection ? (
+                                                                                <>
+                                                                                    <div className="w-28 text-right text-sm text-gray-600">
+                                                                                        Rp {compGross.toLocaleString('id-ID')}
+                                                                                    </div>
+
+                                                                                    <div className="w-16 flex justify-center">
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="0"
+                                                                                            max="100"
+                                                                                            value={effectiveCompDisc}
+                                                                                            className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                            onChange={(e) => {
+                                                                                                const newDisc = parseInt(e.target.value) || 0;
+                                                                                                setItems(items.map(i => i.id === item.id ? {
+                                                                                                    ...i,
+                                                                                                    components: {
+                                                                                                        ...i.components,
+                                                                                                        [comp.id]: { ...selection, discount: newDisc }
+                                                                                                    }
+                                                                                                } : i));
+                                                                                            }}
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    <div className="w-28 text-right text-sm font-medium text-gray-800">
+                                                                                        Rp {Math.round(compNetActual).toLocaleString('id-ID')}
+                                                                                    </div>
+
+                                                                                    <div className="w-16 flex justify-center">
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="1"
+                                                                                            value={selection.qty}
+                                                                                            className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                            onChange={(e) => {
+                                                                                                const newQty = parseInt(e.target.value) || 1;
+                                                                                                setItems(items.map(i => i.id === item.id ? {
+                                                                                                    ...i,
+                                                                                                    components: {
+                                                                                                        ...i.components,
+                                                                                                        [comp.id]: { ...selection, qty: newQty }
+                                                                                                    }
+                                                                                                } : i));
+                                                                                            }}
+                                                                                            title="Qty Per Window"
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
+                                                                                        Rp {Math.round(rowTotal).toLocaleString('id-ID')}
+                                                                                    </div>
+                                                                                </>
+                                                                            ) : (
+                                                                                <div className="flex-1 text-right text-gray-300 text-xs italic pr-4">
+                                                                                    Belum dipilih
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     );
                                                                 })}
@@ -1597,6 +1660,36 @@ export default function AdminDocumentCreate() {
 
             {/* ================== MODALS ================== */}
 
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl w-full max-w-sm mx-4 p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                                <Trash2 className="w-5 h-5 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">Hapus Grup?</h3>
+                        </div>
+                        <p className="text-gray-600 mb-6">Seluruh item dalam grup ini akan dihapus. Tindakan ini tidak dapat dibatalkan.</p>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => { setShowDeleteConfirm(false); setDeleteTargetGroupId(null); }}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                onClick={confirmDeleteGroup}
+                            >
+                                Hapus
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Fabric Picker Modal */}
             {
                 showFabricPicker && (
@@ -1668,7 +1761,7 @@ export default function AdminDocumentCreate() {
                                                     : `${v.width}x${v.height}cm ${v.sibak ? `(sibak ${v.sibak}cm)` : ''}`;
                                             })()}
                                         </p>
-                                        <p className="text-sm text-[#EB216A]">Rp {Number(v.price_gross || v.price_net || 0).toLocaleString('id-ID')}/m</p>
+                                        <p className="text-sm text-[#EB216A]">Rp {Number(v.price_net || v.price_gross || 0).toLocaleString('id-ID')}/m</p>
                                     </div>
                                 ))}
                             </div>

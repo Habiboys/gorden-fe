@@ -81,43 +81,43 @@ export default function ReferralPage() {
   return (
     <div className="bg-white overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-20 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
             {/* Text Content */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-4 py-2 rounded-full mb-6">
+              <div className="inline-flex items-center gap-2 bg-[#EB216A]/10 text-[#EB216A] px-3 py-1.5 rounded-full mb-4">
                 <Gift className="w-4 h-4" />
-                <span className="text-sm">Program Terbaru</span>
+                <span className="text-xs">Program Terbaru</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl text-gray-900 mb-6">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4 font-bold">
                 Program Referal
                 <span className="block text-[#EB216A]">Amagriya Gorden</span>
               </h1>
 
-              <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed">
+              <p className="text-sm sm:text-base text-gray-600 mb-6 leading-relaxed">
                 Ajak teman, bagikan rekomendasi, dan dapatkan komisi!
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Link to="/register">
                   <Button
-                    size="lg"
-                    className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-xl text-lg px-8 w-full sm:w-auto"
+                    size="default"
+                    className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-lg text-sm px-6 w-full sm:w-auto"
                   >
                     Daftar Sekarang
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
                 <Button
-                  size="lg"
+                  size="default"
                   variant="outline"
-                  className="border-2 border-gray-200 text-gray-900 hover:border-[#EB216A] hover:text-[#EB216A] rounded-xl text-lg px-8 w-full sm:w-auto"
+                  className="border border-gray-200 text-gray-900 hover:border-[#EB216A] hover:text-[#EB216A] rounded-lg text-sm px-6 w-full sm:w-auto"
                 >
                   Pelajari Lebih Lanjut
                 </Button>
@@ -125,25 +125,25 @@ export default function ReferralPage() {
             </div>
 
             {/* Image */}
-            <div className="relative mt-8 lg:mt-0">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+            <div className="relative mt-6 lg:mt-0">
+              <div className="relative rounded-2xl overflow-hidden shadow-xl">
                 <img
                   src="https://images.unsplash.com/photo-1745847768380-2caeadbb3b71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMHBhcnRuZXJzaGlwJTIwaGFuZHNoYWtlfGVufDF8fHx8MTc2NTA2MjgyOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                   alt="Program Referal"
-                  className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover"
+                  className="w-full h-[250px] sm:h-[300px] lg:h-[350px] object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#EB216A]/20 to-transparent" />
               </div>
 
               {/* Floating Stats Card */}
-              <div className="absolute -bottom-4 left-4 sm:-bottom-6 sm:left-6 lg:-left-6 bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#EB216A]/10 rounded-xl flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#EB216A]" />
+              <div className="absolute -bottom-4 left-4 sm:-bottom-6 sm:left-6 lg:-left-6 bg-white rounded-xl shadow-lg p-3 sm:p-4 border border-gray-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#EB216A]/10 rounded-lg flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#EB216A]" />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl text-gray-900">1000+</p>
-                    <p className="text-xs sm:text-sm text-gray-500">Mitra Aktif</p>
+                    <p className="text-lg sm:text-xl text-gray-900 font-bold">1000+</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500">Mitra Aktif</p>
                   </div>
                 </div>
               </div>
@@ -153,7 +153,7 @@ export default function ReferralPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 bg-white">
+      <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeader
             badge="Keuntungan"
@@ -167,15 +167,15 @@ export default function ReferralPage() {
               return (
                 <div
                   key={index}
-                  className="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-[#EB216A]/30 hover:shadow-xl transition-all duration-300"
+                  className="group bg-white rounded-xl p-5 border border-gray-100 hover:border-[#EB216A]/30 hover:shadow-lg transition-all duration-300"
                 >
-                  <div className="w-14 h-14 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Icon className="w-7 h-7 text-white" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300 shadow-md">
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-xl text-gray-900 mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">
                     {benefit.title}
                   </h3>
-                  <p className="text-gray-600 leading-relaxed">
+                  <p className="text-sm text-gray-600 leading-relaxed">
                     {benefit.description}
                   </p>
                 </div>
@@ -186,7 +186,7 @@ export default function ReferralPage() {
       </section>
 
       {/* How to Join Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-12 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeader
             badge="Mudah & Cepat"
@@ -194,7 +194,7 @@ export default function ReferralPage() {
             description="Proses pendaftaran yang mudah dan cepat untuk menjadi mitra kami"
           />
 
-          <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isLast = index === steps.length - 1;
@@ -202,27 +202,28 @@ export default function ReferralPage() {
               return (
                 <div key={index} className="relative">
                   {/* Connecting Line - Hidden on mobile */}
+                  {/* Connecting Line - Hidden on mobile, adjusted centering */}
                   {!isLast && (
-                    <div className="hidden sm:block absolute left-[52px] top-24 w-0.5 h-16 bg-gradient-to-b from-[#EB216A] to-[#EB216A]/20" />
+                    <div className="hidden sm:block absolute left-6 sm:left-10 top-16 sm:top-20 bottom-[-24px] w-0.5 bg-gradient-to-b from-[#EB216A] to-transparent -translate-x-1/2 z-0" />
                   )}
 
-                  <div className="flex gap-3 sm:gap-6 items-start">
+                  <div className="flex gap-3 sm:gap-4 items-start">
                     {/* Number Circle - Smaller on mobile */}
-                    <div className="relative flex-shrink-0">
-                      <div className="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                        <span className="text-xl sm:text-2xl lg:text-3xl text-white">{step.number}</span>
+                    <div className="relative flex-shrink-0 z-10">
+                      <div className="w-12 h-12 sm:w-20 sm:h-20 lg:w-20 lg:h-20 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md">
+                        <span className="text-lg sm:text-xl lg:text-2xl text-white font-bold">{step.number}</span>
                       </div>
-                      <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-xl shadow-md flex items-center justify-center border-2 border-[#EB216A]">
-                        <Icon className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#EB216A]" />
+                      <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-lg sm:rounded-xl shadow-sm flex items-center justify-center border border-[#EB216A]">
+                        <Icon className="w-3 h-3 sm:w-4 sm:h-4 text-[#EB216A]" />
                       </div>
                     </div>
 
                     {/* Content - Adjusted padding for mobile */}
-                    <div className="flex-1 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-100 shadow-md hover:shadow-xl transition-shadow duration-300 min-w-0">
-                      <h3 className="text-base sm:text-xl lg:text-2xl text-gray-900 mb-2 sm:mb-3">
+                    <div className="flex-1 bg-white rounded-xl sm:rounded-xl p-4 sm:p-5 lg:p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-shadow duration-300 min-w-0">
+                      <h3 className="text-sm sm:text-lg lg:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
                         {step.title}
                       </h3>
-                      <p className="text-gray-600 leading-relaxed text-xs sm:text-base lg:text-lg break-words">
+                      <p className="text-gray-600 leading-relaxed text-xs sm:text-sm lg:text-base break-words">
                         {step.description}
                       </p>
                     </div>
@@ -235,7 +236,7 @@ export default function ReferralPage() {
       </section>
 
       {/* Workflow Section */}
-      <section className="py-20 bg-white">
+      <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeader
             badge="Alur Kerja"
@@ -252,22 +253,22 @@ export default function ReferralPage() {
                   <div key={index} className="relative">
                     {/* Arrow between steps */}
                     {!isLast && (
-                      <div className="hidden md:block absolute top-1/2 -right-2 transform -translate-y-1/2 z-10">
-                        <ArrowRight className="w-8 h-8 text-[#EB216A]" />
+                      <div className="hidden md:flex absolute top-1/2 -right-4 transform -translate-y-1/2 translate-x-1/2 z-20 w-8 h-8 items-center justify-center bg-white rounded-full shadow-sm border border-gray-100">
+                        <ArrowRight className="w-4 h-4 text-[#EB216A]" />
                       </div>
                     )}
 
                     {/* Step Card */}
-                    <div className="relative bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#EB216A] transition-all duration-300 h-full">
-                      {/* Step Number Badge */}
-                      <div className="absolute -top-3 -left-3 w-8 h-8 bg-[#EB216A] rounded-lg flex items-center justify-center shadow-lg">
-                        <span className="text-white text-sm">{index + 1}</span>
+                    <div className="relative bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 hover:border-[#EB216A] transition-all duration-300 h-full">
+                      {/* Step Number Badge - Positioned relatively inside or top-left inside */}
+                      <div className="w-8 h-8 bg-[#EB216A] rounded-lg flex items-center justify-center shadow-md mb-3">
+                        <span className="text-white text-sm font-bold">{index + 1}</span>
                       </div>
 
-                      <h4 className="text-xl text-gray-900 mb-2 mt-2">
+                      <h4 className="text-base font-semibold text-gray-900 mb-2">
                         {step.label}
                       </h4>
-                      <p className="text-gray-600 text-sm">
+                      <p className="text-gray-600 text-sm leading-relaxed">
                         {step.description}
                       </p>
                     </div>
@@ -277,15 +278,15 @@ export default function ReferralPage() {
             </div>
 
             {/* Summary Box */}
-            <div className="mt-12 bg-gradient-to-r from-[#EB216A] to-[#d11d5e] rounded-3xl p-8 text-white shadow-2xl">
-              <div className="flex items-center justify-between flex-wrap gap-6">
+            <div className="mt-8 bg-gradient-to-r from-[#EB216A] to-[#d11d5e] rounded-2xl p-6 text-white shadow-xl">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h3 className="text-2xl mb-2">Mulai Hasilkan Komisi Hari Ini!</h3>
-                  <p className="text-white/90">Proses cepat, transparan, dan terpercaya</p>
+                  <h3 className="text-xl font-bold mb-1">Mulai Hasilkan Komisi!</h3>
+                  <p className="text-white/90 text-sm">Proses cepat, transparan, dan terpercaya</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-4xl mb-1">10%</p>
-                  <p className="text-white/90">Komisi per transaksi</p>
+                  <p className="text-3xl font-bold mb-0">10%</p>
+                  <p className="text-white/90 text-xs">Komisi per transaksi</p>
                 </div>
               </div>
             </div>
@@ -294,32 +295,32 @@ export default function ReferralPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-pink-50 via-white to-pink-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border border-gray-100">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Gift className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+      <section className="py-12 bg-gradient-to-br from-pink-50 via-white to-pink-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Gift className="w-6 h-6 text-white" />
             </div>
 
-            <h2 className="text-3xl sm:text-4xl text-gray-900 mb-4">
+            <h2 className="text-xl sm:text-2xl text-gray-900 mb-3 font-semibold">
               Siap Menjadi Mitra Referal Kami?
             </h2>
-            <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-sm text-gray-600 mb-6 max-w-xl mx-auto">
               Bergabunglah dengan ribuan mitra yang sudah menghasilkan komisi setiap bulannya
             </p>
 
             <Link to="/register">
               <Button
                 size="lg"
-                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-xl text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-5 sm:py-6 shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
+                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white rounded-lg text-sm sm:text-base px-6 py-3 shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
               >
                 <span className="hidden sm:inline">Daftar Sekarang & Mulai Menghasilkan</span>
                 <span className="sm:hidden">Daftar & Mulai Menghasilkan</span>
-                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 ml-2" />
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
 
-            <p className="text-xs sm:text-sm text-gray-500 mt-6">
+            <p className="text-xs text-gray-500 mt-4">
               Gratis tanpa biaya pendaftaran • Proses otomatis • Pencairan mudah
             </p>
           </div>

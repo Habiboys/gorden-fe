@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { HelpCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { faqsApi } from '../utils/api';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from './ui/accordion';
-import { HelpCircle } from 'lucide-react';
 import { Button } from './ui/button';
-import { faqsApi } from '../utils/api';
 
 export function FAQ() {
   const [faqs, setFaqs] = useState<any[]>([]);
@@ -133,10 +133,10 @@ export function FAQ() {
   }
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
+    <section className="py-16 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
       {/* Decorative Background Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-[#EB216A]/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#EB216A]/5 rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-3 gap-12">
@@ -144,14 +144,14 @@ export function FAQ() {
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-24">
               {/* Icon */}
-              <div className="w-16 h-16 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                <HelpCircle className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-[#EB216A] to-[#d11d5e] rounded-xl flex items-center justify-center mb-4 shadow-lg">
+                <HelpCircle className="w-6 h-6 text-white" />
               </div>
 
-              <h2 className="text-4xl lg:text-5xl text-gray-900 mb-4">
+              <h2 className="text-2xl lg:text-3xl text-gray-900 mb-3 font-bold">
                 Ada Pertanyaan?
               </h2>
-              
+
               <p className="text-lg text-gray-600 mb-8">
                 Temukan jawaban untuk pertanyaan yang sering diajukan tentang produk dan layanan kami.
               </p>

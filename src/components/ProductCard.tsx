@@ -24,9 +24,11 @@ interface ProductCardProps {
   featured?: boolean;
   bestSeller?: boolean;
   newArrival?: boolean;
+  is_custom?: boolean;
+  is_warranty?: boolean;
 }
 
-export function ProductCard({ id, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan }: ProductCardProps) {
+export function ProductCard({ id, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan, is_custom, is_warranty }: ProductCardProps) {
   const productImage = getProductImageUrl(images || image);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -81,6 +83,21 @@ export function ProductCard({ id, name, price, minPrice, minPriceGross, image, i
               {bestSeller ? 'Best Seller' : newArrival ? 'New' : 'Featured'}
             </Badge>
           )}
+
+          {/* Custom Badge - Bottom Left */}
+          {/* Custom & Warranty Badges - Side by Side */}
+          <div className="absolute bottom-4 left-4 flex items-center gap-1">
+            {is_warranty && (
+              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
+                Garansi
+              </Badge>
+            )}
+            {is_custom && (
+              <Badge className="bg-pink-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
+                Custom
+              </Badge>
+            )}
+          </div>
 
           {/* Wishlist Button */}
           <button

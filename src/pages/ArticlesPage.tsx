@@ -75,36 +75,31 @@ export default function ArticlesPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-[#EB216A] via-pink-600 to-purple-600 text-white pt-32 pb-20">
-        <div className="absolute inset-0 bg-black/10"></div>
+      <section className="relative bg-gradient-to-br from-pink-50 via-white to-pink-50 pt-32 pb-16 overflow-hidden">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#EB216A]/5 rounded-full blur-3xl" />
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl text-gray-900 mb-4 font-bold">
               Artikel & Inspirasi Gorden
             </h1>
-            <p className="text-lg md:text-xl text-white/90 mb-8">
+            <p className="text-sm sm:text-base text-gray-600 mb-6">
               Tips, panduan, dan inspirasi desain untuk menciptakan rumah impian Anda
             </p>
 
             {/* Search Bar */}
-            <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="relative max-w-xl mx-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
                 placeholder="Cari artikel..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-6 rounded-full text-base border-0 shadow-lg"
+                className="w-full pl-10 pr-4 py-5 rounded-full text-sm border border-gray-200 shadow-sm"
               />
             </div>
           </div>
-        </div>
-
-        {/* Decorative wave */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg className="w-full h-12 fill-white" viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ transform: 'scaleY(-1)' }}>
-            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
-          </svg>
         </div>
       </section>
 

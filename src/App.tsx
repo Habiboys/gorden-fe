@@ -41,6 +41,7 @@ import AdminGallery from './pages/admin/AdminGallery';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminReferrals from './pages/admin/AdminReferrals';
+import AdminServices from './pages/admin/AdminServices';
 import AdminSettings from './pages/admin/AdminSettings';
 
 import { CartSidebar } from './components/CartSidebar';
@@ -123,6 +124,7 @@ export default function App() {
                           <Route path="documents/edit/:id" element={<AdminDocumentCreate />} />
                           <Route path="documents/:id" element={<AdminDocumentDetail />} />
                           <Route path="articles" element={<AdminArticles />} />
+                          <Route path="services" element={<AdminServices />} />
                           <Route path="articles/new" element={<AdminArticleEdit />} />
                           <Route path="articles/:id/edit" element={<AdminArticleEdit />} />
                           <Route path="gallery" element={<AdminGallery />} />

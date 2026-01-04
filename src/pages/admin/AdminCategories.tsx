@@ -17,7 +17,7 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
-import { categoriesApi, subcategoriesApi } from '../../utils/api';
+import { categoriesApi, subcategoriesApi, uploadApi } from '../../utils/api';
 
 export default function AdminCategories() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -43,6 +43,8 @@ export default function AdminCategories() {
     name: '',
     slug: '',
     description: '',
+    image: '',
+    icon_url: '',
   });
 
   // Form data for sub-category
@@ -52,6 +54,31 @@ export default function AdminCategories() {
     description: '',
     has_max_length: false,
   });
+
+  // File Upload Handlers
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'icon') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      toast.loading('Mengupload...', { id: 'upload' });
+      const res = await uploadApi.uploadFile(file);
+      const url = res.url || res.data?.url;
+
+      if (url) {
+        setFormData(prev => ({
+          ...prev,
+          [type === 'image' ? 'image' : 'icon_url']: url
+        }));
+        toast.dismiss('upload');
+        toast.success(`${type === 'image' ? 'Gambar' : 'Icon'} berhasil diupload!`);
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      toast.dismiss('upload');
+      toast.error('Gagal mengupload file');
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -71,7 +98,7 @@ export default function AdminCategories() {
   };
 
   const handleAdd = () => {
-    setFormData({ name: '', slug: '', description: '' });
+    setFormData({ name: '', slug: '', description: '', image: '', icon_url: '' });
     setIsAddDialogOpen(true);
   };
 
@@ -81,6 +108,8 @@ export default function AdminCategories() {
       name: category.name || '',
       slug: category.slug || '',
       description: category.description || '',
+      image: category.image || '',
+      icon_url: category.icon_url || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -403,6 +432,40 @@ export default function AdminCategories() {
               />
             </div>
             <div className="grid gap-2">
+              <Label>Gambar Kategori (Background)</Label>
+              <div className="flex items-center gap-4">
+                {formData.image && (
+                  <img
+                    src={formData.image}
+                    alt="Preview"
+                    className="w-16 h-16 object-cover rounded-md border"
+                  />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'image')}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Icon Kategori</Label>
+              <div className="flex items-center gap-4">
+                {formData.icon_url && (
+                  <img
+                    src={formData.icon_url}
+                    alt="Icon Preview"
+                    className="w-10 h-10 object-contain rounded-full border bg-gray-50 p-1"
+                  />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'icon')}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="slug">Slug</Label>
               <Input
                 id="slug"
@@ -460,6 +523,40 @@ export default function AdminCategories() {
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label>Gambar Kategori (Background)</Label>
+              <div className="flex items-center gap-4">
+                {formData.image && (
+                  <img
+                    src={formData.image}
+                    alt="Preview"
+                    className="w-16 h-16 object-cover rounded-md border"
+                  />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'image')}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Icon Kategori</Label>
+              <div className="flex items-center gap-4">
+                {formData.icon_url && (
+                  <img
+                    src={formData.icon_url}
+                    alt="Icon Preview"
+                    className="w-10 h-10 object-contain rounded-full border bg-gray-50 p-1"
+                  />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'icon')}
+                />
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-slug">Slug</Label>

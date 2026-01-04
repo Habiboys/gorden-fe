@@ -72,7 +72,7 @@ export function CustomerInfoDialog({ isOpen, onSubmit }: CustomerInfoDialogProps
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 top-24 z-40 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-all duration-300" />
 

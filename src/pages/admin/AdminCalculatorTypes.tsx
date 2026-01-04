@@ -61,7 +61,9 @@ interface CalculatorTypeComponent {
     label: string;
     is_required: boolean;
     price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
+    price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
     display_order: number;
+    multiply_with_variant: boolean;
     subcategory?: {
         id: number;
         name: string;
@@ -113,7 +115,9 @@ export default function AdminCalculatorTypes() {
         label: '',
         is_required: false,
         price_calculation: 'per_meter' as 'per_meter' | 'per_unit' | 'per_10_per_meter',
+        price_calculation: 'per_meter' as 'per_meter' | 'per_unit' | 'per_10_per_meter',
         display_order: '0',
+        multiply_with_variant: false,
     });
 
     useEffect(() => {
@@ -261,7 +265,9 @@ export default function AdminCalculatorTypes() {
             label: '',
             is_required: false,
             price_calculation: 'per_meter',
+            price_calculation: 'per_meter',
             display_order: '0',
+            multiply_with_variant: false,
         });
         setIsComponentDialogOpen(true);
     };
@@ -274,7 +280,9 @@ export default function AdminCalculatorTypes() {
             label: component.label,
             is_required: component.is_required,
             price_calculation: component.price_calculation,
+            price_calculation: component.price_calculation,
             display_order: component.display_order.toString(),
+            multiply_with_variant: component.multiply_with_variant,
         });
         setIsComponentDialogOpen(true);
     };
@@ -293,7 +301,9 @@ export default function AdminCalculatorTypes() {
                 label: componentForm.label,
                 is_required: componentForm.is_required,
                 price_calculation: componentForm.price_calculation,
+                price_calculation: componentForm.price_calculation,
                 display_order: parseInt(componentForm.display_order) || 0,
+                multiply_with_variant: componentForm.multiply_with_variant,
             };
 
             if (editingComponent) {
@@ -772,6 +782,19 @@ export default function AdminCalculatorTypes() {
                             <Switch
                                 checked={componentForm.is_required}
                                 onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, is_required: checked })}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <Label>Ikuti Multiplier Varian?</Label>
+                                <p className="text-xs text-gray-500">
+                                    Jika ON, jumlah komponen dikali dengan multiplier varian (e.g. 2 Sibak)
+                                </p>
+                            </div>
+                            <Switch
+                                checked={componentForm.multiply_with_variant}
+                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, multiply_with_variant: checked })}
                             />
                         </div>
                     </div>

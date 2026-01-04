@@ -24,6 +24,20 @@ const iconMap: { [key: string]: any } = {
 // Default placeholder image
 const defaultImage = 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=800';
 
+function getIconComponent(categoryName: string, iconUrl?: string) {
+  if (iconUrl) {
+    return (props: any) => (
+      <img
+        src={iconUrl}
+        alt={categoryName}
+        className={props.className}
+        style={{ objectFit: 'contain' }}
+      />
+    );
+  }
+  return iconMap[categoryName] || iconMap['default'];
+}
+
 export function ProductCategories() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,8 +115,9 @@ export function ProductCategories() {
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {categories.map((category) => {
-            const Icon = iconMap[category.name] || iconMap['default'];
-            const imageUrl = category.image_url || defaultImage;
+            const Icon = getIconComponent(category.name, category.icon_url);
+            // Prioritize uploaded image, then image_url (legacy), then default
+            const imageUrl = category.image || category.image_url || defaultImage;
             return (
               <Link key={category.id || category.name} to={`/products?category=${encodeURIComponent(category.name)}`}>
                 <Card
@@ -115,11 +130,11 @@ export function ProductCategories() {
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-4 left-4 flex items-center gap-3 text-white">
-                      <div className="w-12 h-12 bg-[#EB216A] rounded-full flex items-center justify-center">
-                        <Icon className="h-6 w-6" />
+                    <div className="absolute bottom-4 left-4 flex items-center gap-2 text-white">
+                      <div className="w-10 h-10 bg-[#EB216A] rounded-full flex items-center justify-center">
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <span className="text-lg">{category.name}</span>
+                      <span className="text-base font-medium">{category.name}</span>
                     </div>
                   </div>
                 </Card>

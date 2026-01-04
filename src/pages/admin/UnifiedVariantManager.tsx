@@ -78,8 +78,13 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
     const handleAddValue = (optionIndex: number, value: string) => {
         if (!value.trim()) return;
         const newOptions = [...options];
-        if (newOptions[optionIndex].values.includes(value.trim())) return;
-        newOptions[optionIndex].values.push(value.trim());
+        // Check if value already exists (now as object)
+        const exists = newOptions[optionIndex].values.some(
+            (v: any) => (typeof v === 'string' ? v : v.value) === value.trim()
+        );
+        if (exists) return;
+        // Add as object with optional multiplier
+        newOptions[optionIndex].values.push({ value: value.trim(), multiplier: null });
         setOptions(newOptions);
         generateCombinations(newOptions);
     };
@@ -91,6 +96,20 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
         generateCombinations(newOptions);
     };
 
+    // Update multiplier for a specific value
+    const handleValueMultiplierChange = (optionIndex: number, valueIndex: number, multiplier: number | null) => {
+        const newOptions = [...options];
+        const val = newOptions[optionIndex].values[valueIndex];
+        // Convert old string format to object if needed
+        if (typeof val === 'string') {
+            newOptions[optionIndex].values[valueIndex] = { value: val, multiplier };
+        } else {
+            newOptions[optionIndex].values[valueIndex] = { ...val, multiplier };
+        }
+        setOptions(newOptions);
+        generateCombinations(newOptions);
+    };
+
     const generateCombinations = (currentOptions: any[]) => {
         if (currentOptions.length === 0 || currentOptions.every(o => o.values.length === 0)) {
             onVariantsChange([], currentOptions);
@@ -98,13 +117,25 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
             return;
         }
 
+        // Helper to get value string from value item (string or object)
+        const getValueStr = (val: any) => typeof val === 'string' ? val : val.value;
+        const getMultiplier = (val: any) => typeof val === 'string' ? null : (val.multiplier || null);
+
         const cartesian = (args: any[]) => {
             const r: any[] = [];
             const max = args.length - 1;
             function helper(arr: any[], i: number) {
                 for (let j = 0, l = args[i].values.length; j < l; j++) {
+                    const valItem = args[i].values[j];
                     const a = arr.slice(0);
-                    a.push({ name: args[i].name, value: args[i].values[j] });
+                    // Only include multiplier if this option is the multiplier type
+                    const isMultType = args[i].isMultiplierType;
+                    a.push({
+                        name: args[i].name,
+                        value: getValueStr(valItem),
+                        multiplier: isMultType ? getMultiplier(valItem) : null,
+                        isMultiplierType: isMultType
+                    });
                     if (i === max) r.push(a);
                     else helper(a, i + 1);
                 }
@@ -123,7 +154,14 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
         const combinations = cartesian(activeOptions);
         const newVariants = combinations.map(combo => {
             const attributes: Record<string, string> = {};
-            combo.forEach((c: any) => attributes[c.name] = c.value);
+            // Find multiplier only from the multiplier type option
+            let comboMultiplier: number | null = null;
+            combo.forEach((c: any) => {
+                attributes[c.name] = c.value;
+                if (c.isMultiplierType && c.multiplier !== null) {
+                    comboMultiplier = c.multiplier;
+                }
+            });
 
             const existing = generatedVariants.find(v => {
                 const vAttrs = v.attributes || {};
@@ -137,6 +175,8 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                 price_gross: existing?.price_gross || 0,
                 price_net: existing?.price_net || 0,
                 satuan: existing?.satuan ?? '',
+                // Use multiplier from option value, or existing, or default 1
+                quantity_multiplier: comboMultiplier ?? existing?.quantity_multiplier ?? 1,
                 is_active: existing?.is_active ?? true
             };
         });
@@ -181,6 +221,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
             price_gross: !isNaN(pGross) ? pGross : v.price_gross,
             price_net: !isNaN(pNet) ? pNet : v.price_net,
             satuan: hasSatuan ? bulkSatuan.trim() : v.satuan,
+            // Keep multiplier from options - don't override
         }));
 
         setGeneratedVariants(newVariants);
@@ -199,89 +240,182 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
 
     return (
         <div className="space-y-5">
-            {/* 1. Option Definitions - Compact Cards */}
-            <div className="bg-gradient-to-br from-pink-50/50 to-white p-4 rounded-xl border border-pink-100">
-                <div className="flex justify-between items-center mb-3">
+            {/* 1. Option Definitions - Improved Cards */}
+            <div className="bg-gradient-to-br from-pink-50/50 to-white p-5 rounded-xl border border-pink-100">
+                <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-[#EB216A]" />
-                        <span className="text-gray-700 font-medium text-sm">Tipe Variasi</span>
+                        <Layers className="w-5 h-5 text-[#EB216A]" />
+                        <span className="text-gray-700 font-semibold">Tipe Variasi</span>
                         {options.length > 0 && (
-                            <span className="text-[10px] bg-pink-100 text-[#EB216A] px-1.5 py-0.5 rounded-full font-medium">
+                            <span className="text-xs bg-pink-100 text-[#EB216A] px-2 py-0.5 rounded-full font-medium">
                                 {options.length} tipe
                             </span>
                         )}
                     </div>
-                    {options.length < 4 && (
-                        <Button
-                            size="sm"
-                            onClick={handleAddOption}
-                            className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs h-7 px-3"
-                        >
-                            <Plus className="w-3 h-3 mr-1" /> Tambah Tipe
-                        </Button>
-                    )}
+                    <div className="flex gap-2">
+                        {/* Sibak Template Button */}
+                        {options.length < 4 && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    const sibakValues = [1, 2, 3, 4, 5].map(n => ({ value: String(n), multiplier: n }));
+                                    const sibakOption = { name: 'Sibak', values: sibakValues, isMultiplierType: true };
+                                    const newOptions = [...options.filter(o => !o.isMultiplierType), sibakOption];
+                                    setOptions(newOptions);
+                                    generateCombinations(newOptions);
+                                }}
+                                className="text-xs h-8 px-3 border-[#EB216A] text-[#EB216A] hover:bg-pink-50"
+                                title="Tambah tipe Sibak otomatis dengan multiplier 1-5"
+                            >
+                                + Template Sibak
+                            </Button>
+                        )}
+                        {options.length < 4 && (
+                            <Button
+                                size="sm"
+                                onClick={handleAddOption}
+                                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs h-8 px-3"
+                            >
+                                <Plus className="w-3 h-3 mr-1" /> Tambah Tipe
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {options.length === 0 ? (
-                    <div
-                        onClick={handleAddOption}
-                        className="text-center py-8 text-gray-500 text-sm border-2 border-dashed border-pink-200 rounded-lg cursor-pointer hover:border-[#EB216A] hover:bg-pink-50/50 transition-all"
-                    >
-                        <Plus className="w-6 h-6 mx-auto mb-2 text-pink-300" />
-                        Klik untuk menambahkan tipe variasi pertama
+                    <div className="text-center py-10 text-gray-500 text-sm border-2 border-dashed border-pink-200 rounded-xl cursor-pointer hover:border-[#EB216A] hover:bg-pink-50/50 transition-all">
+                        <Plus className="w-8 h-8 mx-auto mb-2 text-pink-300" />
+                        <p className="font-medium">Belum ada tipe variasi</p>
+                        <p className="text-xs text-gray-400 mt-1">Klik tombol di atas untuk menambahkan, atau gunakan Template Sibak</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         {options.map((option, idx) => (
-                            <div key={idx} className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            <div key={idx} className={`bg-white rounded-xl border-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow ${option.isMultiplierType ? 'border-[#EB216A]' : 'border-gray-200'}`}>
                                 {/* Header */}
-                                <div className="flex items-center gap-1 px-2.5 py-2 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                                <div className={`flex items-center gap-2 px-4 py-3 border-b ${option.isMultiplierType ? 'bg-pink-50 border-pink-200' : 'bg-gray-50 border-gray-100'}`}>
                                     <Input
                                         value={option.name}
                                         onChange={(e) => handleOptionNameChange(idx, e.target.value)}
                                         placeholder="Nama variasi..."
-                                        className="h-6 text-sm font-medium border-0 p-0 focus-visible:ring-0 bg-transparent flex-1 placeholder:text-gray-400"
+                                        className="h-7 text-sm font-semibold border-0 p-0 focus-visible:ring-0 bg-transparent flex-1 placeholder:text-gray-400"
                                     />
-                                    <span className="text-[10px] text-white font-medium bg-[#EB216A] px-1.5 py-0.5 rounded-full">
+                                    <span className="text-xs text-white font-medium bg-[#EB216A] px-2 py-0.5 rounded-full">
                                         {option.values.length}
                                     </span>
                                     <button
                                         onClick={() => handleRemoveOption(idx)}
-                                        className="text-gray-400 hover:text-red-500 p-0.5 hover:bg-red-50 rounded transition-colors"
+                                        className="text-gray-400 hover:text-red-500 p-1 hover:bg-red-50 rounded transition-colors"
                                     >
-                                        <X className="w-3.5 h-3.5" />
+                                        <X className="w-4 h-4" />
                                     </button>
                                 </div>
 
-                                {/* Values */}
-                                <div className="p-2 space-y-2 max-h-28 overflow-y-auto">
-                                    <div className="flex flex-wrap gap-1">
-                                        {option.values.map((val: string, vIdx: number) => (
-                                            <span
-                                                key={vIdx}
-                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-pink-50 text-[#EB216A] border border-pink-200 font-medium"
-                                            >
-                                                {val}
-                                                <button
-                                                    onClick={() => handleRemoveValue(idx, vIdx)}
-                                                    className="ml-1 text-pink-400 hover:text-red-500"
-                                                >
-                                                    <X className="w-2.5 h-2.5" />
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <Input
-                                        placeholder="+ Ketik lalu Enter..."
-                                        className="h-6 text-xs w-full border-dashed border-pink-200 focus:border-[#EB216A] placeholder:text-gray-400"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                handleAddValue(idx, e.currentTarget.value);
-                                                e.currentTarget.value = '';
-                                            }
+                                {/* Multiplier Type Checkbox */}
+                                <div className={`px-4 py-2 border-b flex items-center gap-2 ${option.isMultiplierType ? 'bg-pink-50/50 border-pink-100' : 'bg-gray-50/50 border-gray-100'}`}>
+                                    <input
+                                        type="checkbox"
+                                        id={`mult-type-${idx}`}
+                                        checked={option.isMultiplierType || false}
+                                        onChange={(e) => {
+                                            const newOptions = options.map((o, i) => ({
+                                                ...o,
+                                                isMultiplierType: i === idx ? e.target.checked : false // Only one can be multiplier
+                                            }));
+                                            setOptions(newOptions);
+                                            generateCombinations(newOptions);
                                         }}
+                                        className="size-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
                                     />
+                                    <label htmlFor={`mult-type-${idx}`} className="text-xs text-gray-600 cursor-pointer flex items-center gap-1">
+                                        <span className="font-medium">Tipe Multiplier</span>
+                                        <span
+                                            className="inline-flex items-center justify-center w-5 h-5 text-sm bg-gray-200 text-gray-600 rounded-full cursor-help hover:bg-[#EB216A] hover:text-white transition-colors"
+                                            title="Nilai di tipe ini akan menjadi pengali jumlah komponen. Contoh: Sibak 3 = komponen kain & aksesoris ×3"
+                                        >
+                                            ?
+                                        </span>
+                                    </label>
+                                    {option.isMultiplierType && (
+                                        <span className="text-[10px] bg-[#EB216A] text-white px-1.5 py-0.5 rounded">AKTIF</span>
+                                    )}
+                                </div>
+
+                                {/* Values */}
+                                <div className="p-4 space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                        {option.values.map((valItem: any, vIdx: number) => {
+                                            const valStr = typeof valItem === 'string' ? valItem : valItem.value;
+                                            const mult = typeof valItem === 'string' ? null : valItem.multiplier;
+                                            return (
+                                                <span
+                                                    key={vIdx}
+                                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border font-medium ${option.isMultiplierType ? 'bg-pink-50 text-[#EB216A] border-pink-300' : 'bg-gray-100 text-gray-700 border-gray-200'}`}
+                                                >
+                                                    {valStr}
+                                                    {/* Editable multiplier input for multiplier type */}
+                                                    {option.isMultiplierType && (
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            value={mult || ''}
+                                                            placeholder="×"
+                                                            onChange={(e) => {
+                                                                const newMult = e.target.value ? parseInt(e.target.value) : null;
+                                                                handleValueMultiplierChange(idx, vIdx, newMult);
+                                                            }}
+                                                            className="w-8 h-5 text-xs text-center bg-white border border-pink-400 rounded focus:outline-none focus:ring-1 focus:ring-[#EB216A]"
+                                                            title="Nilai multiplier"
+                                                        />
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleRemoveValue(idx, vIdx)}
+                                                        className="text-gray-400 hover:text-red-500 ml-0.5"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Add Value Input with Multiplier */}
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="+ Ketik nilai lalu Enter..."
+                                            className="h-8 text-sm flex-1 border-dashed border-gray-300 focus:border-[#EB216A] placeholder:text-gray-400"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    const input = e.currentTarget;
+                                                    const val = input.value.trim();
+                                                    if (!val) return;
+
+                                                    // For multiplier type, auto-set multiplier = value if numeric
+                                                    const numVal = parseInt(val);
+                                                    const multiplier = option.isMultiplierType && !isNaN(numVal) ? numVal : null;
+
+                                                    const newOptions = [...options];
+                                                    const exists = newOptions[idx].values.some(
+                                                        (v: any) => (typeof v === 'string' ? v : v.value) === val
+                                                    );
+                                                    if (!exists) {
+                                                        newOptions[idx].values.push({ value: val, multiplier });
+                                                        setOptions(newOptions);
+                                                        generateCombinations(newOptions);
+                                                    }
+                                                    input.value = '';
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
+                                    {option.isMultiplierType && option.values.length === 0 && (
+                                        <p className="text-xs text-gray-400 italic">
+                                            💡 Tip: Ketik angka (1, 2, 3...) dan nilai tersebut otomatis jadi multiplier
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -304,28 +438,34 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                     <div className="flex flex-wrap items-end gap-3 bg-gradient-to-r from-pink-50 to-pink-100/50 p-3 rounded-lg border border-pink-200">
                         <div className="flex-1 min-w-[200px]">
                             <label className="text-xs text-[#EB216A] font-semibold mb-1.5 block">⚡ Atur Massal</label>
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Harga Gross..."
-                                    className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A]"
-                                    type="number"
-                                    value={bulkPriceGross}
-                                    onChange={(e) => setBulkPriceGross(e.target.value)}
-                                />
-                                <Input
-                                    placeholder="Harga Net..."
-                                    className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A]"
-                                    type="number"
-                                    value={bulkPriceNet}
-                                    onChange={(e) => setBulkPriceNet(e.target.value)}
-                                />
-                                <Input
-                                    placeholder="Satuan..."
-                                    className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A] w-24"
-                                    value={bulkSatuan}
-                                    onChange={(e) => setBulkSatuan(e.target.value)}
-                                    list="satuan-options"
-                                />
+                            <div className="grid grid-cols-5 gap-2">
+                                <div className="col-span-1">
+                                    <Input
+                                        placeholder="Harga Gross..."
+                                        className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A] w-full"
+                                        type="number"
+                                        value={bulkPriceGross}
+                                        onChange={(e) => setBulkPriceGross(e.target.value)}
+                                    />
+                                </div>
+                                <div className="col-span-1">
+                                    <Input
+                                        placeholder="Harga Net..."
+                                        className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A] w-full"
+                                        type="number"
+                                        value={bulkPriceNet}
+                                        onChange={(e) => setBulkPriceNet(e.target.value)}
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <Input
+                                        placeholder="Satuan (e.g. meter)..."
+                                        className="h-9 bg-white border-pink-200 focus:border-[#EB216A] focus:ring-[#EB216A] w-full"
+                                        value={bulkSatuan}
+                                        onChange={(e) => setBulkSatuan(e.target.value)}
+                                        list="satuan-options"
+                                    />
+                                </div>
                             </div>
                         </div>
                         <Button

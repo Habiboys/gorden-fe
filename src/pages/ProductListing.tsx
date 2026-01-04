@@ -43,7 +43,9 @@ export default function ProductListing() {
           maxPrice: p.maxPrice,
           featured: p.is_featured,
           bestSeller: p.is_best_seller,
-          newArrival: p.is_new_arrival
+          newArrival: p.is_new_arrival,
+          is_custom: p.is_custom,
+          is_warranty: p.is_warranty
         }));
         setProducts(mappedProducts);
       } catch (error) {

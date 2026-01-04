@@ -182,7 +182,9 @@ export default function AdminProducts() {
     attribute_value: '',
     price_gross: 0,
     price_net: 0,
+    price_net: 0,
     satuan: '',
+    quantity_multiplier: 1,
   });
 
   // Form states
@@ -1300,7 +1302,9 @@ export default function AdminProducts() {
                       onClick={() => {
                         setEditingVariant(null);
                         setEditingPendingIndex(null);
-                        setVariantForm({ attribute_name: '', attribute_value: '', price_gross: 0, price_net: 0, satuan: '' });
+                        setEditingPendingIndex(null);
+                        setVariantForm({ attribute_name: '', attribute_value: '', price_gross: 0, price_net: 0, satuan: '', quantity_multiplier: 1 });
+                        setIsVariantModalOpen(true);
                         setIsVariantModalOpen(true);
                       }}
                       className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
@@ -1322,6 +1326,11 @@ export default function AdminProducts() {
                               <span className="font-medium">{pv.attribute_value}</span>
                               <span className="text-gray-500 ml-3">Gross: Rp {Number(pv.price_gross).toLocaleString('id-ID')}</span>
                               <span className="text-gray-500 ml-2">Net: Rp {Number(pv.price_net).toLocaleString('id-ID')}</span>
+                              {pv.quantity_multiplier && pv.quantity_multiplier > 1 && (
+                                <span className="ml-2 bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded font-bold">
+                                  {pv.quantity_multiplier}x
+                                </span>
+                              )}
                               <span className="text-gray-500 ml-2">/{pv.satuan || '-'}</span>
                             </div>
                             <div className="flex gap-2">
@@ -1365,6 +1374,7 @@ export default function AdminProducts() {
                               <th className="px-4 py-3 text-left">Nilai</th>
                               <th className="px-4 py-3 text-right">Harga Gross</th>
                               <th className="px-4 py-3 text-right">Harga Net</th>
+                              <th className="px-4 py-3 text-center">Multiplier</th>
                               <th className="px-4 py-3 text-center">Satuan</th>
                               <th className="px-4 py-3 text-right">Aksi</th>
                             </tr>
@@ -1380,6 +1390,15 @@ export default function AdminProducts() {
                                 <td className="px-4 py-3 font-medium">{v.attribute_value || '-'}</td>
                                 <td className="px-4 py-3 text-right">Rp {Number(v.price_gross || 0).toLocaleString('id-ID')}</td>
                                 <td className="px-4 py-3 text-right text-[#EB216A]">Rp {Number(v.price_net || 0).toLocaleString('id-ID')}</td>
+                                <td className="px-4 py-3 text-center">
+                                  {v.quantity_multiplier && v.quantity_multiplier > 1 ? (
+                                    <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded font-bold">
+                                      {v.quantity_multiplier}x
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
                                 <td className="px-4 py-3 text-center">
                                   <span className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded">
                                     {v.satuan || 'meter'}
@@ -1399,6 +1418,7 @@ export default function AdminProducts() {
                                           price_gross: v.price_gross || 0,
                                           price_net: v.price_net || 0,
                                           satuan: v.satuan || '',
+                                          quantity_multiplier: v.quantity_multiplier || 1,
                                         });
                                         setIsVariantModalOpen(true);
                                       }}
@@ -1547,6 +1567,19 @@ export default function AdminProducts() {
                   </datalist>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Satuan unit untuk varian ini (opsional)</p>
+              </div>
+
+              <div>
+                <Label>Multiplier (Pengali Kuantitas)</Label>
+                <Input
+                  type="number"
+                  value={variantForm.quantity_multiplier}
+                  onChange={(e) => setVariantForm({ ...variantForm, quantity_multiplier: parseInt(e.target.value) || 1 })}
+                  placeholder="1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Contoh: Isi 2 jika varian ini adalah "2 Sibak" atau paket isi 2. Default: 1.
+                </p>
               </div>
             </div>
 

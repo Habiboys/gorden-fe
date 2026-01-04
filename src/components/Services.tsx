@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from './ui/card';
-import { Ruler, PenTool, Maximize, ShieldCheck, Shield, Truck, Clock, HeadphonesIcon } from 'lucide-react';
-import { SectionHeader } from './SectionHeader';
+import { Clock, HeadphonesIcon, Maximize, PenTool, Ruler, Shield, ShieldCheck, Truck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { servicesApi } from '../utils/api';
+import { SectionHeader } from './SectionHeader';
+import { Card, CardContent } from './ui/card';
 
 // Icon mapping
 const iconMap: any = {
@@ -104,14 +104,18 @@ export function Services() {
             return (
               <Card
                 key={service.id}
-                className="text-center hover:shadow-xl transition-shadow"
+                className="text-center hover:shadow-lg transition-shadow"
               >
-                <CardContent className="p-6">
-                  <div className="w-16 h-16 bg-[#EB216A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icon className="h-8 w-8 text-[#EB216A]" />
+                <CardContent className="p-5">
+                  <div className="w-12 h-12 bg-[#EB216A]/10 rounded-full flex items-center justify-center mx-auto mb-3 overflow-hidden">
+                    {service.icon && service.icon.startsWith('http') ? (
+                      <img src={service.icon} alt={service.title} className="w-6 h-6 object-contain" />
+                    ) : (
+                      <Icon className="h-6 w-6 text-[#EB216A]" />
+                    )}
                   </div>
-                  <h3 className="mb-3">{service.title}</h3>
-                  <p className="text-gray-600">{service.description}</p>
+                  <h3 className="mb-2 font-semibold text-gray-900">{service.title}</h3>
+                  <p className="text-sm text-gray-600">{service.description}</p>
                 </CardContent>
               </Card>
             );

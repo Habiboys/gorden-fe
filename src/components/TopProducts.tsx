@@ -90,6 +90,7 @@ export function TopProducts() {
           badge="Pilihan Terbaik"
           title="Produk Teratas"
           description="Produk pilihan terbaik dan paling diminati pelanggan kami"
+          alignment="left"
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-3">
@@ -114,6 +115,21 @@ export function TopProducts() {
                       {product.is_best_seller ? 'Best Seller' : product.is_new_arrival ? 'New' : 'Featured'}
                     </Badge>
                   )}
+
+                  {/* Custom Badge - Bottom Left */}
+                  {/* Custom & Warranty Badges - Side by Side */}
+                  <div className="absolute bottom-4 left-4 flex items-center gap-1">
+                    {product.is_warranty && (
+                      <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
+                        Garansi
+                      </Badge>
+                    )}
+                    {product.is_custom && (
+                      <Badge className="bg-pink-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
+                        Custom
+                      </Badge>
+                    )}
+                  </div>
 
                   <button
                     onClick={(e) => {
