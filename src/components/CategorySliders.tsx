@@ -123,7 +123,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
           {products.map((product) => (
             <div
               key={product.id}
-              className="flex-shrink-0 w-[calc(50%_-_4px)] lg:w-[calc(20%_-_9.6px)]"
+              className="flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)]"
             >
               <ProductCard
                 id={product.id}
@@ -154,7 +154,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
           </Button>
         </div>
       </div>
-    </section >
+    </section>
   );
 }
 

@@ -723,6 +723,8 @@ export default function ProductDetail() {
 
 // Sub-component for Product Card to reduce duplication
 function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWishlist, isInWishlist }: any) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div className="group relative h-full">
       {/* Card Container */}
@@ -764,15 +766,20 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
 
           {/* Quick View Button - Shows on Hover */}
           <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-            <Button
-              className="w-full bg-white text-[#EB216A] hover:bg-[#EB216A] hover:text-white shadow-xl text-xs lg:text-sm"
-              size="sm"
+            <button
+              className="w-full shadow-xl border-0 rounded-md py-2 px-3 text-xs lg:text-sm font-medium flex items-center justify-center gap-1 lg:gap-2 transition-all"
+              style={{
+                backgroundColor: isHovered ? '#EB216A' : 'white',
+                color: isHovered ? 'white' : '#EB216A'
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
               onClick={() => navigate(`/product/${product.id}`)}
             >
-              <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
+              <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4" />
               <span className="hidden lg:inline">Lihat Detail</span>
               <span className="lg:hidden">Detail</span>
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -844,9 +851,9 @@ function RelatedProductsSlider({ products, navigate, addToWishlist, removeFromWi
   return (
     <div className="relative group/slider">
       <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex -ml-2 lg:-ml-3 py-4"> {/* Negative margin to offset padding */}
+        <div className="flex gap-2 lg:gap-3 py-4">
           {products.map((product: any) => (
-            <div key={product.id} className="flex-[0_0_50%] sm:flex-[0_0_33.33%] lg:flex-[0_0_20%] min-w-0 pl-2 lg:pl-3">
+            <div key={product.id} className="flex-shrink-0 w-[calc(50%-4px)] lg:w-[calc(20%-9.6px)]">
               <ProductCardForDetail product={product} navigate={navigate} addToWishlist={addToWishlist} removeFromWishlist={removeFromWishlist} isInWishlist={isInWishlist} />
             </div>
           ))}
@@ -855,13 +862,13 @@ function RelatedProductsSlider({ products, navigate, addToWishlist, removeFromWi
 
       {/* Navigation Buttons */}
       <button
-        className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 lg:-ml-4 w-8 h-8 lg:w-10 lg:h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#EB216A] disabled:opacity-0 transition-all z-10 opacity-0 group-hover/slider:opacity-100"
+        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#EB216A] hover:bg-gray-50 transition-all z-10"
         onClick={() => emblaApi?.scrollPrev()}
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
-        className="absolute right-0 top-1/2 -translate-y-1/2 -mr-2 lg:-mr-4 w-8 h-8 lg:w-10 lg:h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#EB216A] disabled:opacity-0 transition-all z-10 opacity-0 group-hover/slider:opacity-100"
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#EB216A] hover:bg-gray-50 transition-all z-10"
         onClick={() => emblaApi?.scrollNext()}
       >
         <ChevronRight className="w-5 h-5" />
