@@ -2148,76 +2148,130 @@ export default function CalculatorPageV2() {
               });
 
               return (
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        {columnKeys.map(key => (
-                          <th key={key} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
-                            {key}
+                <>
+                  {/* DESKTOP: Table View */}
+                  <div className="hidden lg:block overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          {columnKeys.map(key => (
+                            <th key={key} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                              {key}
+                            </th>
+                          ))}
+                          <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                            Harga
                           </th>
-                        ))}
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
-                          Harga
-                        </th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700 whitespace-nowrap">
-                          Pilih
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {sorted.map((v: any) => {
-                        const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
-                        const priceNet = Number(v.price_net) || 0;
-                        const priceGross = Number(v.price_gross) || 0;
-                        const displayPrice = priceNet || priceGross;
+                          <th className="px-3 py-2 text-center font-semibold text-gray-700 whitespace-nowrap">
+                            Pilih
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {sorted.map((v: any) => {
+                          const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                          const priceNet = Number(v.price_net) || 0;
+                          const priceGross = Number(v.price_gross) || 0;
+                          const displayPrice = priceNet || priceGross;
 
-                        return (
-                          <tr
-                            key={v.id}
-                            className="hover:bg-pink-50 cursor-pointer transition-colors"
-                            onClick={() => handleSelectVariant(v)}
-                          >
-                            {columnKeys.map(key => {
-                              // Dynamic Gelombang Logic
-                              if (key === 'Gelombang') {
-                                const lebar = getNum(attrs, ['lebar', 'width', 'l']);
-                                // If lebar is valid (not 999999), calculate gelombang
-                                const val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                          return (
+                            <tr
+                              key={v.id}
+                              className="hover:bg-pink-50 cursor-pointer transition-colors"
+                              onClick={() => handleSelectVariant(v)}
+                            >
+                              {columnKeys.map(key => {
+                                // Dynamic Gelombang Logic
+                                if (key === 'Gelombang') {
+                                  const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                  // If lebar is valid (not 999999), calculate gelombang
+                                  const val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                                  return (
+                                    <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
+                                      {val}
+                                    </td>
+                                  );
+                                }
+
+                                const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                const val = matchKey ? attrs[matchKey] : '-';
                                 return (
                                   <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
                                     {val}
                                   </td>
                                 );
-                              }
+                              })}
+                              <td className="px-3 py-3 text-right whitespace-nowrap">
+                                <span className="font-semibold text-[#EB216A]">
+                                  Rp {displayPrice.toLocaleString('id-ID')}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-center">
+                                <Button
+                                  size="sm"
+                                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
+                                >
+                                  Pilih
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
-                              const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                              const val = matchKey ? attrs[matchKey] : '-';
+                  {/* MOBILE: Card View */}
+                  <div className="lg:hidden space-y-3">
+                    {sorted.map((v: any) => {
+                      const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                      const priceNet = Number(v.price_net) || 0;
+                      const priceGross = Number(v.price_gross) || 0;
+                      const displayPrice = priceNet || priceGross;
+
+                      return (
+                        <div
+                          key={v.id}
+                          className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-pink-50 cursor-pointer transition-all"
+                          onClick={() => handleSelectVariant(v)}
+                        >
+                          {/* Attributes Grid */}
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            {columnKeys.map(key => {
+                              let val: any;
+                              if (key === 'Gelombang') {
+                                const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                              } else {
+                                const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                val = matchKey ? attrs[matchKey] : '-';
+                              }
                               return (
-                                <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
-                                  {val}
-                                </td>
+                                <div key={key} className="text-sm">
+                                  <span className="text-gray-500">{key}: </span>
+                                  <span className="font-medium text-gray-800">{val}</span>
+                                </div>
                               );
                             })}
-                            <td className="px-3 py-3 text-right whitespace-nowrap">
-                              <span className="font-semibold text-[#EB216A]">
-                                Rp {displayPrice.toLocaleString('id-ID')}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 text-center">
-                              <Button
-                                size="sm"
-                                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
-                              >
-                                Pilih
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+
+                          {/* Price & Button */}
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span className="text-lg font-bold text-[#EB216A]">
+                              Rp {displayPrice.toLocaleString('id-ID')}
+                            </span>
+                            <Button
+                              size="sm"
+                              className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-4"
+                            >
+                              Pilih
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               );
             })()}
           </div>
