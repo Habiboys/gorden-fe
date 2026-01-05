@@ -693,47 +693,10 @@ export default function CalculatorPageV2() {
     setAvailableVariants([]);
   };
 
-  // Calculate component price based on price_calculation type
+  // Calculate component price - simplified (per_meter/per_unit deprecated)
   const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
-    const widthM = item.width / 100;
-
-    // Check if variant implies fixed size price (override per_meter)
-    // If variant is by color/style (not size), treat as per_unit pricing
-    let isFixedPriceVariant = false;
-    if (selection.product.variantAttributes) {
-      const attrs = safeJSONParse(selection.product.variantAttributes, {});
-      const keys = Object.keys(attrs).map(k => k.toLowerCase());
-      // Size-based variants that already include width
-      const sizeKeys = ['lebar', 'width', 'l', 'gelombang', 'gel', 'tinggi', 'height'];
-      // Color/style variants that should be per_unit
-      const styleKeys = ['warna', 'color', 'variasi', 'variant', 'model', 'ukuran'];
-
-      if (keys.some(k => sizeKeys.includes(k) || styleKeys.includes(k))) {
-        isFixedPriceVariant = true;
-      }
-    }
-
-    const basePricePerItem = (() => { // Price for one item's component
-      // If variant already defines the width/size in its attributes, 
-      // we assume the price is already for that size (per unit), not per meter.
-      if (isFixedPriceVariant) {
-        return selection.product.price;
-      }
-
-      switch (comp.price_calculation) {
-        case 'per_meter':
-          // Min 1 meter rule: usage < 1m counts as 1m
-          return Math.max(1, widthM) * selection.product.price;
-        case 'per_unit':
-          return selection.product.price;
-        case 'per_10_per_meter':
-          return Math.ceil(widthM * 10) * selection.product.price;
-        default:
-          return 0;
-      }
-    })();
-    // Multiply by component quantity (which might include variant multiplier)
-    let totalPrice = basePricePerItem * selection.qty;
+    // Calculate: base price × quantity
+    let totalPrice = selection.product.price * selection.qty;
 
     // If price_follows_item_qty is enabled, multiply by item quantity (jendela count)
     if (comp.price_follows_item_qty) {
