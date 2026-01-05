@@ -1767,6 +1767,10 @@ export default function CalculatorPageV2() {
                 const tinggiB = getNum(attrsB, ['tinggi', 'height', 't']);
                 if (tinggiA !== tinggiB) return tinggiA - tinggiB;
 
+                const gelA = getNum(attrsA, ['gelombang', 'gel']);
+                const gelB = getNum(attrsB, ['gelombang', 'gel']);
+                if (gelA !== gelB) return gelA - gelB;
+
                 const sibakA = getNum(attrsA, ['sibak']);
                 const sibakB = getNum(attrsB, ['sibak']);
                 return sibakA - sibakB;
