@@ -1317,8 +1317,8 @@ export default function CalculatorPageV2() {
                               {/* Dynamic Components - Table Layout */}
                               {item.packageType === 'gorden-lengkap' && (
                                 <>
-                                  {/* DESKTOP VIEW: Table */}
-                                  <div className="hidden md:block border rounded-lg overflow-hidden bg-white">
+                                  {/* DESKTOP VIEW: Table - only show on large screens */}
+                                  <div className="hidden lg:block border rounded-lg overflow-hidden bg-white">
                                     <table className="w-full text-sm">
                                       <tbody className="divide-y divide-gray-100">
                                         {/* Main Fabric Row */}
@@ -1535,8 +1535,8 @@ export default function CalculatorPageV2() {
                                     </table>
                                   </div>
 
-                                  {/* MOBILE VIEW: Cards */}
-                                  <div className="md:hidden space-y-4">
+                                  {/* MOBILE VIEW: Cards - only show on small screens */}
+                                  <div className="lg:hidden space-y-4">
                                     {/* FABRIC CARD */}
                                     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
                                       {/* Header */}
