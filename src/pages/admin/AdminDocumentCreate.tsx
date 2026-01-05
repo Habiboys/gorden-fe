@@ -773,35 +773,10 @@ export default function AdminDocumentCreate() {
 
         const effectiveDiscount = selection.discount || (basePrice > 0 ? Math.round(((basePrice - netPrice) / basePrice) * 100) : 0);
 
-        // Check if variant is by color/style (not size), treat as per_unit pricing
-        let isFixedPriceVariant = false;
-        if ((selection.product as any).variantAttributes) {
-            const attrs = safeJSONParse((selection.product as any).variantAttributes, {});
-            const keys = Object.keys(attrs).map(k => k.toLowerCase());
-            // Size-based or style-based variants should use per_unit pricing
-            const fixedPriceKeys = ['lebar', 'width', 'l', 'gelombang', 'gel', 'tinggi', 'height', 'warna', 'color', 'variasi', 'variant', 'model', 'ukuran'];
-            if (keys.some(k => fixedPriceKeys.includes(k))) {
-                isFixedPriceVariant = true;
-            }
-        }
+        // Calculate price - simplified (per_meter/per_unit deprecated)
+        let priceBeforeDiscount = basePrice * selection.qty;
 
-        const basePricePerItem = (() => {
-            if (isFixedPriceVariant) return basePrice;
-
-            switch (comp.price_calculation) {
-                case 'per_meter':
-                    return Math.max(1, widthM) * basePrice;
-                case 'per_unit':
-                    return basePrice;
-                case 'per_10_per_meter':
-                    return Math.ceil(widthM * 10) * basePrice;
-                default:
-                    return 0;
-            }
-        })();
-
-        // Calculate price - only multiply by item.quantity if price_follows_item_qty is enabled
-        let priceBeforeDiscount = basePricePerItem * selection.qty;
+        // Only multiply by item.quantity if price_follows_item_qty is enabled
         if (comp.price_follows_item_qty) {
             priceBeforeDiscount *= item.quantity;
         }
