@@ -67,6 +67,7 @@ interface ProductOption {
   sibak?: number;
   minPrice?: number;
   maxPrice?: number;
+  variantAttributes?: any;
 }
 
 interface ComponentSelection {
@@ -604,6 +605,7 @@ export default function CalculatorPageV2() {
         price_net: Number(variant.price_net) || variantPrice,
         quantity_multiplier: Number(variant.quantity_multiplier) || 1,
         name: `${pendingProductForVariant.name} (${attrDisplay})`,
+        variantAttributes: variant.attributes,
       };
 
       setItems(items.map(item => {
@@ -642,7 +644,25 @@ export default function CalculatorPageV2() {
   // Calculate component price based on price_calculation type
   const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
     const widthM = item.width / 100;
+
+    // Check if variant implies fixed size price (override per_meter)
+    let isFixedSizeVariant = false;
+    if (selection.product.variantAttributes) {
+      const attrs = safeJSONParse(selection.product.variantAttributes, {});
+      // Check if attributes define width
+      const keys = Object.keys(attrs).map(k => k.toLowerCase());
+      if (keys.some(k => ['lebar', 'width', 'l', 'gelombang', 'gel'].includes(k))) {
+        isFixedSizeVariant = true;
+      }
+    }
+
     const basePricePerItem = (() => { // Price for one item's component
+      // If variant already defines the width/size in its attributes, 
+      // we assume the price is already for that size (per unit), not per meter.
+      if (isFixedSizeVariant) {
+        return selection.product.price;
+      }
+
       switch (comp.price_calculation) {
         case 'per_meter':
           // Min 1 meter rule: usage < 1m counts as 1m

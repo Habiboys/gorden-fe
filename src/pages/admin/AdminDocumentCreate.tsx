@@ -585,7 +585,8 @@ export default function AdminDocumentCreate() {
                         price: net, // Use NET price as primary for calculations
                         price_gross: gross,
                         price_net: net,
-                        name: variantData.name
+                        name: variantData.name,
+                        variantAttributes: variant.attributes
                     };
 
                     // Check if this component should multiply with variant
@@ -767,10 +768,20 @@ export default function AdminDocumentCreate() {
         const basePrice = (selection.product as any)?.price_gross || selection.product.price || 0;
         const netPrice = (selection.product as any)?.price_net || basePrice;
 
-        // Calculate effective discount from gross/net ratio if selection.discount is 0
         const effectiveDiscount = selection.discount || (basePrice > 0 ? Math.round(((basePrice - netPrice) / basePrice) * 100) : 0);
 
+        let isFixedSizeVariant = false;
+        if ((selection.product as any).variantAttributes) {
+            const attrs = safeJSONParse((selection.product as any).variantAttributes, {});
+            const keys = Object.keys(attrs).map(k => k.toLowerCase());
+            if (keys.some(k => ['lebar', 'width', 'l', 'gelombang', 'gel'].includes(k))) {
+                isFixedSizeVariant = true;
+            }
+        }
+
         const basePricePerItem = (() => {
+            if (isFixedSizeVariant) return basePrice;
+
             switch (comp.price_calculation) {
                 case 'per_meter':
                     return Math.max(1, widthM) * basePrice;
