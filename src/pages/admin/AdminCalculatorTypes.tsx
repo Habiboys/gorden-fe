@@ -66,6 +66,7 @@ interface CalculatorTypeComponent {
     variant_filter_rule: string;
     hide_on_door: boolean;
     show_gelombang?: boolean;
+    price_follows_item_qty?: boolean;
     subcategory?: {
         id: number;
         name: string;
@@ -122,6 +123,7 @@ export default function AdminCalculatorTypes() {
         variant_filter_rule: 'none',
         hide_on_door: false,
         show_gelombang: false,
+        price_follows_item_qty: false,
     });
 
     useEffect(() => {
@@ -274,6 +276,7 @@ export default function AdminCalculatorTypes() {
             variant_filter_rule: 'none',
             hide_on_door: false,
             show_gelombang: false,
+            price_follows_item_qty: false,
         });
         setIsComponentDialogOpen(true);
     };
@@ -290,7 +293,8 @@ export default function AdminCalculatorTypes() {
             multiply_with_variant: component.multiply_with_variant,
             variant_filter_rule: component.variant_filter_rule || 'none',
             hide_on_door: component.hide_on_door || false,
-            show_gelombang: component.show_gelombang || false
+            show_gelombang: component.show_gelombang || false,
+            price_follows_item_qty: component.price_follows_item_qty || false
         });
         setIsComponentDialogOpen(true);
     };
@@ -314,6 +318,7 @@ export default function AdminCalculatorTypes() {
                 variant_filter_rule: componentForm.variant_filter_rule,
                 hide_on_door: componentForm.hide_on_door,
                 show_gelombang: componentForm.show_gelombang,
+                price_follows_item_qty: componentForm.price_follows_item_qty,
             };
 
             if (editingComponent) {
@@ -711,7 +716,7 @@ export default function AdminCalculatorTypes() {
 
             {/* Component Dialog */}
             <Dialog open={isComponentDialogOpen} onOpenChange={setIsComponentDialogOpen}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>{editingComponent ? 'Edit Komponen' : 'Tambah Komponen'}</DialogTitle>
                         <DialogDescription>
@@ -719,116 +724,114 @@ export default function AdminCalculatorTypes() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label>Sub Kategori *</Label>
-                            <Select
-                                value={componentForm.subcategory_id}
-                                onValueChange={(value: string) => {
-                                    const subcat = subcategories.find(s => s.id.toString() === value);
-                                    setComponentForm({
-                                        ...componentForm,
-                                        subcategory_id: value,
-                                        label: componentForm.label || `Pilih ${subcat?.name || ''}`
-                                    });
-                                }}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih sub kategori" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {subcategories.map((sub) => (
-                                        <SelectItem key={sub.id} value={sub.id.toString()}>
-                                            {sub.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500">Produk dari sub kategori ini akan muncul sebagai pilihan</p>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>Label *</Label>
-                            <Input
-                                value={componentForm.label}
-                                onChange={(e) => setComponentForm({ ...componentForm, label: e.target.value })}
-                                placeholder="Contoh: Pilih Rel Gorden"
-                            />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>Aturan Filter Varian Komponen</Label>
-                            <Select
-                                value={componentForm.variant_filter_rule}
-                                onValueChange={(value: string) =>
-                                    setComponentForm({ ...componentForm, variant_filter_rule: value })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">Tanpa Filter (Tasel, Hook)</SelectItem>
-                                    <SelectItem value="rel-4-sizes">Rel (4 ukuran lebar: +0, +10, +20, +30)</SelectItem>
-                                    <SelectItem value="vitrase-kombinasi">Vitrase (Lebar +20~+80 × Tinggi +0~+30)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500">Filter varian komponen berdasarkan dimensi. Bahan gorden difilter otomatis.</p>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>Urutan Tampil</Label>
-                            <Input
-                                type="number"
-                                value={componentForm.display_order}
-                                onChange={(e) => setComponentForm({ ...componentForm, display_order: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <Label>Wajib Dipilih</Label>
-                                <p className="text-xs text-gray-500">User harus memilih komponen ini</p>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                        {/* LEFT COLUMN */}
+                        <div className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label>Sub Kategori *</Label>
+                                <Select
+                                    value={componentForm.subcategory_id}
+                                    onValueChange={(value: string) => {
+                                        const subcat = subcategories.find(s => s.id.toString() === value);
+                                        setComponentForm({
+                                            ...componentForm,
+                                            subcategory_id: value,
+                                            label: componentForm.label || `Pilih ${subcat?.name || ''}`
+                                        });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih sub kategori" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {subcategories.map((sub) => (
+                                            <SelectItem key={sub.id} value={sub.id.toString()}>
+                                                {sub.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <Switch
-                                checked={componentForm.is_required}
-                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, is_required: checked })}
-                            />
+
+                            <div className="grid gap-2">
+                                <Label>Label *</Label>
+                                <Input
+                                    value={componentForm.label}
+                                    onChange={(e) => setComponentForm({ ...componentForm, label: e.target.value })}
+                                    placeholder="Contoh: Pilih Rel Gorden"
+                                />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label>Filter Varian</Label>
+                                <Select
+                                    value={componentForm.variant_filter_rule}
+                                    onValueChange={(value: string) =>
+                                        setComponentForm({ ...componentForm, variant_filter_rule: value })
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Tanpa Filter</SelectItem>
+                                        <SelectItem value="rel-4-sizes">Rel (4 ukuran lebar)</SelectItem>
+                                        <SelectItem value="vitrase-kombinasi">Vitrase (kombinasi)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label>Urutan Tampil</Label>
+                                <Input
+                                    type="number"
+                                    value={componentForm.display_order}
+                                    onChange={(e) => setComponentForm({ ...componentForm, display_order: e.target.value })}
+                                />
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <Label>Ikuti Multiplier Varian?</Label>
-                                <p className="text-xs text-gray-500">
-                                    Jika ON, jumlah komponen dikali dengan multiplier varian (e.g. 2 Sibak)
-                                </p>
+                        {/* RIGHT COLUMN - Toggle Options */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                <Label className="text-sm">Wajib Dipilih</Label>
+                                <Switch
+                                    checked={componentForm.is_required}
+                                    onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, is_required: checked })}
+                                />
                             </div>
-                            <Switch
-                                checked={componentForm.multiply_with_variant}
-                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, multiply_with_variant: checked })}
-                            />
-                        </div>
 
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <Label>Sembunyikan di Pintu</Label>
-                                <p className="text-xs text-gray-500">Komponen tidak muncul jika item = Pintu</p>
+                            <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                <Label className="text-sm">Ikuti Multiplier Varian</Label>
+                                <Switch
+                                    checked={componentForm.multiply_with_variant}
+                                    onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, multiply_with_variant: checked })}
+                                />
                             </div>
-                            <Switch
-                                checked={componentForm.hide_on_door}
-                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, hide_on_door: checked })}
-                            />
-                        </div>
 
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <Label>Tampilkan Kolom Gelombang</Label>
-                                <p className="text-xs text-gray-500">Tampilkan kolom gelombang saat pilih varian</p>
+                            <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                <Label className="text-sm">Sembunyikan di Pintu</Label>
+                                <Switch
+                                    checked={componentForm.hide_on_door}
+                                    onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, hide_on_door: checked })}
+                                />
                             </div>
-                            <Switch
-                                checked={componentForm.show_gelombang}
-                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, show_gelombang: checked })}
-                            />
+
+                            <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                <Label className="text-sm">Tampilkan Gelombang</Label>
+                                <Switch
+                                    checked={componentForm.show_gelombang}
+                                    onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, show_gelombang: checked })}
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                <Label className="text-sm">Harga × Qty Jendela</Label>
+                                <Switch
+                                    checked={componentForm.price_follows_item_qty}
+                                    onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, price_follows_item_qty: checked })}
+                                />
+                            </div>
                         </div>
                     </div>
 

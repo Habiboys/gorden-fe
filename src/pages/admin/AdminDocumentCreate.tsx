@@ -1366,14 +1366,37 @@ export default function AdminDocumentCreate() {
                                                                             {item.product ? 'Ganti' : 'Pilih'}
                                                                         </Button>
 
+                                                                        <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                                                            <img
+                                                                                src={getProductImageUrl(item.product?.images || item.product?.image || selectedFabric?.images || selectedFabric?.image)}
+                                                                                className="w-full h-full object-cover"
+                                                                                alt=""
+                                                                            />
+                                                                        </div>
+
                                                                         <div className="flex flex-col leading-tight min-w-0">
-                                                                            <span className="font-semibold text-gray-900 truncate" title={item.product?.name}>
+                                                                            <span className="font-semibold text-gray-900 line-clamp-2" title={item.product?.name}>
                                                                                 {item.product?.name || `Gorden ${selectedCalcType?.name}`}
                                                                             </span>
                                                                             {item.selectedVariant && (
-                                                                                <span className="text-[10px] text-gray-500 truncate">
-                                                                                    {item.selectedVariant.name || 'Standard'}
-                                                                                </span>
+                                                                                <div className="flex flex-col">
+                                                                                    {(() => {
+                                                                                        const attrs = safeJSONParse(item.selectedVariant.attributes, {});
+                                                                                        const entries = Object.entries(attrs);
+                                                                                        if (entries.length > 0) {
+                                                                                            return (
+                                                                                                <span className="text-[10px] text-gray-500 truncate">
+                                                                                                    {entries.map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                                </span>
+                                                                                            );
+                                                                                        }
+                                                                                        return item.selectedVariant.name ? (
+                                                                                            <span className="text-[10px] text-gray-500 truncate">
+                                                                                                {item.selectedVariant.name}
+                                                                                            </span>
+                                                                                        ) : null;
+                                                                                    })()}
+                                                                                </div>
                                                                             )}
                                                                         </div>
                                                                     </div>
@@ -1493,11 +1516,29 @@ export default function AdminDocumentCreate() {
                                                                                     >
                                                                                         {selection ? 'Ganti' : 'Pilih'}
                                                                                     </Button>
+                                                                                    <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                                                                        <img
+                                                                                            src={getProductImageUrl(selection?.product?.images || selection?.product?.image)}
+                                                                                            className="w-full h-full object-cover"
+                                                                                            alt=""
+                                                                                        />
+                                                                                    </div>
                                                                                     <div className="flex flex-col leading-tight min-w-0">
                                                                                         <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
-                                                                                        <span className="text-sm font-medium text-gray-900 truncate" title={selection?.product?.name}>
+                                                                                        <span className="text-sm font-medium text-gray-900 line-clamp-2" title={selection?.product?.name}>
                                                                                             {selection?.product?.name || '-'}
                                                                                         </span>
+                                                                                        {selection?.product && (
+                                                                                            <span className="text-[10px] text-gray-500 truncate">
+                                                                                                {(() => {
+                                                                                                    if (selection.product.variantAttributes) {
+                                                                                                        const attrs = safeJSONParse(selection.product.variantAttributes, {});
+                                                                                                        return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                                                                    }
+                                                                                                    return '';
+                                                                                                })()}
+                                                                                            </span>
+                                                                                        )}
                                                                                     </div>
                                                                                 </div>
 

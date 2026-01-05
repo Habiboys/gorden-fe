@@ -36,7 +36,7 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
-  const [notes, setNotes] = useState('');
+  const [notes] = useState('');
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [showAllVariants, setShowAllVariants] = useState(false);
   const [calcHovered, setCalcHovered] = useState(false);

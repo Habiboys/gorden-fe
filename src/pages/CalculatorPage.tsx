@@ -56,6 +56,7 @@ interface ComponentFromDB {
   variant_filter_rule?: string;
   hide_on_door?: boolean;
   show_gelombang?: boolean;
+  price_follows_item_qty?: boolean;
   subcategory?: { id: number; name: string; slug: string };
 }
 
@@ -726,8 +727,15 @@ export default function CalculatorPageV2() {
           return 0;
       }
     })();
-    // Multiply by component quantity (which might include variant multiplier) - Item quantity ignored for price
-    return basePricePerItem * selection.qty;
+    // Multiply by component quantity (which might include variant multiplier)
+    let totalPrice = basePricePerItem * selection.qty;
+
+    // If price_follows_item_qty is enabled, multiply by item quantity (jendela count)
+    if (comp.price_follows_item_qty) {
+      totalPrice *= item.quantity;
+    }
+
+    return totalPrice;
   };
 
   // Calculate item price
@@ -1308,167 +1316,446 @@ export default function CalculatorPageV2() {
                             <div className="p-4 sm:p-6 space-y-3">
                               {/* Dynamic Components - Table Layout */}
                               {item.packageType === 'gorden-lengkap' && (
-                                <div className="border rounded-lg overflow-hidden bg-white">
-                                  <table className="w-full text-sm">
-                                    <tbody className="divide-y divide-gray-100">
-                                      {/* Main Fabric Row */}
-                                      <tr className="hover:bg-gray-50">
-                                        <td className="px-3 py-2.5 w-24">
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white w-full"
-                                            onClick={async () => {
-                                              if (!selectedFabric || isBlindFlow) return;
-                                              try {
-                                                const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
-                                                const variants = variantsRes.data || [];
-                                                if (variants.length > 0) {
-                                                  setEditingVariantItemId(item.id);
-                                                  setPendingProductForVariant(selectedFabric);
-                                                  setAvailableVariants(variants);
-                                                  setVariantSelectionMode('fabric');
-                                                  setIsVariantModalOpen(true);
-                                                }
-                                              } catch (error) {
-                                                console.error('Error loading variants:', error);
-                                              }
-                                            }}
-                                          >
-                                            {item.selectedVariant ? 'Ganti' : 'Pilih'}
-                                          </Button>
-                                        </td>
-                                        <td className="px-3 py-2.5 font-medium text-gray-700">
-                                          {isBlindFlow ? 'Produk' : 'Gorden'}
-                                        </td>
-                                        <td className="px-3 py-2.5">
-                                          <div className="flex items-center gap-2">
-                                            {isBlindFlow && item.product && (
-                                              <img src={getProductImageUrl(item.product.image)} className="w-10 h-10 rounded object-cover" alt="" />
-                                            )}
-                                            <span className="text-gray-600 text-xs">
-                                              {(prices as any).fabricName || item.product?.name || selectedFabric?.name || '-'}
-                                            </span>
-                                          </div>
-                                        </td>
-                                        <td className="px-3 py-2.5 text-right text-gray-600">
-                                          Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
-                                        </td>
-                                        <td className="px-3 py-2.5 text-center w-20">
-                                          <input
-                                            type="number"
-                                            min="1"
-                                            value={item.selectedVariant?.quantity_multiplier || 1}
-                                            onClick={(e) => e.stopPropagation()}
-                                            onChange={(e) => {
-                                              const newMultiplier = Math.max(1, parseFloat(e.target.value) || 1);
-                                              setItems(items.map(i => {
-                                                if (i.id === item.id && i.selectedVariant) {
-                                                  // Sync Components
-                                                  const updatedComponents = { ...i.components };
-                                                  if (currentType?.components) {
-                                                    currentType.components.forEach(comp => {
-                                                      if (comp.multiply_with_variant && updatedComponents[comp.id]) {
-                                                        updatedComponents[comp.id] = {
-                                                          ...updatedComponents[comp.id],
-                                                          qty: newMultiplier
-                                                        };
-                                                      }
-                                                    });
+                                <>
+                                  {/* DESKTOP VIEW: Table */}
+                                  <div className="hidden md:block border rounded-lg overflow-hidden bg-white">
+                                    <table className="w-full text-sm">
+                                      <tbody className="divide-y divide-gray-100">
+                                        {/* Main Fabric Row */}
+                                        <tr className="hover:bg-gray-50">
+                                          <td className="px-3 py-2.5 w-24">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white w-full"
+                                              onClick={async () => {
+                                                if (!selectedFabric || isBlindFlow) return;
+                                                try {
+                                                  const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
+                                                  const variants = variantsRes.data || [];
+                                                  if (variants.length > 0) {
+                                                    setEditingVariantItemId(item.id);
+                                                    setPendingProductForVariant(selectedFabric);
+                                                    setAvailableVariants(variants);
+                                                    setVariantSelectionMode('fabric');
+                                                    setIsVariantModalOpen(true);
                                                   }
-                                                  return {
-                                                    ...i,
-                                                    selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
-                                                    components: updatedComponents
-                                                  };
+                                                } catch (error) {
+                                                  console.error('Error loading variants:', error);
                                                 }
-                                                return i;
-                                              }));
-                                            }}
-                                            className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                          />
-                                        </td>
-                                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
-                                          Rp{prices.fabric.toLocaleString('id-ID')}
-                                        </td>
-                                      </tr>
-
-                                      {/* Component Rows */}
-                                      {currentType?.components
-                                        ?.filter(comp => {
-                                          if (comp.hide_on_door && item.itemType === 'pintu') {
-                                            return false;
-                                          }
-                                          return true;
-                                        })
-                                        .map(comp => {
-                                          const selection = item.components[comp.id];
-                                          const products = componentProducts[comp.subcategory_id] || [];
-                                          const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
-
-                                          return (
-                                            <tr key={comp.id} className={`hover:bg-gray-50 ${!selection ? 'opacity-60' : ''}`}>
-                                              <td className="px-3 py-2.5 w-24">
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  className={`h-7 px-2 text-xs w-full ${selection
-                                                    ? 'border-gray-300 text-gray-600 hover:bg-gray-100'
-                                                    : 'border-[#EB216A] text-[#EB216A] bg-[#EB216A]/10 hover:bg-[#EB216A] hover:text-white'}`}
-                                                  onClick={() => openComponentModal(item.id, comp.id)}
-                                                  disabled={products.length === 0}
-                                                >
-                                                  {selection ? 'Ganti' : 'Pilih'}
-                                                </Button>
-                                              </td>
-                                              <td className="px-3 py-2.5 font-medium text-gray-700">
-                                                {comp.label}
-                                              </td>
-                                              <td className="px-3 py-2.5">
-                                                <span className="text-gray-600 text-xs">
-                                                  {selection ? selection.product.name : (products.length === 0 ? 'Tidak ada produk' : '-')}
+                                              }}
+                                            >
+                                              {item.selectedVariant ? 'Ganti' : 'Pilih'}
+                                            </Button>
+                                          </td>
+                                          <td className="px-3 py-2.5 font-medium text-gray-700">
+                                            {isBlindFlow ? 'Produk' : 'Gorden'}
+                                          </td>
+                                          <td className="px-3 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                                <img
+                                                  src={getProductImageUrl(
+                                                    isBlindFlow && item.product
+                                                      ? (item.product.images || item.product.image)
+                                                      : (selectedFabric?.images || selectedFabric?.image)
+                                                  )}
+                                                  className="w-full h-full object-cover"
+                                                  alt=""
+                                                />
+                                              </div>
+                                              <div className="flex flex-col min-w-0">
+                                                <span className="text-sm font-medium text-gray-900 line-clamp-2">
+                                                  {(prices as any).fabricName || item.product?.name || selectedFabric?.name || '-'}
                                                 </span>
-                                              </td>
-                                              <td className="px-3 py-2.5 text-right text-gray-600">
-                                                {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : 'Rp.0'}
-                                              </td>
-                                              <td className="px-3 py-2.5 text-center w-20">
-                                                {selection ? (
-                                                  <input
-                                                    type="number"
-                                                    min="0"
-                                                    value={selection.qty}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onChange={(e) => {
-                                                      const newQty = Math.max(0, parseInt(e.target.value) || 0);
-                                                      setItems(items.map(i => {
-                                                        if (i.id === item.id) {
-                                                          return {
-                                                            ...i,
-                                                            components: {
-                                                              ...i.components,
-                                                              [comp.id]: { ...selection, qty: newQty }
-                                                            }
+                                                {(() => {
+                                                  if (item.selectedVariant && item.selectedVariant.attributes) {
+                                                    const attrs = safeJSONParse(item.selectedVariant.attributes, {});
+                                                    const entries = Object.entries(attrs);
+                                                    if (entries.length > 0) {
+                                                      return (
+                                                        <span className="text-xs text-gray-500 truncate">
+                                                          {entries.map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                        </span>
+                                                      );
+                                                    }
+                                                  }
+                                                  return null;
+                                                })()}
+                                              </div>
+                                            </div>
+                                          </td>
+                                          <td className="px-3 py-2.5 text-right text-gray-600">
+                                            Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
+                                          </td>
+                                          <td className="px-3 py-2.5 text-center w-20">
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={item.selectedVariant?.quantity_multiplier || 1}
+                                              onClick={(e) => e.stopPropagation()}
+                                              onChange={(e) => {
+                                                const newMultiplier = Math.max(1, parseFloat(e.target.value) || 1);
+                                                setItems(items.map(i => {
+                                                  if (i.id === item.id && i.selectedVariant) {
+                                                    // Sync Components
+                                                    const updatedComponents = { ...i.components };
+                                                    if (currentType?.components) {
+                                                      currentType.components.forEach(comp => {
+                                                        if (comp.multiply_with_variant && updatedComponents[comp.id]) {
+                                                          updatedComponents[comp.id] = {
+                                                            ...updatedComponents[comp.id],
+                                                            qty: newMultiplier
                                                           };
                                                         }
-                                                        return i;
-                                                      }));
-                                                    }}
-                                                    className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                                  />
-                                                ) : (
-                                                  <span className="text-gray-400">0</span>
-                                                )}
-                                              </td>
-                                              <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
-                                                Rp{compPrice.toLocaleString('id-ID')}
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                    </tbody>
-                                  </table>
-                                </div>
+                                                      });
+                                                    }
+                                                    return {
+                                                      ...i,
+                                                      selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
+                                                      components: updatedComponents
+                                                    };
+                                                  }
+                                                  return i;
+                                                }));
+                                              }}
+                                              className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                            />
+                                          </td>
+                                          <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                                            Rp{prices.fabric.toLocaleString('id-ID')}
+                                          </td>
+                                        </tr>
+
+                                        {/* Component Rows */}
+                                        {currentType?.components
+                                          ?.filter(comp => {
+                                            if (comp.hide_on_door && item.itemType === 'pintu') {
+                                              return false;
+                                            }
+                                            return true;
+                                          })
+                                          .map(comp => {
+                                            const selection = item.components[comp.id];
+                                            const products = componentProducts[comp.subcategory_id] || [];
+                                            const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
+
+                                            return (
+                                              <tr key={comp.id} className={`hover:bg-gray-50 ${!selection ? 'opacity-60' : ''}`}>
+                                                <td className="px-3 py-2.5 w-24">
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className={`h-7 px-2 text-xs w-full ${selection
+                                                      ? 'border-gray-300 text-gray-600 hover:bg-gray-100'
+                                                      : 'border-[#EB216A] text-[#EB216A] bg-[#EB216A]/10 hover:bg-[#EB216A] hover:text-white'}`}
+                                                    onClick={() => openComponentModal(item.id, comp.id)}
+                                                    disabled={products.length === 0}
+                                                  >
+                                                    {selection ? 'Ganti' : 'Pilih'}
+                                                  </Button>
+                                                </td>
+                                                <td className="px-3 py-2.5 font-medium text-gray-700">
+                                                  {comp.label}
+                                                </td>
+                                                <td className="px-3 py-2.5">
+                                                  <div className="flex items-center gap-2">
+                                                    <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                                      <img
+                                                        src={getProductImageUrl(selection?.product?.images || selection?.product?.image)}
+                                                        className="w-full h-full object-cover"
+                                                        alt={selection?.product?.name || ''}
+                                                      />
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                      <span className="text-sm font-medium text-gray-900 line-clamp-2">
+                                                        {selection?.product?.name || '-'}
+                                                      </span>
+                                                      {(() => {
+                                                        const attrs = selection?.product?.variantAttributes
+                                                          ? safeJSONParse(selection.product.variantAttributes, {})
+                                                          : {};
+                                                        const entries = Object.entries(attrs);
+                                                        if (entries.length > 0) {
+                                                          return (
+                                                            <span className="text-xs text-gray-500 truncate">
+                                                              {entries.map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                            </span>
+                                                          );
+                                                        }
+                                                        return null;
+                                                      })()}
+                                                    </div>
+                                                  </div>
+                                                </td>
+                                                <td className="px-3 py-2.5 text-right text-gray-600">
+                                                  {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : 'Rp.0'}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center w-20">
+                                                  {selection ? (
+                                                    <input
+                                                      type="number"
+                                                      min="0"
+                                                      value={selection.qty}
+                                                      onClick={(e) => e.stopPropagation()}
+                                                      onChange={(e) => {
+                                                        const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                        setItems(items.map(i => {
+                                                          if (i.id === item.id) {
+                                                            return {
+                                                              ...i,
+                                                              components: {
+                                                                ...i.components,
+                                                                [comp.id]: { ...selection, qty: newQty }
+                                                              }
+                                                            };
+                                                          }
+                                                          return i;
+                                                        }));
+                                                      }}
+                                                      className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                                    />
+                                                  ) : (
+                                                    <span className="text-gray-400">0</span>
+                                                  )}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                                                  Rp{compPrice.toLocaleString('id-ID')}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+
+                                  {/* MOBILE VIEW: Cards */}
+                                  <div className="md:hidden space-y-4">
+                                    {/* FABRIC CARD */}
+                                    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                                      {/* Header */}
+                                      <div className="bg-[#EB216A] px-3 py-2 flex justify-between items-center text-white">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center">
+                                            <Pencil className="w-3 h-3 text-white" />
+                                          </div>
+                                          <span className="font-semibold text-sm">{isBlindFlow ? 'Produk' : 'Gorden'}</span>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 px-2 text-xs text-white hover:bg-white/20 hover:text-white"
+                                          onClick={async () => {
+                                            if (!selectedFabric || isBlindFlow) return;
+                                            try {
+                                              const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
+                                              const variants = variantsRes.data || [];
+                                              if (variants.length > 0) {
+                                                setEditingVariantItemId(item.id);
+                                                setPendingProductForVariant(selectedFabric);
+                                                setAvailableVariants(variants);
+                                                setVariantSelectionMode('fabric');
+                                                setIsVariantModalOpen(true);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error loading variants:', error);
+                                            }
+                                          }}
+                                        >
+                                          {item.selectedVariant ? 'Ganti' : 'Pilih'}
+                                        </Button>
+                                      </div>
+
+                                      {/* Body */}
+                                      <div className="p-3">
+                                        <div className="flex gap-3">
+                                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                            <img
+                                              src={getProductImageUrl(
+                                                isBlindFlow && item.product
+                                                  ? (item.product.images || item.product.image)
+                                                  : (selectedFabric?.images || selectedFabric?.image)
+                                              )}
+                                              className="w-full h-full object-cover"
+                                              alt="Fabric"
+                                            />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                                              {(prices as any).fabricName || item.product?.name || selectedFabric?.name || '-'}
+                                            </h4>
+                                            <div className="text-xs text-gray-500 mt-1 truncate">
+                                              {(() => {
+                                                if (item.selectedVariant && item.selectedVariant.attributes) {
+                                                  const attrs = safeJSONParse(item.selectedVariant.attributes, {});
+                                                  const entries = Object.entries(attrs);
+                                                  return entries.map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                }
+                                                return null;
+                                              })()}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Footer */}
+                                        <div className="mt-3 grid grid-cols-3 gap-2 items-center text-sm border-t border-gray-100 pt-3">
+                                          <div>
+                                            <span className="text-xs text-gray-500 block">Harga</span>
+                                            <span className="font-medium">Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}</span>
+                                          </div>
+                                          <div className="flex justify-center">
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={item.selectedVariant?.quantity_multiplier || 1}
+                                              onClick={(e) => e.stopPropagation()}
+                                              onChange={(e) => {
+                                                const newMultiplier = Math.max(1, parseFloat(e.target.value) || 1);
+                                                setItems(items.map(i => {
+                                                  if (i.id === item.id && i.selectedVariant) {
+                                                    // Sync Components
+                                                    const updatedComponents = { ...i.components };
+                                                    if (currentType?.components) {
+                                                      currentType.components.forEach(comp => {
+                                                        if (comp.multiply_with_variant && updatedComponents[comp.id]) {
+                                                          updatedComponents[comp.id] = {
+                                                            ...updatedComponents[comp.id],
+                                                            qty: newMultiplier
+                                                          };
+                                                        }
+                                                      });
+                                                    }
+                                                    return {
+                                                      ...i,
+                                                      selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
+                                                      components: updatedComponents
+                                                    };
+                                                  }
+                                                  return i;
+                                                }));
+                                              }}
+                                              className="w-14 h-8 text-center border border-gray-300 rounded focus:ring-1 focus:ring-[#EB216A] text-gray-900"
+                                            />
+                                          </div>
+                                          <div className="text-right">
+                                            <span className="text-xs text-gray-500 block">Total</span>
+                                            <span className="font-bold text-[#EB216A]">Rp{prices.fabric.toLocaleString('id-ID')}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* COMPONENT CARDS */}
+                                    {currentType?.components
+                                      ?.filter(comp => {
+                                        if (comp.hide_on_door && item.itemType === 'pintu') {
+                                          return false;
+                                        }
+                                        return true;
+                                      })
+                                      .map(comp => {
+                                        const selection = item.components[comp.id];
+                                        const products = componentProducts[comp.subcategory_id] || [];
+                                        const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
+
+                                        return (
+                                          <div key={comp.id} className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                                            {/* Header */}
+                                            <div className="bg-[#EB216A] px-3 py-2 flex justify-between items-center text-white">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center">
+                                                  <Pencil className="w-3 h-3 text-white" />
+                                                </div>
+                                                <span className="font-semibold text-sm">{comp.label}</span>
+                                              </div>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-2 text-xs text-white hover:bg-white/20 hover:text-white"
+                                                onClick={() => openComponentModal(item.id, comp.id)}
+                                                disabled={products.length === 0}
+                                              >
+                                                {selection ? 'Ganti' : 'Pilih'}
+                                              </Button>
+                                            </div>
+
+                                            {/* Body */}
+                                            <div className="p-3">
+                                              {selection ? (
+                                                <div className="flex gap-3">
+                                                  <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                    <img
+                                                      src={getProductImageUrl(selection.product.images || selection.product.image)}
+                                                      className="w-full h-full object-cover"
+                                                      alt={selection.product.name}
+                                                    />
+                                                  </div>
+                                                  <div className="flex-1 min-w-0">
+                                                    <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                                                      {selection.product.name}
+                                                    </h4>
+                                                    <div className="text-xs text-gray-500 mt-1 truncate">
+                                                      {(() => {
+                                                        const attrs = selection.product.variantAttributes
+                                                          ? safeJSONParse(selection.product.variantAttributes, {})
+                                                          : {};
+                                                        const entries = Object.entries(attrs);
+                                                        return entries.map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                      })()}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="text-center py-4 text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-lg">
+                                                  {products.length === 0 ? 'Tidak ada produk' : 'Belum memilih produk'}
+                                                </div>
+                                              )}
+
+                                              {/* Footer */}
+                                              <div className="mt-3 grid grid-cols-3 gap-2 items-center text-sm border-t border-gray-100 pt-3">
+                                                <div>
+                                                  <span className="text-xs text-gray-500 block">Harga</span>
+                                                  <span className="font-medium">
+                                                    {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : '-'}
+                                                  </span>
+                                                </div>
+                                                <div className="flex justify-center">
+                                                  {selection && (
+                                                    <input
+                                                      type="number"
+                                                      min="0"
+                                                      value={selection.qty}
+                                                      onClick={(e) => e.stopPropagation()}
+                                                      onChange={(e) => {
+                                                        const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                        setItems(items.map(i => {
+                                                          if (i.id === item.id) {
+                                                            return {
+                                                              ...i,
+                                                              components: {
+                                                                ...i.components,
+                                                                [comp.id]: { ...selection, qty: newQty }
+                                                              }
+                                                            };
+                                                          }
+                                                          return i;
+                                                        }));
+                                                      }}
+                                                      className="w-12 h-8 text-center border border-gray-300 rounded focus:ring-1 focus:ring-[#EB216A] text-gray-900"
+                                                    />
+                                                  )}
+                                                </div>
+                                                <div className="text-right">
+                                                  <span className="text-xs text-gray-500 block">Total</span>
+                                                  <span className="font-bold text-[#EB216A]">Rp{compPrice.toLocaleString('id-ID')}</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                  </div>
+                                </>
                               )}
 
                               {/* Subtotal */}
@@ -1479,7 +1766,7 @@ export default function CalculatorPageV2() {
                                 </p>
                               </div>
                             </div>
-                          </div>
+                          </div >
                         );
                       })}
                     </>
@@ -1520,10 +1807,10 @@ export default function CalculatorPageV2() {
             )}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* Add Item Modal */}
-      <Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen}>
+      < Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen} >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
@@ -1671,10 +1958,10 @@ export default function CalculatorPageV2() {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Product Selection Modal */}
-      <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
+      < Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen} >
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Pilih Kain Gorden</DialogTitle>
@@ -1726,15 +2013,33 @@ export default function CalculatorPageV2() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Component Selection Modal */}
-      <Dialog open={isComponentModalOpen} onOpenChange={setIsComponentModalOpen}>
+      < Dialog open={isComponentModalOpen} onOpenChange={setIsComponentModalOpen} >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Pilih Komponen</DialogTitle>
             <DialogDescription>
-              {editingComponentId !== null && currentType?.components?.find(c => c.id === editingComponentId)?.label}
+              {editingComponentId !== null && (() => {
+                const comp = currentType?.components?.find(c => c.id === editingComponentId);
+                const item = items.find(i => i.id === editingItemId);
+                if (!comp) return null;
+
+                return (
+                  <div className="space-y-2 mt-1">
+                    <span className="font-medium text-gray-900 block">{comp.label}</span>
+                    {item && (
+                      <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800 leading-relaxed text-left">
+                        <p>
+                          Berikut adalah beberapa jenis <strong>{comp.label}</strong> yang bisa anda pilih sesuai dengan kebutuhan dan budget.
+                          Cocok untuk Ukuran Lebar <strong>{item.width} cm</strong> x Tinggi <strong>{item.height} cm</strong> sesuai sama pintu/jendela anda.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </DialogDescription>
           </DialogHeader>
 
@@ -1786,13 +2091,29 @@ export default function CalculatorPageV2() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Variant Picker Modal */}
-      <Dialog open={isVariantModalOpen} onOpenChange={(open: boolean) => { setIsVariantModalOpen(open); if (!open) setVariantSearchQuery(''); }}>
+      < Dialog open={isVariantModalOpen} onOpenChange={(open: boolean) => { setIsVariantModalOpen(open); if (!open) setVariantSearchQuery(''); }
+      }>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Pilih Varian - {pendingProductForVariant?.name}</DialogTitle>
+            <DialogDescription>
+              {variantSelectionMode === 'component' && editingComponentId !== null && (() => {
+                const comp = currentType?.components?.find(c => c.id === editingComponentId);
+                const item = items.find(i => i.id === editingItemId);
+                if (!comp || !item) return null;
+                return (
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800 leading-relaxed text-left mt-2">
+                    <p>
+                      Berikut adalah beberapa varian <strong>{comp.label}</strong> yang bisa anda pilih sesuai dengan kebutuhan dan budget.
+                      Cocok untuk Ukuran Lebar <strong>{item.width} cm</strong> x Tinggi <strong>{item.height} cm</strong> sesuai sama pintu/jendela anda.
+                    </p>
+                  </div>
+                );
+              })()}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Search Input */}
@@ -1979,9 +2300,9 @@ export default function CalculatorPageV2() {
             })()}
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
       {/* Confirmation Modal */}
-      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+      < Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen} >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Ganti Jenis Kalkulator?</DialogTitle>
@@ -2002,7 +2323,7 @@ export default function CalculatorPageV2() {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
     </div >
   );
 }
