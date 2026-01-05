@@ -25,6 +25,8 @@ import {
 import { calculatorLeadsApi, calculatorTypesApi, productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { safeJSONParse } from '../utils/jsonHelper';
+import type { VariantFilterRule } from '../utils/variantFilterHelper';
+import { filterVariantsByRule } from '../utils/variantFilterHelper';
 import { chatAdminFromCalculator } from '../utils/whatsappHelper';
 
 // Types
@@ -51,6 +53,7 @@ interface ComponentFromDB {
   price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
   display_order: number;
   multiply_with_variant: boolean;
+  variant_filter_rule?: string;
   subcategory?: { id: number; name: string; slug: string };
 }
 
@@ -363,21 +366,20 @@ export default function CalculatorPageV2() {
     if (selectedFabric?.id && !isBlindFlow) {
       try {
         const variantsRes = await productVariantsApi.getByProduct(selectedFabric.id);
-        const variants = variantsRes.data || [];
+        let variants = variantsRes.data || [];
 
         if (variants.length > 0) {
-          // Filter variants that match the item dimensions (using recommended ranges)
-          const matchingVariants = variants.filter((v: any) => {
-            // If variant has recommended ranges, use those
-            if (v.recommended_min_width && v.recommended_max_width) {
-              return itemWidth >= v.recommended_min_width && itemWidth <= v.recommended_max_width;
-            }
-            // Otherwise show all variants
-            return true;
-          });
+          // Apply gorden-smokering filter for fabric if calculator type is smokering-related
+          const isSmokering = currentType?.slug?.toLowerCase().includes('smokering') ||
+            currentType?.slug?.toLowerCase().includes('kupu');
 
-          // If no matching variants, show all variants
-          const variantsToShow = matchingVariants.length > 0 ? matchingVariants : variants;
+          if (isSmokering) {
+            const dimensions = { width: itemWidth, height: itemHeight };
+            variants = filterVariantsByRule(variants, dimensions, 'gorden-smokering');
+          }
+
+          // If no matching variants after filter, show all variants
+          const variantsToShow = variants.length > 0 ? variants : (variantsRes.data || []);
 
           setEditingVariantItemId(newItem.id);
           setPendingProductForVariant(selectedFabric);
@@ -464,9 +466,22 @@ export default function CalculatorPageV2() {
     setLoadingVariants(true);
     try {
       const variantsRes = await productVariantsApi.getByProduct(product.id);
-      const variants = variantsRes.data || [];
+      let variants = variantsRes.data || [];
 
       if (variants.length > 0) {
+        // Get the component config to check for filter rule
+        const componentConfig = currentType?.components?.find(c => c.id === editingComponentId);
+        const filterRule = (componentConfig?.variant_filter_rule || 'none') as VariantFilterRule;
+
+        // Get the item being edited for dimensions
+        const editingItem = items.find(item => item.id === editingItemId);
+
+        // Apply filter based on rule and item dimensions
+        if (filterRule !== 'none' && editingItem) {
+          const dimensions = { width: editingItem.width, height: editingItem.height };
+          variants = filterVariantsByRule(variants, dimensions, filterRule);
+        }
+
         // Product has variants - show variant picker
         setPendingProductForVariant(product);
         setAvailableVariants(variants);

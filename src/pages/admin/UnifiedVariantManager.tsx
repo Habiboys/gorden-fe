@@ -252,7 +252,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                             </span>
                         )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {/* Sibak Template Button */}
                         {options.length < 4 && (
                             <Button
@@ -261,14 +261,74 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 onClick={() => {
                                     const sibakValues = [1, 2, 3, 4, 5].map(n => ({ value: String(n), multiplier: n }));
                                     const sibakOption = { name: 'Sibak', values: sibakValues, isMultiplierType: true };
-                                    const newOptions = [...options.filter(o => !o.isMultiplierType), sibakOption];
+                                    const newOptions = [...options.filter(o => o.name !== 'Sibak'), sibakOption];
                                     setOptions(newOptions);
                                     generateCombinations(newOptions);
                                 }}
                                 className="text-xs h-8 px-3 border-[#EB216A] text-[#EB216A] hover:bg-pink-50"
                                 title="Tambah tipe Sibak otomatis dengan multiplier 1-5"
                             >
-                                + Template Sibak
+                                + Sibak
+                            </Button>
+                        )}
+                        {/* Gelombang Template Button */}
+                        {options.length < 4 && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    const gelombangValues = [6, 7, 8, 9, 10, 11, 12].map(n => ({ value: String(n), multiplier: null }));
+                                    const gelombangOption = { name: 'Gelombang', values: gelombangValues, isMultiplierType: false };
+                                    const newOptions = [...options.filter(o => o.name !== 'Gelombang'), gelombangOption];
+                                    setOptions(newOptions);
+                                    generateCombinations(newOptions);
+                                }}
+                                className="text-xs h-8 px-3 border-blue-500 text-blue-600 hover:bg-blue-50"
+                                title="Tambah tipe Gelombang (6-12)"
+                            >
+                                + Gelombang
+                            </Button>
+                        )}
+                        {/* Tinggi Template Button */}
+                        {options.length < 4 && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    const tinggiValues = [];
+                                    for (let t = 200; t <= 280; t += 10) {
+                                        tinggiValues.push({ value: String(t), multiplier: null });
+                                    }
+                                    const tinggiOption = { name: 'Tinggi', values: tinggiValues, isMultiplierType: false };
+                                    const newOptions = [...options.filter(o => o.name !== 'Tinggi'), tinggiOption];
+                                    setOptions(newOptions);
+                                    generateCombinations(newOptions);
+                                }}
+                                className="text-xs h-8 px-3 border-green-500 text-green-600 hover:bg-green-50"
+                                title="Tambah tipe Tinggi (200-280 step 10)"
+                            >
+                                + Tinggi
+                            </Button>
+                        )}
+                        {/* Lebar Template Button */}
+                        {options.length < 4 && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    const lebarValues = [];
+                                    for (let l = 100; l <= 300; l += 20) {
+                                        lebarValues.push({ value: String(l), multiplier: null });
+                                    }
+                                    const lebarOption = { name: 'Lebar', values: lebarValues, isMultiplierType: false };
+                                    const newOptions = [...options.filter(o => o.name !== 'Lebar'), lebarOption];
+                                    setOptions(newOptions);
+                                    generateCombinations(newOptions);
+                                }}
+                                className="text-xs h-8 px-3 border-orange-500 text-orange-600 hover:bg-orange-50"
+                                title="Tambah tipe Lebar (100-300 step 20)"
+                            >
+                                + Lebar
                             </Button>
                         )}
                         {options.length < 4 && (
@@ -277,7 +337,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 onClick={handleAddOption}
                                 className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs h-8 px-3"
                             >
-                                <Plus className="w-3 h-3 mr-1" /> Tambah Tipe
+                                <Plus className="w-3 h-3 mr-1" /> Custom
                             </Button>
                         )}
                     </div>

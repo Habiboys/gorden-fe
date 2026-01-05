@@ -24,6 +24,8 @@ import { Textarea } from '../../components/ui/textarea';
 import { calculatorTypesApi, documentsApi, productsApi, productVariantsApi } from '../../utils/api';
 import { getProductImageUrl } from '../../utils/imageHelper';
 import { safeJSONParse } from '../../utils/jsonHelper';
+import type { VariantFilterRule } from '../../utils/variantFilterHelper';
+import { filterVariantsByRule } from '../../utils/variantFilterHelper';
 
 // ================== TYPES (from CalculatorPage) ==================
 
@@ -36,6 +38,7 @@ interface ComponentFromDB {
     price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
     display_order: number;
     multiply_with_variant?: boolean;
+    variant_filter_rule?: string;
 }
 
 interface CalculatorTypeFromDB {
@@ -497,10 +500,23 @@ export default function AdminDocumentCreate() {
         if (productToCheck?.id && !newItem.selectedVariant) { // Skip if variant already assigned (Blind Group Flow)
             try {
                 const variantsRes = await productVariantsApi.getByProduct(productToCheck.id);
-                const variants = variantsRes.data || [];
+                let variants = variantsRes.data || [];
+
                 if (variants.length > 0) {
+                    // Apply gorden-smokering filter for fabric if calculator type is smokering-related
+                    const isSmokering = selectedCalcType?.slug?.toLowerCase().includes('smokering') ||
+                        selectedCalcType?.slug?.toLowerCase().includes('kupu');
+
+                    if (isSmokering) {
+                        const dimensions = { width: itemWidth, height: itemHeight };
+                        variants = filterVariantsByRule(variants, dimensions, 'gorden-smokering');
+                    }
+
+                    // If no matching variants after filter, show all variants
+                    const variantsToShow = variants.length > 0 ? variants : (variantsRes.data || []);
+
                     setVariantItemId(newItem.id);
-                    setAvailableVariants(variants);
+                    setAvailableVariants(variantsToShow);
                     setShowVariantPicker(true);
                 }
             } catch (error) {
@@ -664,9 +680,22 @@ export default function AdminDocumentCreate() {
         try {
             // Basic fetch from productVariantsApi
             const variantsRes = await productVariantsApi.getByProduct(product.id);
-            const variants = variantsRes.data || [];
+            let variants = variantsRes.data || [];
 
             if (variants.length > 0) {
+                // Get the component config to check for filter rule
+                const componentConfig = selectedCalcType?.components?.find(c => c.id === editingComponentId);
+                const filterRule = (componentConfig?.variant_filter_rule || 'none') as VariantFilterRule;
+
+                // Get the item being edited for dimensions
+                const editingItem = items.find(item => item.id === editingItemId);
+
+                // Apply filter based on rule and item dimensions
+                if (filterRule !== 'none' && editingItem) {
+                    const dimensions = { width: editingItem.width, height: editingItem.height };
+                    variants = filterVariantsByRule(variants, dimensions, filterRule);
+                }
+
                 // Has variants: Open variant picker
                 setItemModalTargetProduct(product);
                 setAvailableVariants(variants);

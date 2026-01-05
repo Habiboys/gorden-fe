@@ -61,9 +61,9 @@ interface CalculatorTypeComponent {
     label: string;
     is_required: boolean;
     price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
-    price_calculation: 'per_meter' | 'per_unit' | 'per_10_per_meter';
     display_order: number;
     multiply_with_variant: boolean;
+    variant_filter_rule: string;
     subcategory?: {
         id: number;
         name: string;
@@ -115,9 +115,9 @@ export default function AdminCalculatorTypes() {
         label: '',
         is_required: false,
         price_calculation: 'per_meter' as 'per_meter' | 'per_unit' | 'per_10_per_meter',
-        price_calculation: 'per_meter' as 'per_meter' | 'per_unit' | 'per_10_per_meter',
         display_order: '0',
         multiply_with_variant: false,
+        variant_filter_rule: 'none',
     });
 
     useEffect(() => {
@@ -265,9 +265,9 @@ export default function AdminCalculatorTypes() {
             label: '',
             is_required: false,
             price_calculation: 'per_meter',
-            price_calculation: 'per_meter',
             display_order: '0',
             multiply_with_variant: false,
+            variant_filter_rule: 'none',
         });
         setIsComponentDialogOpen(true);
     };
@@ -280,9 +280,9 @@ export default function AdminCalculatorTypes() {
             label: component.label,
             is_required: component.is_required,
             price_calculation: component.price_calculation,
-            price_calculation: component.price_calculation,
             display_order: component.display_order.toString(),
             multiply_with_variant: component.multiply_with_variant,
+            variant_filter_rule: component.variant_filter_rule || 'none',
         });
         setIsComponentDialogOpen(true);
     };
@@ -301,9 +301,9 @@ export default function AdminCalculatorTypes() {
                 label: componentForm.label,
                 is_required: componentForm.is_required,
                 price_calculation: componentForm.price_calculation,
-                price_calculation: componentForm.price_calculation,
                 display_order: parseInt(componentForm.display_order) || 0,
                 multiply_with_variant: componentForm.multiply_with_variant,
+                variant_filter_rule: componentForm.variant_filter_rule,
             };
 
             if (editingComponent) {
@@ -747,22 +747,23 @@ export default function AdminCalculatorTypes() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Cara Hitung Harga</Label>
+                            <Label>Aturan Filter Varian Komponen</Label>
                             <Select
-                                value={componentForm.price_calculation}
-                                onValueChange={(value: 'per_meter' | 'per_unit' | 'per_10_per_meter') =>
-                                    setComponentForm({ ...componentForm, price_calculation: value })
+                                value={componentForm.variant_filter_rule}
+                                onValueChange={(value: string) =>
+                                    setComponentForm({ ...componentForm, variant_filter_rule: value })
                                 }
                             >
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="per_meter">Per Meter (lebar × harga)</SelectItem>
-                                    <SelectItem value="per_unit">Per Unit (harga saja)</SelectItem>
-                                    <SelectItem value="per_10_per_meter">Per 10/Meter (untuk hook: ceil(lebar×10) × harga)</SelectItem>
+                                    <SelectItem value="none">Tanpa Filter (Tasel, Hook)</SelectItem>
+                                    <SelectItem value="rel-4-sizes">Rel (4 ukuran lebar: +0, +10, +20, +30)</SelectItem>
+                                    <SelectItem value="vitrase-kombinasi">Vitrase (Lebar +20~+80 × Tinggi +0~+30)</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <p className="text-xs text-gray-500">Filter varian komponen berdasarkan dimensi. Bahan gorden difilter otomatis.</p>
                         </div>
 
                         <div className="grid gap-2">
