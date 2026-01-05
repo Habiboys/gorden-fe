@@ -358,7 +358,7 @@ export default function ProductDetail() {
                         return (
                           <div key={key} className="mb-4">
                             <p className="text-sm font-semibold text-gray-900 mb-2">{key}</p>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-5 gap-2">
                               {availableValues.map((val: any) => {
                                 const isSelected = selectedAttributes[key] === val;
                                 return (
@@ -386,8 +386,8 @@ export default function ProductDetail() {
 
                                       setSelectedVariant(match || null);
                                     }}
-                                    className={`px-4 py-2 rounded-lg border-2 text-sm transition-all ${isSelected
-                                      ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A]'
+                                    className={`px-3 py-2 rounded-lg border-2 text-sm transition-all text-center ${isSelected
+                                      ? 'border-[#EB216A] bg-[#EB216A]/5 text-[#EB216A] font-medium'
                                       : 'border-gray-200 text-gray-700 hover:border-gray-300'
                                       }`}
                                   >

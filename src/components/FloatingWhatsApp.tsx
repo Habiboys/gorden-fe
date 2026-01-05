@@ -67,23 +67,35 @@ export function FloatingWhatsApp() {
         `}
             </style>
 
+            {/* Close Overlay (Click outside to close) */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0"
+                    style={{ zIndex: 99997 }}
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+
             {/* Menu Options */}
             {isOpen && (
                 <div
                     style={{
                         position: 'fixed',
-                        bottom: '100px', // Adjusted position
+                        bottom: '100px',
                         left: '32px',
                         zIndex: 99998,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '8px', // Smaller gap
+                        gap: '8px',
                         animation: 'slideUp 0.3s ease-out',
                     }}
                 >
                     {/* Option 2: Request Quote */}
                     <button
-                        onClick={() => handleOptionClick('Halo admin, saya ingin membuat penawaran untuk proyek gorden saya...')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOptionClick('Halo admin, saya ingin membuat penawaran untuk proyek gorden saya...');
+                        }}
                         className="bg-white px-4 py-3 rounded-xl shadow-lg hover:bg-gray-50 transition-all text-left min-w-[180px] border border-gray-100"
                     >
                         <p className="text-sm font-semibold text-gray-800">Buat Penawaran</p>
@@ -91,17 +103,14 @@ export function FloatingWhatsApp() {
 
                     {/* Option 1: General Chat */}
                     <button
-                        onClick={() => handleOptionClick('Halo admin, saya ingin konsultasi mengenai produk gorden...')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOptionClick('Halo admin, saya ingin konsultasi mengenai produk gorden...');
+                        }}
                         className="bg-white px-4 py-3 rounded-xl shadow-lg hover:bg-gray-50 transition-all text-left min-w-[180px] border border-gray-100"
                     >
                         <p className="text-sm font-semibold text-gray-800">Chat dengan Kami</p>
                     </button>
-
-                    {/* Close Overlay (Click outside to close) */}
-                    <div
-                        className="fixed inset-0 z-[-1]"
-                        onClick={() => setIsOpen(false)}
-                    />
                 </div>
             )}
 
