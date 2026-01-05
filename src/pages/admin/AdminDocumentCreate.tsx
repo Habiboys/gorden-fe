@@ -41,6 +41,7 @@ interface ComponentFromDB {
     variant_filter_rule?: string;
     hide_on_door?: boolean;
     show_gelombang?: boolean;
+    price_follows_item_qty?: boolean;
 }
 
 interface CalculatorTypeFromDB {
