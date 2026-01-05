@@ -241,7 +241,7 @@ export default function ProductDetail() {
 
                 {/* Short Description */}
                 {product.description && (
-                  <p className="text-gray-600 text-sm mb-3">{product.description}</p>
+                  <p className="text-gray-600 text-sm mb-3 text-justify">{product.description}</p>
                 )}
 
                 <div className="flex flex-col gap-1 text-sm text-gray-600">
@@ -353,12 +353,20 @@ export default function ProductDetail() {
                             const matchingKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
                             return matchingKey ? attrs[matchingKey] : undefined;
                           }).filter(Boolean)
-                        ));
+                        )).sort((a, b) => {
+                          // Sort numerically if both values are numbers, otherwise alphabetically
+                          const numA = parseFloat(String(a).replace(/[^\d.-]/g, ''));
+                          const numB = parseFloat(String(b).replace(/[^\d.-]/g, ''));
+                          if (!isNaN(numA) && !isNaN(numB)) {
+                            return numA - numB;
+                          }
+                          return String(a).localeCompare(String(b));
+                        });
 
                         return (
                           <div key={key} className="mb-4">
                             <p className="text-sm font-semibold text-gray-900 mb-2">{key}</p>
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(70px, auto))' }}>
                               {availableValues.map((val: any) => {
                                 const isSelected = selectedAttributes[key] === val;
                                 return (
