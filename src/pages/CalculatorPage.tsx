@@ -1493,28 +1493,34 @@ export default function CalculatorPageV2() {
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center w-20">
                                                   {selection ? (
-                                                    <input
-                                                      type="number"
-                                                      min="0"
-                                                      value={selection.qty}
-                                                      onClick={(e) => e.stopPropagation()}
-                                                      onChange={(e) => {
-                                                        const newQty = Math.max(0, parseInt(e.target.value) || 0);
-                                                        setItems(items.map(i => {
-                                                          if (i.id === item.id) {
-                                                            return {
-                                                              ...i,
-                                                              components: {
-                                                                ...i.components,
-                                                                [comp.id]: { ...selection, qty: newQty }
-                                                              }
-                                                            };
-                                                          }
-                                                          return i;
-                                                        }));
-                                                      }}
-                                                      className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                                    />
+                                                    comp.price_follows_item_qty ? (
+                                                      <span className="inline-flex items-center justify-center w-14 h-7 bg-gray-100 rounded text-sm text-gray-600">
+                                                        {selection.qty * item.quantity}
+                                                      </span>
+                                                    ) : (
+                                                      <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={selection.qty}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onChange={(e) => {
+                                                          const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                          setItems(items.map(i => {
+                                                            if (i.id === item.id) {
+                                                              return {
+                                                                ...i,
+                                                                components: {
+                                                                  ...i.components,
+                                                                  [comp.id]: { ...selection, qty: newQty }
+                                                                }
+                                                              };
+                                                            }
+                                                            return i;
+                                                          }));
+                                                        }}
+                                                        className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                                      />
+                                                    )
                                                   ) : (
                                                     <span className="text-gray-400">0</span>
                                                   )}
@@ -1721,28 +1727,34 @@ export default function CalculatorPageV2() {
                                                 </div>
                                                 <div className="flex justify-center">
                                                   {selection && (
-                                                    <input
-                                                      type="number"
-                                                      min="0"
-                                                      value={selection.qty}
-                                                      onClick={(e) => e.stopPropagation()}
-                                                      onChange={(e) => {
-                                                        const newQty = Math.max(0, parseInt(e.target.value) || 0);
-                                                        setItems(items.map(i => {
-                                                          if (i.id === item.id) {
-                                                            return {
-                                                              ...i,
-                                                              components: {
-                                                                ...i.components,
-                                                                [comp.id]: { ...selection, qty: newQty }
-                                                              }
-                                                            };
-                                                          }
-                                                          return i;
-                                                        }));
-                                                      }}
-                                                      className="w-12 h-8 text-center border border-gray-300 rounded focus:ring-1 focus:ring-[#EB216A] text-gray-900"
-                                                    />
+                                                    comp.price_follows_item_qty ? (
+                                                      <span className="inline-flex items-center justify-center w-12 h-8 bg-gray-100 rounded text-gray-600 font-medium">
+                                                        {selection.qty * item.quantity}
+                                                      </span>
+                                                    ) : (
+                                                      <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={selection.qty}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onChange={(e) => {
+                                                          const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                          setItems(items.map(i => {
+                                                            if (i.id === item.id) {
+                                                              return {
+                                                                ...i,
+                                                                components: {
+                                                                  ...i.components,
+                                                                  [comp.id]: { ...selection, qty: newQty }
+                                                                }
+                                                              };
+                                                            }
+                                                            return i;
+                                                          }));
+                                                        }}
+                                                        className="w-12 h-8 text-center border border-gray-300 rounded focus:ring-1 focus:ring-[#EB216A] text-gray-900"
+                                                      />
+                                                    )
                                                   )}
                                                 </div>
                                                 <div className="text-right">
