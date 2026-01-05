@@ -1420,48 +1420,9 @@ export default function AdminDocumentCreate() {
 
                                                                     {/* Qty */}
                                                                     <div className="w-16 flex justify-center">
-                                                                        <input
-                                                                            type="number"
-                                                                            min="1"
-                                                                            step="0.1"
-                                                                            value={item.selectedVariant?.quantity_multiplier || 1}
-                                                                            onChange={(e) => {
-                                                                                const newTotal = parseFloat(e.target.value) || 0;
-                                                                                if (item.selectedVariant) {
-                                                                                    const newMultiplier = newTotal / (item.quantity || 1);
-                                                                                    setItems(items.map(i => {
-                                                                                        if (i.id === item.id && i.selectedVariant) {
-                                                                                            // Sync Components
-                                                                                            const updatedComponents = { ...i.components };
-                                                                                            if (selectedCalcType?.components) {
-                                                                                                selectedCalcType.components.forEach(comp => {
-                                                                                                    if (comp.multiply_with_variant && updatedComponents[comp.id]) {
-                                                                                                        updatedComponents[comp.id] = {
-                                                                                                            ...updatedComponents[comp.id],
-                                                                                                            qty: newMultiplier
-                                                                                                        };
-                                                                                                    }
-                                                                                                });
-                                                                                            }
-                                                                                            return {
-                                                                                                ...i,
-                                                                                                selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
-                                                                                                components: updatedComponents
-                                                                                            };
-                                                                                        }
-                                                                                        return i;
-                                                                                    }));
-                                                                                } else {
-                                                                                    setItems(items.map(i => {
-                                                                                        if (i.id === item.id) {
-                                                                                            return { ...i, quantity: newTotal };
-                                                                                        }
-                                                                                        return i;
-                                                                                    }));
-                                                                                }
-                                                                            }}
-                                                                            className="w-14 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                        />
+                                                                        <span className="inline-flex items-center justify-center w-14 h-8 bg-gray-100 rounded text-sm text-gray-600">
+                                                                            {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}
+                                                                        </span>
                                                                     </div>
 
                                                                     {/* Total */}

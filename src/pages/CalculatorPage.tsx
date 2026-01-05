@@ -1357,38 +1357,9 @@ export default function CalculatorPageV2() {
                                             Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
                                           </td>
                                           <td className="px-3 py-2.5 text-center w-20">
-                                            <input
-                                              type="number"
-                                              min="1"
-                                              value={item.selectedVariant?.quantity_multiplier || 1}
-                                              onClick={(e) => e.stopPropagation()}
-                                              onChange={(e) => {
-                                                const newMultiplier = Math.max(1, parseFloat(e.target.value) || 1);
-                                                setItems(items.map(i => {
-                                                  if (i.id === item.id && i.selectedVariant) {
-                                                    // Sync Components
-                                                    const updatedComponents = { ...i.components };
-                                                    if (currentType?.components) {
-                                                      currentType.components.forEach(comp => {
-                                                        if (comp.multiply_with_variant && updatedComponents[comp.id]) {
-                                                          updatedComponents[comp.id] = {
-                                                            ...updatedComponents[comp.id],
-                                                            qty: newMultiplier
-                                                          };
-                                                        }
-                                                      });
-                                                    }
-                                                    return {
-                                                      ...i,
-                                                      selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
-                                                      components: updatedComponents
-                                                    };
-                                                  }
-                                                  return i;
-                                                }));
-                                              }}
-                                              className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                            />
+                                            <span className="inline-flex items-center justify-center w-14 h-7 bg-gray-100 rounded text-sm text-gray-600">
+                                              {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}
+                                            </span>
                                           </td>
                                           <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
                                             Rp{prices.fabric.toLocaleString('id-ID')}
@@ -1578,38 +1549,9 @@ export default function CalculatorPageV2() {
                                             <span className="font-medium">Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}</span>
                                           </div>
                                           <div className="flex justify-center">
-                                            <input
-                                              type="number"
-                                              min="1"
-                                              value={item.selectedVariant?.quantity_multiplier || 1}
-                                              onClick={(e) => e.stopPropagation()}
-                                              onChange={(e) => {
-                                                const newMultiplier = Math.max(1, parseFloat(e.target.value) || 1);
-                                                setItems(items.map(i => {
-                                                  if (i.id === item.id && i.selectedVariant) {
-                                                    // Sync Components
-                                                    const updatedComponents = { ...i.components };
-                                                    if (currentType?.components) {
-                                                      currentType.components.forEach(comp => {
-                                                        if (comp.multiply_with_variant && updatedComponents[comp.id]) {
-                                                          updatedComponents[comp.id] = {
-                                                            ...updatedComponents[comp.id],
-                                                            qty: newMultiplier
-                                                          };
-                                                        }
-                                                      });
-                                                    }
-                                                    return {
-                                                      ...i,
-                                                      selectedVariant: { ...i.selectedVariant, quantity_multiplier: newMultiplier },
-                                                      components: updatedComponents
-                                                    };
-                                                  }
-                                                  return i;
-                                                }));
-                                              }}
-                                              className="w-14 h-8 text-center border border-gray-300 rounded focus:ring-1 focus:ring-[#EB216A] text-gray-900"
-                                            />
+                                            <span className="inline-flex items-center justify-center w-12 h-8 bg-gray-100 rounded text-gray-600 font-medium">
+                                              {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}
+                                            </span>
                                           </div>
                                           <div className="text-right">
                                             <span className="text-xs text-gray-500 block">Total</span>
