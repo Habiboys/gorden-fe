@@ -55,6 +55,7 @@ interface ComponentFromDB {
   multiply_with_variant: boolean;
   variant_filter_rule?: string;
   hide_on_door?: boolean;
+  show_gelombang?: boolean;
   subcategory?: { id: number; name: string; slug: string };
 }
 
@@ -64,11 +65,18 @@ interface ProductOption {
   price: number;
   description?: string;
   image?: string;
+  images?: string[];
   maxWidth?: number;
   sibak?: number;
   minPrice?: number;
   maxPrice?: number;
   variantAttributes?: any;
+  category?: any;
+  Category?: any; // Capital C sometimes from backend
+  variantMinWidth?: number;
+  variantMaxWidth?: number;
+  variantMinHeight?: number;
+  variantMaxHeight?: number;
 }
 
 interface ComponentSelection {
@@ -303,6 +311,7 @@ export default function CalculatorPageV2() {
     setPackageType('gorden-lengkap');
     setTempSelectedProduct(null);
     setTargetGroupId(null);
+    setEditingItemId(null);
   };
 
   // Add item - then check for variants based on dimensions
@@ -342,6 +351,34 @@ export default function CalculatorPageV2() {
         attributes: (tempSelectedProduct as any).attributes,
         quantity_multiplier: 1 // Blind flow doesn't use multiplier
       };
+    }
+
+    // If editing, update existing item
+    if (editingItemId) {
+      setItems(items.map(item => {
+        if (item.id === editingItemId) {
+          return {
+            ...item,
+            name: itemName,
+            itemType,
+            packageType,
+            width: itemWidth,
+            height: itemHeight,
+            panels: parseInt(panels) || 1,
+            quantity: parseInt(quantity),
+            // Preserve components and variant (unless product changed?)
+            // For now, assume variants/components distinct from dimensions (except validation)
+            // If dimensions change, we might need to re-validate variant filter?
+            // Existing logic below checks variant for NEW item.
+            // For UPDATE, we might should re-check?
+            // User requested basic edit.
+          };
+        }
+        return item;
+      }));
+      resetForm();
+      setIsAddItemModalOpen(false);
+      return;
     }
 
     const newItem: CalculatorItem = {
@@ -398,6 +435,19 @@ export default function CalculatorPageV2() {
   // Remove item
   const handleRemoveItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
+  };
+
+  // Edit item
+  const handleEditItem = (item: CalculatorItem) => {
+    setEditingItemId(item.id);
+    setItemName(item.name || '');
+    setItemType(item.itemType);
+    setPackageType(item.packageType);
+    setWidth(item.width.toString());
+    setHeight(item.height.toString());
+    setPanels(item.panels.toString());
+    setQuantity(item.quantity.toString());
+    setIsAddItemModalOpen(true);
   };
 
   // Open component modal
@@ -676,8 +726,8 @@ export default function CalculatorPageV2() {
           return 0;
       }
     })();
-    // Multiply by component quantity (which might include variant multiplier) and item quantity
-    return basePricePerItem * selection.qty * item.quantity;
+    // Multiply by component quantity (which might include variant multiplier) - Item quantity ignored for price
+    return basePricePerItem * selection.qty;
   };
 
   // Calculate item price
@@ -707,13 +757,13 @@ export default function CalculatorPageV2() {
       fabricPrice = fabricPricePerMeter * item.quantity;
       fabricMeters = 0;
     } else if (variantMultiplier > 1) {
-      // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
-      fabricPrice = fabricPricePerMeter * variantMultiplier * item.quantity;
+      // GORDEN FLOW with Multiplier: Price × Multiplier (Qty ignored)
+      fabricPrice = fabricPricePerMeter * variantMultiplier;
       fabricMeters = 0; // Not calculated by area when using multiplier
     } else {
       // GORDEN FLOW standard: Area Calculation
       fabricMeters = widthM * currentType.fabric_multiplier * heightM;
-      fabricPrice = fabricMeters * fabricPricePerMeter * item.quantity;
+      fabricPrice = fabricMeters * fabricPricePerMeter;
     }
 
     // Components calculation
@@ -1018,6 +1068,16 @@ export default function CalculatorPageV2() {
                                 : 'Harga ditentukan oleh varian'}
                           </span>
                         </div>
+                        {(selectedFabric.variantMinWidth || selectedFabric.variantMaxWidth) && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Lebar Mulai {selectedFabric.variantMinWidth ?? 0} s/d {selectedFabric.variantMaxWidth ?? '...'}
+                          </p>
+                        )}
+                        {(selectedFabric.variantMinHeight || selectedFabric.variantMaxHeight) && (
+                          <p className="text-xs text-gray-500">
+                            Tinggi Mulai {selectedFabric.variantMinHeight ?? 0} s/d {selectedFabric.variantMaxHeight ?? '...'}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <Button
@@ -1215,7 +1275,7 @@ export default function CalculatorPageV2() {
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                   <div className="w-12 h-12 bg-[#EB216A]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <span className="text-lg font-bold text-[#EB216A]">{idx + 1}</span>
+                                    <span className="text-lg font-bold text-[#EB216A]">{item.quantity}</span>
                                   </div>
                                   <div>
                                     <h3 className="text-lg font-semibold text-gray-900">
@@ -1223,16 +1283,24 @@ export default function CalculatorPageV2() {
                                       {!isBlindFlow && (item.packageType === 'gorden-lengkap' ? ' - Paket Lengkap' : ' - Gorden Saja')}
                                     </h3>
                                     <p className="text-sm text-gray-500">
-                                      {item.width} cm × {item.height} cm • Jumlah: {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}x
+                                      {item.width} cm × {item.height} cm • Jumlah: {item.quantity}
                                     </p>
                                   </div>
                                 </div>
-                                <button
-                                  onClick={() => handleRemoveItem(item.id)}
-                                  className="text-gray-400 hover:text-red-500 transition-colors p-2"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
+                                <div className="flex">
+                                  <button
+                                    onClick={() => handleEditItem(item)}
+                                    className="text-gray-400 hover:text-blue-500 transition-colors p-2"
+                                  >
+                                    <Pencil className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleRemoveItem(item.id)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
 
@@ -1417,7 +1485,7 @@ export default function CalculatorPageV2() {
                     </>
                   );
                 })()}
-              </div>
+              </div >
             )} {/* Grand Total & WhatsApp */}
             {items.length > 0 && (
               <div className="space-y-4">
@@ -1595,7 +1663,7 @@ export default function CalculatorPageV2() {
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setIsAddItemModalOpen(false)} className="flex-1">
+            <Button variant="outline" onClick={() => { resetForm(); setIsAddItemModalOpen(false); }} className="flex-1">
               Batal
             </Button>
             <Button onClick={handleAddItem} className="flex-1 bg-[#EB216A] hover:bg-[#d11d5e] text-white">
@@ -1813,8 +1881,15 @@ export default function CalculatorPageV2() {
               const hasLebar = Array.from(allAttrKeys).some(k => ['lebar', 'width', 'l'].includes(k.toLowerCase()));
               let columnKeys = Array.from(allAttrKeys);
 
-              // Add dynamic Gelombang if Lebar exists
-              if (hasLebar && !columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()))) {
+              // Check component config for Gelombang visibility
+              let showGelombang = true;
+              if (variantSelectionMode === 'component' && editingComponentId) {
+                const comp = currentType?.components?.find((c: any) => c.id === editingComponentId);
+                if (comp) showGelombang = !!comp.show_gelombang;
+              }
+
+              // Add dynamic Gelombang if Lebar exists AND allowed
+              if (hasLebar && showGelombang && !columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()))) {
                 columnKeys.push('Gelombang');
               }
 

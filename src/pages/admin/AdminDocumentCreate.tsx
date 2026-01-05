@@ -40,6 +40,7 @@ interface ComponentFromDB {
     multiply_with_variant?: boolean;
     variant_filter_rule?: string;
     hide_on_door?: boolean;
+    show_gelombang?: boolean;
 }
 
 interface CalculatorTypeFromDB {
@@ -1855,8 +1856,15 @@ export default function AdminDocumentCreate() {
                                     const hasLebar = Array.from(allAttrKeys).some(k => ['lebar', 'width', 'l'].includes(k.toLowerCase()));
                                     let columnKeys = Array.from(allAttrKeys);
 
-                                    // Add dynamic Gelombang if Lebar exists
-                                    if (hasLebar && !columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()))) {
+                                    // Check component config for Gelombang visibility
+                                    let showGelombang = true;
+                                    if (variantSelectionMode === 'component' && editingComponentId) {
+                                        const comp = selectedCalcType?.components?.find((c: any) => c.id === editingComponentId);
+                                        if (comp) showGelombang = !!comp.show_gelombang;
+                                    }
+
+                                    // Add dynamic Gelombang if Lebar exists AND allowed
+                                    if (hasLebar && showGelombang && !columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()))) {
                                         columnKeys.push('Gelombang');
                                     }
 

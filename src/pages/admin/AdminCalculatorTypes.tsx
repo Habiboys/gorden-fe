@@ -65,6 +65,7 @@ interface CalculatorTypeComponent {
     multiply_with_variant: boolean;
     variant_filter_rule: string;
     hide_on_door: boolean;
+    show_gelombang?: boolean;
     subcategory?: {
         id: number;
         name: string;
@@ -120,6 +121,7 @@ export default function AdminCalculatorTypes() {
         multiply_with_variant: false,
         variant_filter_rule: 'none',
         hide_on_door: false,
+        show_gelombang: false,
     });
 
     useEffect(() => {
@@ -271,6 +273,7 @@ export default function AdminCalculatorTypes() {
             multiply_with_variant: false,
             variant_filter_rule: 'none',
             hide_on_door: false,
+            show_gelombang: false,
         });
         setIsComponentDialogOpen(true);
     };
@@ -286,7 +289,8 @@ export default function AdminCalculatorTypes() {
             display_order: component.display_order.toString(),
             multiply_with_variant: component.multiply_with_variant,
             variant_filter_rule: component.variant_filter_rule || 'none',
-            hide_on_door: component.hide_on_door || false
+            hide_on_door: component.hide_on_door || false,
+            show_gelombang: component.show_gelombang || false
         });
         setIsComponentDialogOpen(true);
     };
@@ -309,6 +313,7 @@ export default function AdminCalculatorTypes() {
                 multiply_with_variant: componentForm.multiply_with_variant,
                 variant_filter_rule: componentForm.variant_filter_rule,
                 hide_on_door: componentForm.hide_on_door,
+                show_gelombang: componentForm.show_gelombang,
             };
 
             if (editingComponent) {
@@ -812,6 +817,17 @@ export default function AdminCalculatorTypes() {
                             <Switch
                                 checked={componentForm.hide_on_door}
                                 onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, hide_on_door: checked })}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <Label>Tampilkan Kolom Gelombang</Label>
+                                <p className="text-xs text-gray-500">Tampilkan kolom gelombang saat pilih varian</p>
+                            </div>
+                            <Switch
+                                checked={componentForm.show_gelombang}
+                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, show_gelombang: checked })}
                             />
                         </div>
                     </div>
