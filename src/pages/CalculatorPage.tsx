@@ -733,8 +733,8 @@ export default function CalculatorPageV2() {
       fabricPrice = fabricPricePerMeter * item.quantity;
       fabricMeters = 0;
     } else if (variantMultiplier > 1) {
-      // GORDEN FLOW with Multiplier: Price × Multiplier (Qty ignored)
-      fabricPrice = fabricPricePerMeter * variantMultiplier;
+      // GORDEN FLOW with Multiplier: Price × Multiplier × Qty Jendela
+      fabricPrice = fabricPricePerMeter * variantMultiplier * item.quantity;
       fabricMeters = 0; // Not calculated by area when using multiplier
     } else {
       // GORDEN FLOW standard: Area Calculation
