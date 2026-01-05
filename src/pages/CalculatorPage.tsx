@@ -1758,22 +1758,18 @@ export default function CalculatorPageV2() {
                   return 999999;
                 };
 
-                // Sort order: Sibak, Gelombang, Tinggi, Lebar
-                const sibakA = getNum(attrsA, ['sibak']);
-                const sibakB = getNum(attrsB, ['sibak']);
-                if (sibakA !== sibakB) return sibakA - sibakB;
-
-                const gelA = getNum(attrsA, ['gelombang', 'gel']);
-                const gelB = getNum(attrsB, ['gelombang', 'gel']);
-                if (gelA !== gelB) return gelA - gelB;
+                // Sort order: Lebar, Tinggi, Sibak
+                const lebarA = getNum(attrsA, ['lebar', 'width', 'l']);
+                const lebarB = getNum(attrsB, ['lebar', 'width', 'l']);
+                if (lebarA !== lebarB) return lebarA - lebarB;
 
                 const tinggiA = getNum(attrsA, ['tinggi', 'height', 't']);
                 const tinggiB = getNum(attrsB, ['tinggi', 'height', 't']);
                 if (tinggiA !== tinggiB) return tinggiA - tinggiB;
 
-                const lebarA = getNum(attrsA, ['lebar', 'width', 'l']);
-                const lebarB = getNum(attrsB, ['lebar', 'width', 'l']);
-                return lebarA - lebarB;
+                const sibakA = getNum(attrsA, ['sibak']);
+                const sibakB = getNum(attrsB, ['sibak']);
+                return sibakA - sibakB;
               });
 
               if (sorted.length === 0) {
