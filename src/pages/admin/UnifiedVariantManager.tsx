@@ -271,24 +271,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 + Sibak
                             </Button>
                         )}
-                        {/* Gelombang Template Button */}
-                        {options.length < 4 && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                    const gelombangValues = [6, 7, 8, 9, 10, 11, 12].map(n => ({ value: String(n), multiplier: null }));
-                                    const gelombangOption = { name: 'Gelombang', values: gelombangValues, isMultiplierType: false };
-                                    const newOptions = [...options.filter(o => o.name !== 'Gelombang'), gelombangOption];
-                                    setOptions(newOptions);
-                                    generateCombinations(newOptions);
-                                }}
-                                className="text-xs h-8 px-3 border-blue-500 text-blue-600 hover:bg-blue-50"
-                                title="Tambah tipe Gelombang (6-12)"
-                            >
-                                + Gelombang
-                            </Button>
-                        )}
+
                         {/* Tinggi Template Button */}
                         {options.length < 4 && (
                             <Button

@@ -20,7 +20,7 @@ export type VariantFilterRule =
  */
 export const VARIANT_FILTER_RULES: { value: VariantFilterRule; label: string; description: string }[] = [
     { value: 'none', label: 'Tanpa Filter', description: 'Tampilkan semua varian' },
-    { value: 'gorden-smokering', label: 'Gorden Smokering', description: 'Sibak 1/2 + Gelombang ≥6 + Tinggi ±30cm' },
+    { value: 'gorden-smokering', label: 'Gorden Smokering', description: 'Sibak 1/2 + Tinggi ±30cm' },
     { value: 'rel-4-sizes', label: 'Rel (4 Ukuran)', description: '4 ukuran lebar: +0, +10, +20, +30' },
     { value: 'vitrase-kombinasi', label: 'Vitrase (Kombinasi)', description: 'Lebar +20~+80 × Tinggi +0~+30' },
 ];
@@ -60,7 +60,7 @@ function getNumericAttr(attrs: Record<string, any>, keys: string[]): number | nu
  * Rules:
  * - Lebar < 90cm → Sibak = 1
  * - Lebar >= 90cm → Sibak = 2
- * - Gelombang: >= 6 (semua gelombang dari 6 ke atas)
+ * - Lebar >= 90cm → Sibak = 2
  * - Tinggi filter: input, +10, +20, +30
  */
 function filterGordenSmokering(variants: any[], input: DimensionInput): any[] {
@@ -81,11 +81,7 @@ function filterGordenSmokering(variants: any[], input: DimensionInput): any[] {
             return false;
         }
 
-        // Check Gelombang - must be >= 6
-        const gelombang = getNumericAttr(attrs, ['Gelombang', 'gelombang', 'Gel']);
-        if (gelombang !== null && gelombang < 6) {
-            return false;
-        }
+
 
         // Check Tinggi (if present in variant) - must be in allowed range
         const tinggi = getNumericAttr(attrs, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);

@@ -1749,11 +1749,15 @@ export default function CalculatorPageV2() {
                 <p className="text-gray-600">Tidak ada varian tersedia.</p>
               </div>
             ) : (() => {
-              // Build search index for attribute keys
+              // Build search index and keys
               const allAttrKeys = new Set<string>();
               availableVariants.forEach((v: any) => {
                 const attrs = safeJSONParse(v.attributes, {});
-                Object.keys(attrs).forEach(k => allAttrKeys.add(k));
+                Object.keys(attrs).forEach(k => {
+                  if (!['gelombang', 'gel'].includes(k.toLowerCase())) {
+                    allAttrKeys.add(k);
+                  }
+                });
               });
 
               // Filter by search query
@@ -1761,44 +1765,41 @@ export default function CalculatorPageV2() {
                 if (!variantSearchQuery) return true;
                 const q = variantSearchQuery.toLowerCase();
                 const attrs = safeJSONParse(v.attributes, {});
-                // Search in attributes
                 const attrMatch = Object.values(attrs).some((val: any) =>
                   String(val).toLowerCase().includes(q)
                 );
-                // Search in price
                 const priceMatch = String(v.price_net).includes(q) || String(v.price_gross).includes(q);
                 return attrMatch || priceMatch;
               });
 
-              // Sort by Sibak, then Gelombang, then Tinggi, then Lebar (ascending)
+              // Helper to get numeric value
+              const getNum = (attrs: Record<string, any>, keys: string[]) => {
+                for (const key of keys) {
+                  const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                  if (matchKey) {
+                    const val = parseFloat(String(attrs[matchKey]).replace(/[^\d.-]/g, ''));
+                    if (!isNaN(val)) return val;
+                  }
+                }
+                return 999999; // Fallback for sorting
+              };
+
+              // Sort by Lebar, then Tinggi, then Sibak (ASC)
               const sorted = [...filtered].sort((a, b) => {
                 const attrsA = safeJSONParse(a.attributes, {}) as Record<string, any>;
                 const attrsB = safeJSONParse(b.attributes, {}) as Record<string, any>;
 
-                const getNum = (attrs: Record<string, any>, keys: string[]) => {
-                  for (const key of keys) {
-                    const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                    if (matchKey) {
-                      const val = parseFloat(String(attrs[matchKey]).replace(/[^\d.-]/g, ''));
-                      if (!isNaN(val)) return val;
-                    }
-                  }
-                  return 999999;
-                };
-
-                // Sort order: Lebar, Tinggi, Sibak
+                // 1. Lebar
                 const lebarA = getNum(attrsA, ['lebar', 'width', 'l']);
                 const lebarB = getNum(attrsB, ['lebar', 'width', 'l']);
                 if (lebarA !== lebarB) return lebarA - lebarB;
 
+                // 2. Tinggi
                 const tinggiA = getNum(attrsA, ['tinggi', 'height', 't']);
                 const tinggiB = getNum(attrsB, ['tinggi', 'height', 't']);
                 if (tinggiA !== tinggiB) return tinggiA - tinggiB;
 
-                const gelA = getNum(attrsA, ['gelombang', 'gel']);
-                const gelB = getNum(attrsB, ['gelombang', 'gel']);
-                if (gelA !== gelB) return gelA - gelB;
-
+                // 3. Sibak
                 const sibakA = getNum(attrsA, ['sibak']);
                 const sibakB = getNum(attrsB, ['sibak']);
                 return sibakA - sibakB;
@@ -1808,8 +1809,25 @@ export default function CalculatorPageV2() {
                 return <p className="text-center py-8 text-gray-600">Tidak ada varian yang cocok.</p>;
               }
 
-              // Get column headers from first variant
-              const columnKeys = Array.from(allAttrKeys);
+              // Determine columns
+              const hasLebar = Array.from(allAttrKeys).some(k => ['lebar', 'width', 'l'].includes(k.toLowerCase()));
+              let columnKeys = Array.from(allAttrKeys);
+
+              // Add dynamic Gelombang if Lebar exists
+              if (hasLebar && !columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()))) {
+                columnKeys.push('Gelombang');
+              }
+
+              // Sort columns: Lebar -> Gelombang -> Tinggi -> Sibak -> Others
+              const colOrder = ['lebar', 'width', 'l', 'gelombang', 'gel', 'tinggi', 'height', 't', 'sibak'];
+              columnKeys.sort((a, b) => {
+                const ia = colOrder.findIndex(o => a.toLowerCase() === o || a.toLowerCase().startsWith(o));
+                const ib = colOrder.findIndex(o => b.toLowerCase() === o || b.toLowerCase().startsWith(o));
+                if (ia !== -1 && ib !== -1) return ia - ib;
+                if (ia !== -1) return -1;
+                if (ib !== -1) return 1;
+                return a.localeCompare(b);
+              });
 
               return (
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -1843,6 +1861,18 @@ export default function CalculatorPageV2() {
                             onClick={() => handleSelectVariant(v)}
                           >
                             {columnKeys.map(key => {
+                              // Dynamic Gelombang Logic
+                              if (key === 'Gelombang') {
+                                const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                // If lebar is valid (not 999999), calculate gelombang
+                                const val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                                return (
+                                  <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
+                                    {val}
+                                  </td>
+                                );
+                              }
+
                               const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
                               const val = matchKey ? attrs[matchKey] : '-';
                               return (
