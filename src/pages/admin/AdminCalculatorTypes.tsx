@@ -64,6 +64,7 @@ interface CalculatorTypeComponent {
     display_order: number;
     multiply_with_variant: boolean;
     variant_filter_rule: string;
+    hide_on_door: boolean;
     subcategory?: {
         id: number;
         name: string;
@@ -118,6 +119,7 @@ export default function AdminCalculatorTypes() {
         display_order: '0',
         multiply_with_variant: false,
         variant_filter_rule: 'none',
+        hide_on_door: false,
     });
 
     useEffect(() => {
@@ -268,6 +270,7 @@ export default function AdminCalculatorTypes() {
             display_order: '0',
             multiply_with_variant: false,
             variant_filter_rule: 'none',
+            hide_on_door: false,
         });
         setIsComponentDialogOpen(true);
     };
@@ -283,6 +286,7 @@ export default function AdminCalculatorTypes() {
             display_order: component.display_order.toString(),
             multiply_with_variant: component.multiply_with_variant,
             variant_filter_rule: component.variant_filter_rule || 'none',
+            hide_on_door: component.hide_on_door || false
         });
         setIsComponentDialogOpen(true);
     };
@@ -304,6 +308,7 @@ export default function AdminCalculatorTypes() {
                 display_order: parseInt(componentForm.display_order) || 0,
                 multiply_with_variant: componentForm.multiply_with_variant,
                 variant_filter_rule: componentForm.variant_filter_rule,
+                hide_on_door: componentForm.hide_on_door,
             };
 
             if (editingComponent) {
@@ -796,6 +801,17 @@ export default function AdminCalculatorTypes() {
                             <Switch
                                 checked={componentForm.multiply_with_variant}
                                 onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, multiply_with_variant: checked })}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <Label>Sembunyikan di Pintu</Label>
+                                <p className="text-xs text-gray-500">Komponen tidak muncul jika item = Pintu</p>
+                            </div>
+                            <Switch
+                                checked={componentForm.hide_on_door}
+                                onCheckedChange={(checked: boolean) => setComponentForm({ ...componentForm, hide_on_door: checked })}
                             />
                         </div>
                     </div>

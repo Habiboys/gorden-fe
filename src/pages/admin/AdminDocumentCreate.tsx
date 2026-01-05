@@ -39,6 +39,7 @@ interface ComponentFromDB {
     display_order: number;
     multiply_with_variant?: boolean;
     variant_filter_rule?: string;
+    hide_on_door?: boolean;
 }
 
 interface CalculatorTypeFromDB {
@@ -1463,97 +1464,104 @@ export default function AdminDocumentCreate() {
                                                                 </div>
 
                                                                 {/* 2. Components Rows */}
-                                                                {selectedCalcType?.components?.map(comp => {
-                                                                    const selection = item.components[comp.id];
+                                                                {selectedCalcType?.components
+                                                                    ?.filter(comp => {
+                                                                        if (comp.hide_on_door && item.itemType === 'pintu') {
+                                                                            return false;
+                                                                        }
+                                                                        return true;
+                                                                    })
+                                                                    .map(comp => {
+                                                                        const selection = item.components[comp.id];
 
-                                                                    // Calculate display values with effective discount from gross/net
-                                                                    const compGross = (selection?.product as any)?.price_gross || selection?.product?.price || 0;
-                                                                    const compNetActual = (selection?.product as any)?.price_net || compGross;
-                                                                    const effectiveCompDisc = selection?.discount || (compGross > 0 ? Math.round(((compGross - compNetActual) / compGross) * 100) : 0);
+                                                                        // Calculate display values with effective discount from gross/net
+                                                                        const compGross = (selection?.product as any)?.price_gross || selection?.product?.price || 0;
+                                                                        const compNetActual = (selection?.product as any)?.price_net || compGross;
+                                                                        const effectiveCompDisc = selection?.discount || (compGross > 0 ? Math.round(((compGross - compNetActual) / compGross) * 100) : 0);
 
-                                                                    const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
+                                                                        const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
 
-                                                                    return (
-                                                                        <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white gap-4">
-                                                                            <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                                                                                <Button
-                                                                                    variant="outline"
-                                                                                    size="sm"
-                                                                                    onClick={() => openComponentPicker(item.id, comp.id)}
-                                                                                    className={`text-xs px-3 h-8 w-16 flex-shrink-0 ${selection ? 'bg-white' : 'border-dashed text-gray-400'}`}
-                                                                                >
-                                                                                    {selection ? 'Ganti' : 'Pilih'}
-                                                                                </Button>
-                                                                                <div className="flex flex-col leading-tight min-w-0">
-                                                                                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
-                                                                                    <span className="text-sm font-medium text-gray-900 truncate" title={selection?.product?.name}>
-                                                                                        {selection?.product?.name || '-'}
-                                                                                    </span>
+                                                                        return (
+                                                                            <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white gap-4">
+                                                                                <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                                                                                    <Button
+                                                                                        variant="outline"
+                                                                                        size="sm"
+                                                                                        onClick={() => openComponentPicker(item.id, comp.id)}
+                                                                                        className={`text-xs px-3 h-8 w-16 flex-shrink-0 ${selection ? 'bg-white' : 'border-dashed text-gray-400'}`}
+                                                                                    >
+                                                                                        {selection ? 'Ganti' : 'Pilih'}
+                                                                                    </Button>
+                                                                                    <div className="flex flex-col leading-tight min-w-0">
+                                                                                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
+                                                                                        <span className="text-sm font-medium text-gray-900 truncate" title={selection?.product?.name}>
+                                                                                            {selection?.product?.name || '-'}
+                                                                                        </span>
+                                                                                    </div>
                                                                                 </div>
+
+                                                                                {selection ? (
+                                                                                    <>
+                                                                                        <div className="w-28 text-right text-sm text-gray-600">
+                                                                                            Rp {compGross.toLocaleString('id-ID')}
+                                                                                        </div>
+
+                                                                                        <div className="w-16 flex justify-center">
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                max="100"
+                                                                                                value={effectiveCompDisc}
+                                                                                                className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                onChange={(e) => {
+                                                                                                    const newDisc = parseInt(e.target.value) || 0;
+                                                                                                    setItems(items.map(i => i.id === item.id ? {
+                                                                                                        ...i,
+                                                                                                        components: {
+                                                                                                            ...i.components,
+                                                                                                            [comp.id]: { ...selection, discount: newDisc }
+                                                                                                        }
+                                                                                                    } : i));
+                                                                                                }}
+                                                                                            />
+                                                                                        </div>
+
+                                                                                        <div className="w-28 text-right text-sm font-medium text-gray-800">
+                                                                                            Rp {Math.round(compNetActual).toLocaleString('id-ID')}
+                                                                                        </div>
+
+                                                                                        <div className="w-16 flex justify-center">
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="1"
+                                                                                                value={selection.qty}
+                                                                                                className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                onChange={(e) => {
+                                                                                                    const newQty = parseInt(e.target.value) || 1;
+                                                                                                    setItems(items.map(i => i.id === item.id ? {
+                                                                                                        ...i,
+                                                                                                        components: {
+                                                                                                            ...i.components,
+                                                                                                            [comp.id]: { ...selection, qty: newQty }
+                                                                                                        }
+                                                                                                    } : i));
+                                                                                                }}
+                                                                                                title="Qty Per Window"
+                                                                                            />
+                                                                                        </div>
+
+                                                                                        <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
+                                                                                            Rp {Math.round(rowTotal).toLocaleString('id-ID')}
+                                                                                        </div>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <div className="flex-1 text-right text-gray-300 text-xs italic pr-4">
+                                                                                        Belum dipilih
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
-
-                                                                            {selection ? (
-                                                                                <>
-                                                                                    <div className="w-28 text-right text-sm text-gray-600">
-                                                                                        Rp {compGross.toLocaleString('id-ID')}
-                                                                                    </div>
-
-                                                                                    <div className="w-16 flex justify-center">
-                                                                                        <input
-                                                                                            type="number"
-                                                                                            min="0"
-                                                                                            max="100"
-                                                                                            value={effectiveCompDisc}
-                                                                                            className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                            onChange={(e) => {
-                                                                                                const newDisc = parseInt(e.target.value) || 0;
-                                                                                                setItems(items.map(i => i.id === item.id ? {
-                                                                                                    ...i,
-                                                                                                    components: {
-                                                                                                        ...i.components,
-                                                                                                        [comp.id]: { ...selection, discount: newDisc }
-                                                                                                    }
-                                                                                                } : i));
-                                                                                            }}
-                                                                                        />
-                                                                                    </div>
-
-                                                                                    <div className="w-28 text-right text-sm font-medium text-gray-800">
-                                                                                        Rp {Math.round(compNetActual).toLocaleString('id-ID')}
-                                                                                    </div>
-
-                                                                                    <div className="w-16 flex justify-center">
-                                                                                        <input
-                                                                                            type="number"
-                                                                                            min="1"
-                                                                                            value={selection.qty}
-                                                                                            className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                            onChange={(e) => {
-                                                                                                const newQty = parseInt(e.target.value) || 1;
-                                                                                                setItems(items.map(i => i.id === item.id ? {
-                                                                                                    ...i,
-                                                                                                    components: {
-                                                                                                        ...i.components,
-                                                                                                        [comp.id]: { ...selection, qty: newQty }
-                                                                                                    }
-                                                                                                } : i));
-                                                                                            }}
-                                                                                            title="Qty Per Window"
-                                                                                        />
-                                                                                    </div>
-
-                                                                                    <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
-                                                                                        Rp {Math.round(rowTotal).toLocaleString('id-ID')}
-                                                                                    </div>
-                                                                                </>
-                                                                            ) : (
-                                                                                <div className="flex-1 text-right text-gray-300 text-xs italic pr-4">
-                                                                                    Belum dipilih
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                                        );
+                                                                    })}
 
                                                                 {/* FOOTER per Item */}
                                                                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-dashed">

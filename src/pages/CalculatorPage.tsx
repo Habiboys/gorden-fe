@@ -54,6 +54,7 @@ interface ComponentFromDB {
   display_order: number;
   multiply_with_variant: boolean;
   variant_filter_rule?: string;
+  hide_on_door?: boolean;
   subcategory?: { id: number; name: string; slug: string };
 }
 
@@ -1325,71 +1326,78 @@ export default function CalculatorPageV2() {
                                       </tr>
 
                                       {/* Component Rows */}
-                                      {currentType?.components?.map(comp => {
-                                        const selection = item.components[comp.id];
-                                        const products = componentProducts[comp.subcategory_id] || [];
-                                        const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
+                                      {currentType?.components
+                                        ?.filter(comp => {
+                                          if (comp.hide_on_door && item.itemType === 'pintu') {
+                                            return false;
+                                          }
+                                          return true;
+                                        })
+                                        .map(comp => {
+                                          const selection = item.components[comp.id];
+                                          const products = componentProducts[comp.subcategory_id] || [];
+                                          const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
 
-                                        return (
-                                          <tr key={comp.id} className={`hover:bg-gray-50 ${!selection ? 'opacity-60' : ''}`}>
-                                            <td className="px-3 py-2.5 w-24">
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className={`h-7 px-2 text-xs w-full ${selection
-                                                  ? 'border-gray-300 text-gray-600 hover:bg-gray-100'
-                                                  : 'border-[#EB216A] text-[#EB216A] bg-[#EB216A]/10 hover:bg-[#EB216A] hover:text-white'}`}
-                                                onClick={() => openComponentModal(item.id, comp.id)}
-                                                disabled={products.length === 0}
-                                              >
-                                                {selection ? 'Ganti' : 'Pilih'}
-                                              </Button>
-                                            </td>
-                                            <td className="px-3 py-2.5 font-medium text-gray-700">
-                                              {comp.label}
-                                            </td>
-                                            <td className="px-3 py-2.5">
-                                              <span className="text-gray-600 text-xs">
-                                                {selection ? selection.product.name : (products.length === 0 ? 'Tidak ada produk' : '-')}
-                                              </span>
-                                            </td>
-                                            <td className="px-3 py-2.5 text-right text-gray-600">
-                                              {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : 'Rp.0'}
-                                            </td>
-                                            <td className="px-3 py-2.5 text-center w-20">
-                                              {selection ? (
-                                                <input
-                                                  type="number"
-                                                  min="0"
-                                                  value={selection.qty}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  onChange={(e) => {
-                                                    const newQty = Math.max(0, parseInt(e.target.value) || 0);
-                                                    setItems(items.map(i => {
-                                                      if (i.id === item.id) {
-                                                        return {
-                                                          ...i,
-                                                          components: {
-                                                            ...i.components,
-                                                            [comp.id]: { ...selection, qty: newQty }
-                                                          }
-                                                        };
-                                                      }
-                                                      return i;
-                                                    }));
-                                                  }}
-                                                  className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
-                                                />
-                                              ) : (
-                                                <span className="text-gray-400">0</span>
-                                              )}
-                                            </td>
-                                            <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
-                                              Rp{compPrice.toLocaleString('id-ID')}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
+                                          return (
+                                            <tr key={comp.id} className={`hover:bg-gray-50 ${!selection ? 'opacity-60' : ''}`}>
+                                              <td className="px-3 py-2.5 w-24">
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className={`h-7 px-2 text-xs w-full ${selection
+                                                    ? 'border-gray-300 text-gray-600 hover:bg-gray-100'
+                                                    : 'border-[#EB216A] text-[#EB216A] bg-[#EB216A]/10 hover:bg-[#EB216A] hover:text-white'}`}
+                                                  onClick={() => openComponentModal(item.id, comp.id)}
+                                                  disabled={products.length === 0}
+                                                >
+                                                  {selection ? 'Ganti' : 'Pilih'}
+                                                </Button>
+                                              </td>
+                                              <td className="px-3 py-2.5 font-medium text-gray-700">
+                                                {comp.label}
+                                              </td>
+                                              <td className="px-3 py-2.5">
+                                                <span className="text-gray-600 text-xs">
+                                                  {selection ? selection.product.name : (products.length === 0 ? 'Tidak ada produk' : '-')}
+                                                </span>
+                                              </td>
+                                              <td className="px-3 py-2.5 text-right text-gray-600">
+                                                {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : 'Rp.0'}
+                                              </td>
+                                              <td className="px-3 py-2.5 text-center w-20">
+                                                {selection ? (
+                                                  <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={selection.qty}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onChange={(e) => {
+                                                      const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                      setItems(items.map(i => {
+                                                        if (i.id === item.id) {
+                                                          return {
+                                                            ...i,
+                                                            components: {
+                                                              ...i.components,
+                                                              [comp.id]: { ...selection, qty: newQty }
+                                                            }
+                                                          };
+                                                        }
+                                                        return i;
+                                                      }));
+                                                    }}
+                                                    className="w-14 h-7 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                                  />
+                                                ) : (
+                                                  <span className="text-gray-400">0</span>
+                                                )}
+                                              </td>
+                                              <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                                                Rp{compPrice.toLocaleString('id-ID')}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
                                     </tbody>
                                   </table>
                                 </div>
