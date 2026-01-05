@@ -772,17 +772,20 @@ export default function AdminDocumentCreate() {
 
         const effectiveDiscount = selection.discount || (basePrice > 0 ? Math.round(((basePrice - netPrice) / basePrice) * 100) : 0);
 
-        let isFixedSizeVariant = false;
+        // Check if variant is by color/style (not size), treat as per_unit pricing
+        let isFixedPriceVariant = false;
         if ((selection.product as any).variantAttributes) {
             const attrs = safeJSONParse((selection.product as any).variantAttributes, {});
             const keys = Object.keys(attrs).map(k => k.toLowerCase());
-            if (keys.some(k => ['lebar', 'width', 'l', 'gelombang', 'gel'].includes(k))) {
-                isFixedSizeVariant = true;
+            // Size-based or style-based variants should use per_unit pricing
+            const fixedPriceKeys = ['lebar', 'width', 'l', 'gelombang', 'gel', 'tinggi', 'height', 'warna', 'color', 'variasi', 'variant', 'model', 'ukuran'];
+            if (keys.some(k => fixedPriceKeys.includes(k))) {
+                isFixedPriceVariant = true;
             }
         }
 
         const basePricePerItem = (() => {
-            if (isFixedSizeVariant) return basePrice;
+            if (isFixedPriceVariant) return basePrice;
 
             switch (comp.price_calculation) {
                 case 'per_meter':
@@ -795,8 +798,12 @@ export default function AdminDocumentCreate() {
                     return 0;
             }
         })();
-        // Component qty should already include multiplier if set via handleSelectComponent
-        const priceBeforeDiscount = basePricePerItem * selection.qty * item.quantity;
+
+        // Calculate price - only multiply by item.quantity if price_follows_item_qty is enabled
+        let priceBeforeDiscount = basePricePerItem * selection.qty;
+        if (comp.price_follows_item_qty) {
+            priceBeforeDiscount *= item.quantity;
+        }
         return priceBeforeDiscount * (1 - effectiveDiscount / 100);  // Apply effective component discount
     };
 

@@ -698,20 +698,25 @@ export default function CalculatorPageV2() {
     const widthM = item.width / 100;
 
     // Check if variant implies fixed size price (override per_meter)
-    let isFixedSizeVariant = false;
+    // If variant is by color/style (not size), treat as per_unit pricing
+    let isFixedPriceVariant = false;
     if (selection.product.variantAttributes) {
       const attrs = safeJSONParse(selection.product.variantAttributes, {});
-      // Check if attributes define width
       const keys = Object.keys(attrs).map(k => k.toLowerCase());
-      if (keys.some(k => ['lebar', 'width', 'l', 'gelombang', 'gel'].includes(k))) {
-        isFixedSizeVariant = true;
+      // Size-based variants that already include width
+      const sizeKeys = ['lebar', 'width', 'l', 'gelombang', 'gel', 'tinggi', 'height'];
+      // Color/style variants that should be per_unit
+      const styleKeys = ['warna', 'color', 'variasi', 'variant', 'model', 'ukuran'];
+
+      if (keys.some(k => sizeKeys.includes(k) || styleKeys.includes(k))) {
+        isFixedPriceVariant = true;
       }
     }
 
     const basePricePerItem = (() => { // Price for one item's component
       // If variant already defines the width/size in its attributes, 
       // we assume the price is already for that size (per unit), not per meter.
-      if (isFixedSizeVariant) {
+      if (isFixedPriceVariant) {
         return selection.product.price;
       }
 
