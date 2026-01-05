@@ -1728,6 +1728,7 @@ export default function CalculatorPageV2() {
                 Object.keys(attrs).forEach(k => allAttrKeys.add(k));
               });
 
+              // Filter by search query
               const filtered = availableVariants.filter((v: any) => {
                 if (!variantSearchQuery) return true;
                 const q = variantSearchQuery.toLowerCase();
@@ -1741,64 +1742,105 @@ export default function CalculatorPageV2() {
                 return attrMatch || priceMatch;
               });
 
-              if (filtered.length === 0) {
+              // Sort by Sibak, then Gelombang, then Tinggi, then Lebar (ascending)
+              const sorted = [...filtered].sort((a, b) => {
+                const attrsA = safeJSONParse(a.attributes, {}) as Record<string, any>;
+                const attrsB = safeJSONParse(b.attributes, {}) as Record<string, any>;
+
+                const getNum = (attrs: Record<string, any>, keys: string[]) => {
+                  for (const key of keys) {
+                    const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                    if (matchKey) {
+                      const val = parseFloat(String(attrs[matchKey]).replace(/[^\d.-]/g, ''));
+                      if (!isNaN(val)) return val;
+                    }
+                  }
+                  return 999999;
+                };
+
+                // Sort order: Sibak, Gelombang, Tinggi, Lebar
+                const sibakA = getNum(attrsA, ['sibak']);
+                const sibakB = getNum(attrsB, ['sibak']);
+                if (sibakA !== sibakB) return sibakA - sibakB;
+
+                const gelA = getNum(attrsA, ['gelombang', 'gel']);
+                const gelB = getNum(attrsB, ['gelombang', 'gel']);
+                if (gelA !== gelB) return gelA - gelB;
+
+                const tinggiA = getNum(attrsA, ['tinggi', 'height', 't']);
+                const tinggiB = getNum(attrsB, ['tinggi', 'height', 't']);
+                if (tinggiA !== tinggiB) return tinggiA - tinggiB;
+
+                const lebarA = getNum(attrsA, ['lebar', 'width', 'l']);
+                const lebarB = getNum(attrsB, ['lebar', 'width', 'l']);
+                return lebarA - lebarB;
+              });
+
+              if (sorted.length === 0) {
                 return <p className="text-center py-8 text-gray-600">Tidak ada varian yang cocok.</p>;
               }
 
-              return (
-                <div className="grid grid-cols-1 gap-3">
-                  {filtered.map((v: any) => {
-                    const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
-                    const priceNet = Number(v.price_net) || 0;
-                    const priceGross = Number(v.price_gross) || 0;
-                    const hasDiscount = priceGross > priceNet && priceNet > 0;
-                    const discountPercent = hasDiscount
-                      ? Math.round((1 - priceNet / priceGross) * 100)
-                      : 0;
+              // Get column headers from first variant
+              const columnKeys = Array.from(allAttrKeys);
 
-                    return (
-                      <div
-                        key={v.id}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-[#EB216A] hover:bg-pink-50/50 transition-colors cursor-pointer"
-                        onClick={() => handleSelectVariant(v)}
-                      >
-                        <div className="flex-1">
-                          {/* Attribute Display */}
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {Object.entries(attrs).map(([key, val]) => (
-                              <span key={key} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded">
-                                <span className="font-medium text-gray-500 mr-1">{key}:</span>
-                                {String(val)}
-                              </span>
-                            ))}
-                          </div>
-                          {/* Price Display */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-[#EB216A]">
-                              Rp {(priceNet || priceGross).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </span>
-                            {hasDiscount && (
-                              <>
-                                <span className="text-sm text-gray-400 line-through">
-                                  Rp {priceGross.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </span>
-                                <span className="bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
-                                  -{discountPercent}%
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="bg-[#EB216A] hover:bg-[#d11d5e] text-white ml-4"
-                        >
-                          <Check className="w-4 h-4 mr-1" />
+              return (
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        {columnKeys.map(key => (
+                          <th key={key} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                            {key}
+                          </th>
+                        ))}
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                          Harga
+                        </th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700 whitespace-nowrap">
                           Pilih
-                        </Button>
-                      </div>
-                    );
-                  })}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {sorted.map((v: any) => {
+                        const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                        const priceNet = Number(v.price_net) || 0;
+                        const priceGross = Number(v.price_gross) || 0;
+                        const displayPrice = priceNet || priceGross;
+
+                        return (
+                          <tr
+                            key={v.id}
+                            className="hover:bg-pink-50 cursor-pointer transition-colors"
+                            onClick={() => handleSelectVariant(v)}
+                          >
+                            {columnKeys.map(key => {
+                              const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                              const val = matchKey ? attrs[matchKey] : '-';
+                              return (
+                                <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
+                                  {val}
+                                </td>
+                              );
+                            })}
+                            <td className="px-3 py-3 text-right whitespace-nowrap">
+                              <span className="font-semibold text-[#EB216A]">
+                                Rp {displayPrice.toLocaleString('id-ID')}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <Button
+                                size="sm"
+                                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
+                              >
+                                Pilih
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               );
             })()}

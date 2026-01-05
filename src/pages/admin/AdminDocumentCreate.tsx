@@ -1762,37 +1762,134 @@ export default function AdminDocumentCreate() {
             {
                 showVariantPicker && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl w-full max-w-md mx-4 max-h-[60vh] overflow-hidden flex flex-col">
+                        <div className="bg-white rounded-xl w-full max-w-3xl mx-4 max-h-[80vh] overflow-hidden flex flex-col">
                             <div className="p-4 border-b flex items-center justify-between">
                                 <h3 className="text-lg font-semibold">Pilih Varian</h3>
                                 <Button size="sm" variant="ghost" onClick={() => { setShowVariantPicker(false); setVariantItemId(null); }}><X className="w-4 h-4" /></Button>
                             </div>
                             <div className="p-4 border-b">
-                                <Input placeholder="Cari varian..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                <Input placeholder="Cari varian (sibak, gelombang, tinggi, harga)..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                {/* Default price option removed as product level price is deprecated */}
-                                {availableVariants.filter(v =>
-                                    `${v.width}x${v.height}`.includes(searchQuery) ||
-                                    String(v.sibak || '').includes(searchQuery) ||
-                                    (v.attribute_value || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                    (v.attribute_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-                                ).map(v => (
-                                    <div key={v.id} className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#EB216A]" onClick={() => handleSelectVariant(v)}>
-                                        <p className="font-medium">
-                                            {(() => {
-                                                const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
-                                                if (Object.keys(attrs).length > 0) {
-                                                    return Object.entries(attrs).map(([k, val]) => `${k}: ${val}`).join(', ');
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {(() => {
+                                    // Build column keys from all variants
+                                    const allAttrKeys = new Set<string>();
+                                    availableVariants.forEach((v: any) => {
+                                        const attrs = safeJSONParse(v.attributes, {});
+                                        Object.keys(attrs).forEach(k => allAttrKeys.add(k));
+                                    });
+                                    const columnKeys = Array.from(allAttrKeys);
+
+                                    // Filter by search
+                                    const filtered = availableVariants.filter((v: any) => {
+                                        if (!searchQuery) return true;
+                                        const q = searchQuery.toLowerCase();
+                                        const attrs = safeJSONParse(v.attributes, {});
+                                        const attrMatch = Object.values(attrs).some((val: any) =>
+                                            String(val).toLowerCase().includes(q)
+                                        );
+                                        const priceMatch = String(v.price_net).includes(q) || String(v.price_gross).includes(q);
+                                        return attrMatch || priceMatch;
+                                    });
+
+                                    // Sort by Sibak, Gelombang, Tinggi, Lebar (ascending)
+                                    const sorted = [...filtered].sort((a, b) => {
+                                        const attrsA = safeJSONParse(a.attributes, {}) as Record<string, any>;
+                                        const attrsB = safeJSONParse(b.attributes, {}) as Record<string, any>;
+
+                                        const getNum = (attrs: Record<string, any>, keys: string[]) => {
+                                            for (const key of keys) {
+                                                const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                                if (matchKey) {
+                                                    const val = parseFloat(String(attrs[matchKey]).replace(/[^\d.-]/g, ''));
+                                                    if (!isNaN(val)) return val;
                                                 }
-                                                return v.attribute_value
-                                                    ? <>{v.attribute_value} <span className="text-xs text-gray-500 font-normal">({v.attribute_name})</span></>
-                                                    : `${v.width}x${v.height}cm ${v.sibak ? `(sibak ${v.sibak}cm)` : ''}`;
-                                            })()}
-                                        </p>
-                                        <p className="text-sm text-[#EB216A]">Rp {Number(v.price_net || v.price_gross || 0).toLocaleString('id-ID')}/m</p>
-                                    </div>
-                                ))}
+                                            }
+                                            return 999999;
+                                        };
+
+                                        const sibakA = getNum(attrsA, ['sibak']);
+                                        const sibakB = getNum(attrsB, ['sibak']);
+                                        if (sibakA !== sibakB) return sibakA - sibakB;
+
+                                        const gelA = getNum(attrsA, ['gelombang', 'gel']);
+                                        const gelB = getNum(attrsB, ['gelombang', 'gel']);
+                                        if (gelA !== gelB) return gelA - gelB;
+
+                                        const tinggiA = getNum(attrsA, ['tinggi', 'height', 't']);
+                                        const tinggiB = getNum(attrsB, ['tinggi', 'height', 't']);
+                                        if (tinggiA !== tinggiB) return tinggiA - tinggiB;
+
+                                        const lebarA = getNum(attrsA, ['lebar', 'width', 'l']);
+                                        const lebarB = getNum(attrsB, ['lebar', 'width', 'l']);
+                                        return lebarA - lebarB;
+                                    });
+
+                                    if (sorted.length === 0) {
+                                        return <p className="text-center py-8 text-gray-500">Tidak ada varian yang cocok.</p>;
+                                    }
+
+                                    return (
+                                        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-gray-50 border-b border-gray-200">
+                                                    <tr>
+                                                        {columnKeys.map(key => (
+                                                            <th key={key} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                                                                {key}
+                                                            </th>
+                                                        ))}
+                                                        <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                                                            Harga
+                                                        </th>
+                                                        <th className="px-3 py-2 text-center font-semibold text-gray-700 whitespace-nowrap">
+                                                            Pilih
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {sorted.map((v: any) => {
+                                                        const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                                                        const priceNet = Number(v.price_net) || 0;
+                                                        const priceGross = Number(v.price_gross) || 0;
+                                                        const displayPrice = priceNet || priceGross;
+
+                                                        return (
+                                                            <tr
+                                                                key={v.id}
+                                                                className="hover:bg-pink-50 cursor-pointer transition-colors"
+                                                                onClick={() => handleSelectVariant(v)}
+                                                            >
+                                                                {columnKeys.map(key => {
+                                                                    const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                                                    const val = matchKey ? attrs[matchKey] : '-';
+                                                                    return (
+                                                                        <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
+                                                                            {val}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                                <td className="px-3 py-3 text-right whitespace-nowrap">
+                                                                    <span className="font-semibold text-[#EB216A]">
+                                                                        Rp {displayPrice.toLocaleString('id-ID')}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3 py-3 text-center">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
+                                                                    >
+                                                                        Pilih
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
