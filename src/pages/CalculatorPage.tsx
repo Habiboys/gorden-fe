@@ -501,8 +501,7 @@ export default function CalculatorPageV2() {
       setTempSelectedProduct(product);
       setIsProductModalOpen(false);
       setIsAddItemModalOpen(true);
-      // Pre-fill name if empty
-      if (!itemName) setItemName(product.name);
+      // Do NOT pre-fill name - user requested it stays empty
     } else {
       // Curtain Flow: Global selection
       setSelectedFabric(product);
@@ -596,6 +595,7 @@ export default function CalculatorPageV2() {
         price_gross: Number(variant.price_gross) || 0,
         price_net: Number(variant.price_net) || 0,
         name: `${pendingProductForVariant.name} (${attrDisplay})`,
+        selectedVariantName: attrDisplay,
       };
 
       // If Blind Flow and no editing item ID, this is the initial product selection
@@ -604,7 +604,7 @@ export default function CalculatorPageV2() {
           ...pendingProductForVariant,
           ...variantData
         });
-        setItemName(variantData.name);
+        // Do NOT auto-fill itemName - user requested it stays empty
         setIsVariantModalOpen(false);
         setIsAddItemModalOpen(true);
         setPendingProductForVariant(null);
@@ -1839,7 +1839,7 @@ export default function CalculatorPageV2() {
       < Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen} >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className={isBlindFlow ? 'hidden lg:block' : ''}>
               {isBlindFlow ? `Tambah: ${tempSelectedProduct?.name || 'Blind'}` : 'Tambah Item Baru'}
             </DialogTitle>
             <DialogDescription>Masukkan detail ukuran dan kebutuhan</DialogDescription>
@@ -1850,16 +1850,19 @@ export default function CalculatorPageV2() {
             {/* Show Product Image for Blind Flow */}
             {isBlindFlow && tempSelectedProduct && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <img src={getProductImageUrl(tempSelectedProduct.images || tempSelectedProduct.image)} className="w-16 h-16 rounded-lg object-cover" />
-                <div>
-                  <p className="font-medium text-gray-900">{tempSelectedProduct.name}</p>
-                  <p className="text-[#EB216A] font-bold">
+                <img src={getProductImageUrl(tempSelectedProduct.images || tempSelectedProduct.image)} className="w-12 h-12 lg:w-16 lg:h-16 rounded-lg object-cover" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm lg:text-base font-medium text-gray-900 truncate">{tempSelectedProduct.name}</p>
+                  <p className="text-xs lg:text-sm text-[#EB216A] font-bold">
                     {tempSelectedProduct.minPrice && tempSelectedProduct.minPrice > 0
                       ? `Mulai Rp ${tempSelectedProduct.minPrice.toLocaleString('id-ID')}`
                       : tempSelectedProduct.price > 0
-                        ? `Rp ${tempSelectedProduct.price.toLocaleString('id-ID')}/m`
+                        ? `Rp ${tempSelectedProduct.price.toLocaleString('id-ID')}/m²`
                         : 'Lihat Varian'}
                   </p>
+                  {tempSelectedProduct.selectedVariantName && (
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">Varian: {tempSelectedProduct.selectedVariantName}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -2124,8 +2127,7 @@ export default function CalculatorPageV2() {
       < Dialog open={isVariantModalOpen} onOpenChange={(open: boolean) => { setIsVariantModalOpen(open); if (!open) setVariantSearchQuery(''); }
       }>
         <DialogContent
-          className="max-h-[80vh] overflow-hidden flex flex-col"
-          style={{ width: '60vw', maxWidth: '1600px' }}
+          className="w-[98vw] md:w-[60vw] max-w-[1600px] max-h-[80vh] overflow-hidden flex flex-col"
         >
           <DialogHeader>
             <DialogTitle>Pilih Varian - {pendingProductForVariant?.name}</DialogTitle>
@@ -2138,7 +2140,7 @@ export default function CalculatorPageV2() {
 
                 if (item) {
                   return (
-                    <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed text-left mt-2 mb-2">
+                    <div className="hidden lg:block p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed text-left mt-2 mb-2">
                       <p className="font-semibold">
                         Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {item.width} cm × Tinggi {item.height} cm
                       </p>
@@ -2396,64 +2398,56 @@ export default function CalculatorPageV2() {
                       return (
                         <div
                           key={v.id}
-                          className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-pink-50 cursor-pointer transition-all"
+                          className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-pink-50 cursor-pointer transition-all flex items-center justify-between gap-4"
                           onClick={() => handleSelectVariant(v)}
                         >
-                          {/* Attributes Grid */}
-                          <div className="grid grid-cols-2 gap-2 mb-3">
-                            {columnKeys.map(key => {
-                              let val: any;
-                              if (key === 'Gelombang') {
-                                const lebar = getNum(attrs, ['lebar', 'width', 'l']);
-                                val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
-                              } else {
-                                const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                                val = matchKey ? attrs[matchKey] : '-';
+                          {/* Left Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap text-sm text-gray-700 mb-2">
+                              {columnKeys.map(key => {
+                                let val: any;
+                                if (key === 'Gelombang') {
+                                  const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                  val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                                } else {
+                                  const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                  val = matchKey ? attrs[matchKey] : '-';
+                                }
+                                return (
+                                  <span key={key} style={{ marginRight: '16px', marginBottom: '4px', whiteSpace: 'nowrap' }}>
+                                    <span className="text-gray-500 text-xs">{key}:</span> <span className="font-semibold text-gray-900">{val}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+
+                            {/* Suitable For Info */}
+                            {!currentType.slug?.toLowerCase().includes('blind') && (() => {
+                              const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                              const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                              const sibak = getNum(attrs, ['sibak']);
+                              const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                              const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+
+                              if (calculatedLebar || calculatedTinggi) {
+                                return (
+                                  <p className="text-xs text-blue-600 mt-2 mb-2 truncate">
+                                    Cocok: L +/-{calculatedLebar || '-'}cm × T {calculatedTinggi || '-'}cm
+                                  </p>
+                                );
                               }
-                              return (
-                                <div key={key} className="text-sm">
-                                  <span className="text-gray-500">{key}: </span>
-                                  <span className="font-medium text-gray-800">{val}</span>
-                                </div>
-                              );
-                            })}
+                              return null;
+                            })()}
+
+                            <div className="font-bold text-[#EB216A] mt-2">
+                              Rp {displayPrice.toLocaleString('id-ID')}
+                            </div>
                           </div>
 
-                          {/* Suitable For Info */}
-                          {!currentType.slug?.toLowerCase().includes('blind') && (() => {
-                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
-                            const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
-                            const sibak = getNum(attrs, ['sibak']);
-                            const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
-                            const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
-
-                            if (calculatedLebar || calculatedTinggi) {
-                              return (
-                                <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1.5 rounded-lg mb-3">
-                                  Cocok Untuk Pintu/Jendela Lebar +/- {calculatedLebar || '-'}cm × Tinggi {calculatedTinggi || '-'}cm
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
-
-                          {/* Price & Button */}
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                            <span className="text-lg font-bold text-[#EB216A]">
-                              Rp {displayPrice.toLocaleString('id-ID')}
-                            </span>
+                          {/* Right Button */}
+                          <div className="shrink-0">
                             <button
-                              className="px-4 py-2 text-sm rounded transition-all"
-                              style={{
-                                backgroundColor: '#EB216A',
-                                color: 'white'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#d11d5e';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#EB216A';
-                              }}
+                              className="bg-[#EB216A] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d11d5e] transition-colors shadow-sm"
                             >
                               Pilih
                             </button>
