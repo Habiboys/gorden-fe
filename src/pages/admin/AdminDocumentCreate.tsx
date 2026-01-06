@@ -766,7 +766,6 @@ export default function AdminDocumentCreate() {
     // ================== CALCULATIONS ==================
 
     const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
-        const widthM = item.width / 100;
         // Use price_gross if available (for variant products), otherwise use price
         const basePrice = (selection.product as any)?.price_gross || selection.product.price || 0;
         const netPrice = (selection.product as any)?.price_net || basePrice;
@@ -798,19 +797,27 @@ export default function AdminDocumentCreate() {
         // Check if this is Blind flow (simpler pricing)
         const isBlind = selectedCalcType.slug?.toLowerCase().includes('blind') || selectedCalcType.has_item_type === false;
 
+        // Check if variant has Sibak attribute (should use multiplier pricing, not area)
+        const hasSibakAttribute = item.selectedVariant?.attributes && (() => {
+            const attrs = safeJSONParse(item.selectedVariant?.attributes, {});
+            return Object.keys(attrs).some(k => k.toLowerCase() === 'sibak');
+        })();
+
         let fabricMeters = 0;
         let fabricPriceBeforeDiscount = 0;
 
         if (isBlind) {
-            // BLIND FLOW: Simple Price × Qty (no area, no multiplier)
-            fabricPriceBeforeDiscount = fabricPricePerMeter * item.quantity;
-            fabricMeters = 0;
-        } else if (variantMultiplier > 1) {
+            // BLIND FLOW: Price × Volume × Qty (volume = width × height in meters)
+            const volumeM2 = widthM * heightM;
+            fabricPriceBeforeDiscount = fabricPricePerMeter * volumeM2 * item.quantity;
+            fabricMeters = volumeM2; // Display volume for blind
+        } else if (hasSibakAttribute || variantMultiplier > 1) {
             // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
+            // (Sibak 1 = multiplier 1, still uses this formula instead of area)
             fabricPriceBeforeDiscount = fabricPricePerMeter * variantMultiplier * item.quantity;
             fabricMeters = 0; // Not calculated by area when using multiplier
         } else {
-            // GORDEN FLOW standard: Area Calculation
+            // GORDEN FLOW standard: Area Calculation (for products without Sibak variant)
             fabricMeters = widthM * (selectedCalcType.fabric_multiplier || 2.4) * heightM;
             fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
         }
@@ -1767,11 +1774,30 @@ export default function AdminDocumentCreate() {
             {
                 showVariantPicker && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl w-full max-w-3xl mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                        <div
+                            className="bg-white rounded-xl mx-4 max-h-[80vh] overflow-hidden flex flex-col"
+                            style={{ width: '60vw', maxWidth: '1600px' }}
+                        >
                             <div className="p-4 border-b flex items-center justify-between">
                                 <h3 className="text-lg font-semibold">Pilih Varian</h3>
                                 <Button size="sm" variant="ghost" onClick={() => { setShowVariantPicker(false); setVariantItemId(null); }}><X className="w-4 h-4" /></Button>
                             </div>
+
+                            {/* General Recommendation Banner */}
+                            {(() => {
+                                const item = items.find(i => i.id === variantItemId);
+                                if (item) {
+                                    return (
+                                        <div className="mx-4 mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed">
+                                            <p className="font-semibold">
+                                                Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {item.width} cm × Tinggi {item.height} cm
+                                            </p>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
                             <div className="p-4 border-b">
                                 <Input placeholder="Cari varian (sibak, gelombang, tinggi, harga)..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
@@ -1874,6 +1900,9 @@ export default function AdminDocumentCreate() {
                                                                 {key}
                                                             </th>
                                                         ))}
+                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                                                            Cocok Untuk Pintu/Jendela
+                                                        </th>
                                                         <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
                                                             Harga
                                                         </th>
@@ -1914,6 +1943,26 @@ export default function AdminDocumentCreate() {
                                                                         </td>
                                                                     );
                                                                 })}
+                                                                {/* Cocok Untuk Pintu/Jendela Cell */}
+                                                                <td className="px-3 py-3 text-gray-800 text-xs">
+                                                                    {(() => {
+                                                                        const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                        const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                                                                        const sibak = getNum(attrs, ['sibak']);
+                                                                        const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                                                                        const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+
+                                                                        if (calculatedLebar || calculatedTinggi) {
+                                                                            return (
+                                                                                <span>
+                                                                                    Lebar +/- {calculatedLebar || '-'}cm<br />
+                                                                                    Tinggi {calculatedTinggi || '-'}cm
+                                                                                </span>
+                                                                            );
+                                                                        }
+                                                                        return '-';
+                                                                    })()}
+                                                                </td>
                                                                 <td className="px-3 py-3 text-right whitespace-nowrap">
                                                                     <span className="font-semibold text-[#EB216A]">
                                                                         Rp {displayPrice.toLocaleString('id-ID')}

@@ -728,16 +728,24 @@ export default function CalculatorPageV2() {
     // Check if this is Blind flow (simpler pricing)
     const isBlindType = currentType.slug?.toLowerCase().includes('blind') || currentType.has_item_type === false;
 
+    // Check if variant has Sibak attribute (should use multiplier pricing, not area)
+    const hasSibakAttribute = item.selectedVariant?.attributes && (() => {
+      const attrs = safeJSONParse(item.selectedVariant?.attributes, {});
+      return Object.keys(attrs).some(k => k.toLowerCase() === 'sibak');
+    })();
+
     if (isBlindType) {
-      // BLIND FLOW: Simple Price × Qty (no area, no multiplier)
-      fabricPrice = fabricPricePerMeter * item.quantity;
+      // BLIND FLOW: Price × Volume × Qty (volume = width × height in meters)
+      const volumeM2 = widthM * heightM;
+      fabricPrice = fabricPricePerMeter * volumeM2 * item.quantity;
       fabricMeters = 0;
-    } else if (variantMultiplier > 1) {
+    } else if (hasSibakAttribute || variantMultiplier > 1) {
       // GORDEN FLOW with Multiplier: Price × Multiplier × Qty Jendela
+      // (Sibak 1 = multiplier 1, still uses this formula instead of area)
       fabricPrice = fabricPricePerMeter * variantMultiplier * item.quantity;
       fabricMeters = 0; // Not calculated by area when using multiplier
     } else {
-      // GORDEN FLOW standard: Area Calculation
+      // GORDEN FLOW standard: Area Calculation (for products without Sibak variant)
       fabricMeters = widthM * currentType.fabric_multiplier * heightM;
       fabricPrice = fabricMeters * fabricPricePerMeter;
     }
@@ -1068,7 +1076,7 @@ export default function CalculatorPageV2() {
               ) : (
                 <Button
                   onClick={() => setIsProductModalOpen(true)}
-                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-5 py-4 rounded-lg text-sm"
+                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white hover:text-white px-5 py-4 rounded-lg text-sm"
                 >
                   <Package className="w-4 h-4 mr-2" /> Pilih Produk Gorden
                 </Button>
@@ -1093,7 +1101,7 @@ export default function CalculatorPageV2() {
                     setIsAddItemModalOpen(true); // Open Dimensions for Curtain
                   }
                 }}
-                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                className="bg-[#EB216A] hover:bg-[#d11d5e] text-white hover:text-white"
               >
                 <Plus className="w-4 h-4 mr-2" /> {isBlindFlow ? 'Tambah Produk' : 'Tambah Item'}
               </Button>
@@ -1114,7 +1122,7 @@ export default function CalculatorPageV2() {
                       setIsAddItemModalOpen(true);
                     }
                   }}
-                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-8"
+                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white hover:text-white px-8"
                 >
                   <Plus className="w-4 h-4 mr-2" /> {isBlindFlow ? 'Pilih Produk Pertama' : 'Tambah Item Pertama'}
                 </Button>
@@ -1170,8 +1178,60 @@ export default function CalculatorPageV2() {
                               </button>
                             </div>
 
-                            {/* Table of Items */}
-                            <div className="overflow-x-auto">
+                            {/* MOBILE VIEW: Card List */}
+                            <div className="lg:hidden space-y-4 mb-4">
+                              {groupItems.map((item) => {
+                                const prices = calculateItemPrice(item);
+                                const vol = (item.width * item.height) / 10000;
+
+                                return (
+                                  <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 relative">
+                                    <button
+                                      onClick={() => handleRemoveItem(item.id)}
+                                      className="absolute top-4 right-4 text-gray-400 hover:text-red-500 p-1"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+
+                                    <div className="pr-8">
+                                      <h4 className="font-medium text-gray-900 mb-3 text-sm">{item.name || '-'}</h4>
+
+                                      <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mb-3">
+                                        <div>
+                                          <span className="text-gray-500 text-xs block mb-0.5">Ukuran</span>
+                                          <span className="font-medium text-gray-900">{item.width} x {item.height} cm</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-500 text-xs block mb-0.5">Volume</span>
+                                          <span className="font-medium text-gray-900">{vol.toFixed(2)} m²</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-500 text-xs block mb-0.5">Harga</span>
+                                          <span className="font-medium text-gray-900">Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-500 text-xs block mb-0.5">Qty</span>
+                                          <span className="font-medium text-gray-900">{item.quantity}</span>
+                                        </div>
+                                      </div>
+
+                                      <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+                                        <span className="text-gray-600 font-medium text-sm">Total</span>
+                                        <span className="text-lg font-bold text-[#EB216A]">Rp {prices.total.toLocaleString('id-ID')}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              <div className="flex justify-between items-center py-6 mt-4 px-4 bg-gray-50/80 rounded-xl border border-gray-100 border-dashed">
+                                <span className="font-bold text-gray-900 text-lg">Subtotal Group</span>
+                                <span className="font-bold text-[#EB216A] text-xl">Rp {groupTotal.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+
+                            {/* DESKTOP VIEW: Table */}
+                            <div className="hidden lg:block overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-100">
                                   <tr>
@@ -1197,7 +1257,7 @@ export default function CalculatorPageV2() {
                                         <td className="py-3 px-4 text-center">{item.height}</td>
                                         <td className="py-3 px-4 text-center">{vol.toFixed(2)}</td>
                                         <td className="py-3 px-4 text-right text-gray-500">
-                                          Rp {(prices.fabric / item.quantity).toLocaleString('id-ID')}
+                                          Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
                                         </td>
                                         <td className="py-3 px-4 text-center">{item.quantity}</td>
                                         <td className="py-3 px-4 text-right font-medium text-gray-900">
@@ -1292,10 +1352,21 @@ export default function CalculatorPageV2() {
                                         {/* Main Fabric Row */}
                                         <tr className="hover:bg-gray-50">
                                           <td className="px-3 py-2.5 w-24">
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              className="h-7 px-2 text-xs border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white w-full"
+                                            <button
+                                              className="h-7 px-2 text-xs w-full rounded transition-all border"
+                                              style={{
+                                                borderColor: '#EB216A',
+                                                color: '#EB216A',
+                                                backgroundColor: 'transparent'
+                                              }}
+                                              onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = '#EB216A';
+                                                e.currentTarget.style.color = 'white';
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                e.currentTarget.style.color = '#EB216A';
+                                              }}
                                               onClick={async () => {
                                                 if (!selectedFabric || isBlindFlow) return;
                                                 try {
@@ -1314,7 +1385,7 @@ export default function CalculatorPageV2() {
                                               }}
                                             >
                                               {item.selectedVariant ? 'Ganti' : 'Pilih'}
-                                            </Button>
+                                            </button>
                                           </td>
                                           <td className="px-3 py-2.5 font-medium text-gray-700">
                                             {isBlindFlow ? 'Produk' : 'Gorden'}
@@ -1382,17 +1453,34 @@ export default function CalculatorPageV2() {
                                             return (
                                               <tr key={comp.id} className={`hover:bg-gray-50 ${!selection ? 'opacity-60' : ''}`}>
                                                 <td className="px-3 py-2.5 w-24">
-                                                  <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`h-7 px-2 text-xs w-full ${selection
-                                                      ? 'border-gray-300 text-gray-600 hover:bg-gray-100'
-                                                      : 'border-[#EB216A] text-[#EB216A] bg-[#EB216A]/10 hover:bg-[#EB216A] hover:text-white'}`}
+                                                  <button
+                                                    className="h-7 px-2 text-xs w-full rounded transition-all border"
+                                                    style={{
+                                                      borderColor: selection ? '#d1d5db' : '#EB216A',
+                                                      color: selection ? '#4b5563' : '#EB216A',
+                                                      backgroundColor: selection ? 'transparent' : 'rgba(235, 33, 106, 0.1)'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                      if (!selection) {
+                                                        e.currentTarget.style.backgroundColor = '#EB216A';
+                                                        e.currentTarget.style.color = 'white';
+                                                      } else {
+                                                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                                      }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                      if (!selection) {
+                                                        e.currentTarget.style.backgroundColor = 'rgba(235, 33, 106, 0.1)';
+                                                        e.currentTarget.style.color = '#EB216A';
+                                                      } else {
+                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                      }
+                                                    }}
                                                     onClick={() => openComponentModal(item.id, comp.id)}
                                                     disabled={products.length === 0}
                                                   >
                                                     {selection ? 'Ganti' : 'Pilih'}
-                                                  </Button>
+                                                  </button>
                                                 </td>
                                                 <td className="px-3 py-2.5 font-medium text-gray-700">
                                                   {comp.label}
@@ -1486,10 +1574,18 @@ export default function CalculatorPageV2() {
                                           </div>
                                           <span className="font-semibold text-sm">{isBlindFlow ? 'Produk' : 'Gorden'}</span>
                                         </div>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-6 px-2 text-xs text-white hover:bg-white/20 hover:text-white"
+                                        <button
+                                          className="h-6 px-2 text-xs rounded transition-all"
+                                          style={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                            color: 'white'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                          }}
                                           onClick={async () => {
                                             if (!selectedFabric || isBlindFlow) return;
                                             try {
@@ -1508,7 +1604,7 @@ export default function CalculatorPageV2() {
                                           }}
                                         >
                                           {item.selectedVariant ? 'Ganti' : 'Pilih'}
-                                        </Button>
+                                        </button>
                                       </div>
 
                                       {/* Body */}
@@ -1584,15 +1680,23 @@ export default function CalculatorPageV2() {
                                                 </div>
                                                 <span className="font-semibold text-sm">{comp.label}</span>
                                               </div>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-6 px-2 text-xs text-white hover:bg-white/20 hover:text-white"
+                                              <button
+                                                className="h-6 px-2 text-xs rounded transition-all"
+                                                style={{
+                                                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                                  color: 'white'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                                }}
                                                 onClick={() => openComponentModal(item.id, comp.id)}
                                                 disabled={products.length === 0}
                                               >
                                                 {selection ? 'Ganti' : 'Pilih'}
-                                              </Button>
+                                              </button>
                                             </div>
 
                                             {/* Body */}
@@ -1875,7 +1979,7 @@ export default function CalculatorPageV2() {
             <Button variant="outline" onClick={() => { resetForm(); setIsAddItemModalOpen(false); }} className="flex-1">
               Batal
             </Button>
-            <Button onClick={handleAddItem} className="flex-1 bg-[#EB216A] hover:bg-[#d11d5e] text-white">
+            <Button onClick={handleAddItem} className="flex-1 bg-[#EB216A] hover:bg-[#d11d5e] text-white hover:text-white">
               <Plus className="w-4 h-4 mr-2" /> Tambah Item
             </Button>
           </div>
@@ -2015,13 +2119,35 @@ export default function CalculatorPageV2() {
         </DialogContent>
       </Dialog >
 
+
       {/* Variant Picker Modal */}
       < Dialog open={isVariantModalOpen} onOpenChange={(open: boolean) => { setIsVariantModalOpen(open); if (!open) setVariantSearchQuery(''); }
       }>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent
+          className="max-h-[80vh] overflow-hidden flex flex-col"
+          style={{ width: '60vw', maxWidth: '1600px' }}
+        >
           <DialogHeader>
             <DialogTitle>Pilih Varian - {pendingProductForVariant?.name}</DialogTitle>
             <DialogDescription>
+              {/* General Recommendation Banner */}
+              {(() => {
+                const item = variantSelectionMode === 'fabric'
+                  ? items.find(i => i.id === editingVariantItemId)
+                  : items.find(i => i.id === editingItemId);
+
+                if (item) {
+                  return (
+                    <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed text-left mt-2 mb-2">
+                      <p className="font-semibold">
+                        Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {item.width} cm × Tinggi {item.height} cm
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               {variantSelectionMode === 'component' && editingComponentId !== null && (() => {
                 const comp = currentType?.components?.find(c => c.id === editingComponentId);
                 const item = items.find(i => i.id === editingItemId);
@@ -2052,8 +2178,10 @@ export default function CalculatorPageV2() {
 
           <div className="flex-1 overflow-y-auto">
             {loadingVariants ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">Memuat varian...</p>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-12 h-12 border-4 border-[#EB216A] border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-600 font-medium">Memuat varian...</p>
+                <p className="text-sm text-gray-400 mt-1">Mohon tunggu sebentar</p>
               </div>
             ) : availableVariants.length === 0 ? (
               <div className="text-center py-8">
@@ -2159,6 +2287,11 @@ export default function CalculatorPageV2() {
                               {key}
                             </th>
                           ))}
+                          {!currentType.slug?.toLowerCase().includes('blind') && (
+                            <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                              Cocok Untuk Pintu/Jendela
+                            </th>
+                          )}
                           <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
                             Harga
                           </th>
@@ -2201,18 +2334,49 @@ export default function CalculatorPageV2() {
                                   </td>
                                 );
                               })}
+                              {/* Cocok Untuk Pintu/Jendela Cell */}
+                              {!currentType.slug?.toLowerCase().includes('blind') && (
+                                <td className="px-3 py-3 text-gray-800 text-xs">
+                                  {(() => {
+                                    const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                    const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                                    const sibak = getNum(attrs, ['sibak']);
+                                    const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                                    const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+
+                                    if (calculatedLebar || calculatedTinggi) {
+                                      return (
+                                        <span>
+                                          Lebar +/- {calculatedLebar || '-'}cm<br />
+                                          Tinggi {calculatedTinggi || '-'}cm
+                                        </span>
+                                      );
+                                    }
+                                    return '-';
+                                  })()}
+                                </td>
+                              )}
                               <td className="px-3 py-3 text-right whitespace-nowrap">
                                 <span className="font-semibold text-[#EB216A]">
                                   Rp {displayPrice.toLocaleString('id-ID')}
                                 </span>
                               </td>
                               <td className="px-3 py-3 text-center">
-                                <Button
-                                  size="sm"
-                                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
+                                <button
+                                  className="px-3 py-1 text-xs rounded transition-all"
+                                  style={{
+                                    backgroundColor: '#EB216A',
+                                    color: 'white'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#d11d5e';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#EB216A';
+                                  }}
                                 >
                                   Pilih
-                                </Button>
+                                </button>
                               </td>
                             </tr>
                           );
@@ -2255,17 +2419,44 @@ export default function CalculatorPageV2() {
                             })}
                           </div>
 
+                          {/* Suitable For Info */}
+                          {!currentType.slug?.toLowerCase().includes('blind') && (() => {
+                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                            const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                            const sibak = getNum(attrs, ['sibak']);
+                            const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                            const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+
+                            if (calculatedLebar || calculatedTinggi) {
+                              return (
+                                <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1.5 rounded-lg mb-3">
+                                  Cocok Untuk Pintu/Jendela Lebar +/- {calculatedLebar || '-'}cm × Tinggi {calculatedTinggi || '-'}cm
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
+
                           {/* Price & Button */}
                           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                             <span className="text-lg font-bold text-[#EB216A]">
                               Rp {displayPrice.toLocaleString('id-ID')}
                             </span>
-                            <Button
-                              size="sm"
-                              className="bg-[#EB216A] hover:bg-[#d11d5e] text-white px-4"
+                            <button
+                              className="px-4 py-2 text-sm rounded transition-all"
+                              style={{
+                                backgroundColor: '#EB216A',
+                                color: 'white'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#d11d5e';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#EB216A';
+                              }}
                             >
                               Pilih
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       );
