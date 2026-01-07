@@ -1203,9 +1203,9 @@ export default function AdminDocumentCreate() {
                                                                     </button>
                                                                 </div>
 
-                                                                {/* Items Table */}
+                                                                {/* Items Table (Responsive Wrapper) */}
                                                                 <div className="p-4">
-                                                                    <div className="overflow-x-auto">
+                                                                    <div className="overflow-x-auto hidden lg:block">
                                                                         <table className="w-full text-sm">
                                                                             <thead>
                                                                                 <tr className="bg-gray-50 text-gray-600 border-b">
@@ -1319,6 +1319,116 @@ export default function AdminDocumentCreate() {
                                                                                 </tr>
                                                                             </tfoot>
                                                                         </table>
+                                                                    </div>
+
+                                                                    {/* MOBILE VIEW: Cards List */}
+                                                                    <div className="lg:hidden space-y-4">
+                                                                        {groupItems.map((item) => {
+                                                                            const prices = calculateItemPrice(item);
+                                                                            const discountedPrice = prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100);
+
+                                                                            return (
+                                                                                <div key={item.id} className="border border-gray-100 rounded-xl p-3 bg-gray-50/50">
+                                                                                    {/* Card Header: Label & Remove */}
+                                                                                    <div className="flex justify-between items-start mb-2">
+                                                                                        <div>
+                                                                                            <span className="font-semibold text-sm text-gray-900 block">{item.name || '-'}</span>
+                                                                                            <span className="text-xs text-gray-500">{item.width} x {item.height} cm • {prices.fabricMeters.toFixed(2)} m²</span>
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={() => handleRemoveItem(item.id)}
+                                                                                            className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50"
+                                                                                        >
+                                                                                            <X className="w-4 h-4" />
+                                                                                        </button>
+                                                                                    </div>
+
+                                                                                    {/* Price Section */}
+                                                                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                                                                        <div>
+                                                                                            <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga/m²</span>
+                                                                                            <div className="text-sm">Rp {prices.fabricPricePerMeter.toLocaleString('id-ID')}</div>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Net</span>
+                                                                                            <div className="text-sm font-medium">Rp {discountedPrice.toLocaleString('id-ID')}</div>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* Disc & Qty inputs */}
+                                                                                    <div className="flex items-center gap-3 mb-3">
+                                                                                        <div className="flex-1">
+                                                                                            <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Disc (%)</span>
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                max="100"
+                                                                                                value={item.fabricDiscount || 0}
+                                                                                                onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
+                                                                                                className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div className="flex-1">
+                                                                                            <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Qty</span>
+                                                                                            <div className="h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100 flex items-center justify-center text-gray-600 font-medium">
+                                                                                                {item.quantity}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* Item Total */}
+                                                                                    <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between items-center">
+                                                                                        <span className="text-xs text-gray-500">Total Item</span>
+                                                                                        <span className="text-sm font-bold text-gray-900">Rp {prices.total.toLocaleString('id-ID')}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+
+                                                                        {/* Group Footer Summary Card */}
+                                                                        <div className="bg-[#EB216A]/5 rounded-xl p-4 border border-[#EB216A]/10">
+                                                                            <div className="flex justify-between items-center mb-3">
+                                                                                <span className="text-sm font-semibold text-gray-700">Diskon Group</span>
+                                                                                <div className="flex items-center gap-1 w-20">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="0"
+                                                                                        max="100"
+                                                                                        value={groupItems[0]?.groupDiscount || 0}
+                                                                                        onChange={(e) => {
+                                                                                            const newDisc = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                                                            setItems(prevItems => prevItems.map(i =>
+                                                                                                i.groupId === groupId ? { ...i, groupDiscount: newDisc } : i
+                                                                                            ));
+                                                                                        }}
+                                                                                        className="w-full h-9 px-1 border border-[#EB216A]/20 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                        placeholder="0"
+                                                                                    />
+                                                                                    <span className="text-gray-500 text-sm">%</span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="border-t border-[#EB216A]/10 pt-3 flex justify-between items-end">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="text-sm text-gray-600">Total Group</span>
+                                                                                    {(groupItems[0]?.groupDiscount || 0) > 0 && (
+                                                                                        <span className="text-xs text-[#EB216A] font-medium">
+                                                                                            Hemat Rp {(groupTotal * ((groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="text-right">
+                                                                                    {(groupItems[0]?.groupDiscount || 0) > 0 && (
+                                                                                        <span className="text-xs text-gray-400 line-through block">
+                                                                                            Rp {groupTotal.toLocaleString('id-ID')}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span className="text-lg font-bold text-[#EB216A]">
+                                                                                        Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
 
                                                                     {/* Add Variant Button for Group */}
