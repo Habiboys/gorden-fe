@@ -22,6 +22,7 @@ import { Button } from '../../components/ui/button';
 import { useConfirm } from '../../context/ConfirmContext';
 import { calculatorLeadsApi, documentsApi } from '../../utils/api';
 import { exportToCSV } from '../../utils/exportHelper';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 // Mock data - nanti akan dari localStorage atau database
 const mockLeads = [
@@ -481,7 +482,9 @@ export default function AdminCalculatorLeads() {
             name: comp.productName,
             price: comp.productPrice,
             price_gross: comp.productPriceGross || comp.productPrice,
-            price_net: comp.productPriceNet || comp.productPrice
+            price_net: comp.productPriceNet || comp.productPrice,
+            image: comp.productImage,   // Include image for display
+            images: comp.productImages  // Include images array for display
           },
           qty: comp.qty || 1,
           discount: comp.discount || 0
@@ -489,10 +492,16 @@ export default function AdminCalculatorLeads() {
       });
 
       // Determine product first to use ID for grouping
-      const product = item.product || {
+      const product = item.product ? {
+        ...item.product,
+        image: item.product.image,
+        images: item.product.images
+      } : {
         id: fabric.id,
         name: item.fabricName || fabric.name,
-        price: item.fabricPricePerMeter || fabric.price
+        price: item.fabricPricePerMeter || fabric.price,
+        image: fabric.image,
+        images: fabric.images
       };
 
       // Preserve original groupId from lead data
@@ -626,9 +635,20 @@ export default function AdminCalculatorLeads() {
         message += `${idx + 1}. ${type} ${w}cm x ${h}cm\n`;
         message += `   Jumlah: ${qty} unit\n`;
 
-        // Variant
+        // Variant / Fabric with price details
         if (item.selectedVariant) {
-          message += `   - Varian: ${item.selectedVariant.name}\n`;
+          const fabricQty = qty * (item.selectedVariant.quantity_multiplier || 1);
+          const fabricGross = item.selectedVariant.price_gross || item.fabricPricePerMeter || 0;
+          const fabricNet = item.selectedVariant.price_net || item.selectedVariant.price || fabricGross;
+          const fabricDisc = fabricGross > 0 && fabricNet < fabricGross
+            ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100)
+            : 0;
+          const fabricTotal = item.fabricPrice || (fabricNet * fabricQty);
+
+          message += `   - Kain: ${item.selectedVariant.name}\n`;
+          message += `     ${fabricQty}x @ Rp ${formatRupiah(fabricNet)}`;
+          if (fabricDisc > 0) message += ` (Disc ${fabricDisc}%)`;
+          message += ` = Rp ${formatRupiah(fabricTotal)}\n`;
         }
 
         // Components logic handles both Array (DB) and Object (Frontend) structures
@@ -636,19 +656,23 @@ export default function AdminCalculatorLeads() {
           const comps = Array.isArray(item.components) ? item.components : Object.values(item.components);
 
           comps.forEach((comp: any) => {
-            // Admin/DB structure usually has 'productName' and 'label'
-            // Frontend structure has 'product.name' and 'label' derived from currentType
             const label = comp.label || 'Komponen';
             const name = comp.productName || comp.product?.name || comp.name;
             const cQty = comp.qty || comp.quantity || 1;
+            const cPrice = comp.productPriceNet || comp.productPrice || comp.product?.price || 0;
+            const cDisc = comp.discount || 0;
+            const cTotal = comp.componentTotal || (cPrice * cQty * ((100 - cDisc) / 100));
 
             if (name) {
-              message += `   - ${label}: ${name} (${cQty}x)\n`;
+              message += `   - ${label}: ${name}\n`;
+              message += `     ${cQty}x @ Rp ${formatRupiah(cPrice)}`;
+              if (cDisc > 0) message += ` (Disc ${cDisc}%)`;
+              message += ` = Rp ${formatRupiah(cTotal)}\n`;
             }
           });
         }
 
-        message += `   Total: Rp ${formatRupiah(sub)}\n\n`;
+        message += `   *Total Item: Rp ${formatRupiah(sub)}*\n\n`;
       });
 
       message += `Subtotal Group: *Rp ${formatRupiah(groupTotal)}*\n`;
@@ -1099,18 +1123,21 @@ export default function AdminCalculatorLeads() {
                       // RENDER GROUPED VIEW (Blind)
                       return (
                         <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                          {/* Group Header */}
+                          {/* Group Header with Image */}
                           <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
-                                <Ruler className="w-5 h-5" />
-                              </div>
+                              {/* Product Image */}
+                              <img
+                                src={getProductImageUrl(item.product?.images || item.product?.image)}
+                                alt={item.name}
+                                className="w-14 h-14 rounded-lg object-cover border border-gray-200"
+                              />
                               <div>
                                 <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                                <p className="text-xs text-gray-500">{item.items.length} Ukuran</p>
+                                <p className="text-xs text-gray-500">{item.items.length} Ukuran • Rp {formatRupiah(item.product?.price || 0)}/m²</p>
                               </div>
                             </div>
-                            <p className="font-bold text-gray-900 text-lg">
+                            <p className="font-bold text-[#EB216A] text-lg">
                               Rp {formatRupiah(item.total || 0)}
                             </p>
                           </div>
@@ -1150,57 +1177,124 @@ export default function AdminCalculatorLeads() {
                       );
                     }
 
-                    // RENDER SINGLE ITEM (Existing Logic)
                     return (
                       <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         {/* Item Header */}
-                        <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex justify-between items-center">
+                        <div className="bg-gradient-to-r from-gray-50 to-white p-4 border-b border-gray-100 flex justify-between items-center">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-[#EB216A] text-white flex items-center justify-center font-bold text-sm">
-                              {idx + 1}
+                              {item.quantity || 1}
                             </div>
                             <div>
                               <h4 className="font-semibold text-gray-900">
                                 {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}
                               </h4>
                               <p className="text-xs text-gray-500">
-                                {item.dimensions?.width}cm × {item.dimensions?.height}cm • {item.panels} Panel • {item.quantity} Unit
+                                {item.dimensions?.width || item.width}cm × {item.dimensions?.height || item.height}cm • {item.panels || 2} Panel
                               </p>
                             </div>
                           </div>
-                          <p className="font-bold text-gray-900">
+                          <p className="font-bold text-[#EB216A] text-lg">
                             Rp {formatRupiah(item.subtotal || 0)}
                           </p>
                         </div>
 
                         <div className="p-4 space-y-3">
-                          {/* Fabric */}
-                          <div className="flex justify-between items-start py-2 border-b border-gray-50">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {item.selectedVariant?.name || item.fabricName || selectedLead.calculation_data?.fabric?.name || 'Kain'}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {item.fabricMeters?.toFixed(2)}m × Rp {formatRupiah(item.fabricPricePerMeter || selectedLead.calculation_data?.fabric?.price || 0)}
-                              </p>
-                            </div>
-                            <p className="text-sm font-medium text-gray-900">
-                              Rp {formatRupiah(item.fabricPrice || 0)}
-                            </p>
-                          </div>
+                          {/* Fabric with Image */}
+                          {(() => {
+                            // Get fabric price info for discount calculation
+                            const grossPrice = item.selectedVariant?.price_gross || item.fabricPricePerMeter || 0;
+                            const netPrice = item.selectedVariant?.price_net || item.selectedVariant?.price || grossPrice;
+                            const autoDiscount = grossPrice > 0 && netPrice < grossPrice
+                              ? Math.round(((grossPrice - netPrice) / grossPrice) * 100)
+                              : (item.fabricDiscount || 0);
+                            const fabricImg = item.selectedVariant?.images || item.selectedVariant?.image
+                              || item.product?.images || item.product?.image
+                              || selectedLead.calculation_data?.fabric?.images;
 
-                          {/* Components */}
-                          {(item.components || []).map((comp: any, cIdx: number) => (
-                            <div key={cIdx} className="flex justify-between items-start py-1 pl-4 border-l-2 border-gray-100">
-                              <div>
-                                <p className="text-sm text-gray-700">{comp.label}: {comp.productName}</p>
-                                <p className="text-xs text-gray-500">Qty: {comp.qty} {comp.unit}</p>
+                            return (
+                              <div className="flex items-start gap-3 py-2 border-b border-gray-50">
+                                <img
+                                  src={getProductImageUrl(fabricImg)}
+                                  alt="Kain"
+                                  className="w-12 h-12 rounded-lg object-cover border border-gray-100 flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {item.selectedVariant?.name || item.fabricName || selectedLead.calculation_data?.fabric?.name || 'Kain'}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5 flex-wrap">
+                                    {/* Calculate fabric Qty: quantity * quantity_multiplier */}
+                                    {(() => {
+                                      const fabricQty = (item.quantity || 1) * (item.selectedVariant?.quantity_multiplier || 1);
+                                      return <span className="font-medium text-gray-700">Qty: {fabricQty}</span>;
+                                    })()}
+                                    <span>×</span>
+                                    {grossPrice !== netPrice ? (
+                                      <>
+                                        <span className="line-through text-gray-400">Rp {formatRupiah(grossPrice)}</span>
+                                        <span className="text-[#EB216A] font-medium">Rp {formatRupiah(netPrice)}</span>
+                                      </>
+                                    ) : (
+                                      <span>Rp {formatRupiah(netPrice)}</span>
+                                    )}
+                                  </div>
+                                  {/* Show Fabric Discount if exists */}
+                                  {autoDiscount > 0 && (
+                                    <span className="inline-block mt-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                      Disc {autoDiscount}%
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm font-medium text-[#EB216A] text-right">
+                                  Rp {formatRupiah(item.fabricPrice || 0)}
+                                </p>
                               </div>
-                              <p className="text-sm text-gray-700">
-                                Rp {formatRupiah(comp.productPrice * comp.qty)}
-                              </p>
-                            </div>
-                          ))}
+                            );
+                          })()}
+
+                          {/* Components with Images */}
+                          {(item.components || []).map((comp: any, cIdx: number) => {
+                            // Auto-calculate discount from gross/net difference
+                            const compGross = comp.productPriceGross || comp.productPrice || 0;
+                            const compNet = comp.productPriceNet || comp.productPrice || 0;
+                            const compAutoDisc = compGross > 0 && compNet < compGross
+                              ? Math.round(((compGross - compNet) / compGross) * 100)
+                              : (comp.discount || 0);
+                            // Use componentTotal if available, otherwise calculate
+                            const totalPrice = comp.componentTotal || (compNet * (comp.qty || 1) * ((100 - (comp.discount || 0)) / 100));
+
+                            return (
+                              <div key={cIdx} className="flex items-start gap-3 py-2 pl-2 border-l-2 border-gray-100">
+                                <img
+                                  src={getProductImageUrl(comp.productImages || comp.productImage)}
+                                  alt={comp.productName}
+                                  className="w-10 h-10 rounded-lg object-cover border border-gray-100 flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-gray-700 truncate">{comp.label}: {comp.productName}</p>
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5 flex-wrap">
+                                    <span>Qty: {comp.qty}</span>
+                                    <span>×</span>
+                                    {compGross !== compNet ? (
+                                      <>
+                                        <span className="line-through text-gray-400">Rp {formatRupiah(compGross)}</span>
+                                        <span className="text-[#EB216A] font-medium">Rp {formatRupiah(compNet)}</span>
+                                      </>
+                                    ) : (
+                                      <span>Rp {formatRupiah(compNet)}</span>
+                                    )}
+                                    {compAutoDisc > 0 && (
+                                      <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[10px]">Disc {compAutoDisc}%</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-[#EB216A] font-medium text-right">
+                                  Rp {formatRupiah(totalPrice)}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );

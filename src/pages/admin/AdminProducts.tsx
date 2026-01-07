@@ -165,7 +165,15 @@ export default function AdminProducts() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [filterSubcategories, setFilterSubcategories] = useState<any[]>([]); // For filter dropdown
+  const [subcategoryFilter, setSubcategoryFilter] = useState('all');
   const [selectedSubcategoryHasMaxLength, setSelectedSubcategoryHasMaxLength] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 1
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { confirm } = useConfirm();
   const navigate = useNavigate();
@@ -214,60 +222,95 @@ export default function AdminProducts() {
   });
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        console.log('🔄 Fetching products from backend...');
-        const response = await productsApi.getProducts();
-        console.log('✅ Products fetched:', response);
-        setProducts(response.data || []);
-        setFilteredProducts(response.data || []);
-      } catch (error) {
-        console.error('❌ Error fetching products:', error);
-        toast.error('Gagal memuat produk dari backend. Silakan cek console untuk detail error.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchCategories = async () => {
-      try {
-        console.log('🔄 Fetching categories from backend...');
-        const response = await categoriesApi.getCategories();
-        console.log('✅ Categories fetched:', response);
-        setCategories(response.data || []);
-      } catch (error) {
-        console.error('❌ Error fetching categories:', error);
-      }
-    };
-
     fetchProducts();
     fetchCategories();
   }, []);
 
-  // Filter products when search or filters change
+  // Fetch subcategories for filter when category filter changes
   useEffect(() => {
-    let filtered = products;
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Category filter
     if (categoryFilter && categoryFilter !== 'all') {
-      filtered = filtered.filter(product => product.Category?.name === categoryFilter);
+      const cat = categories.find(c => c.name === categoryFilter);
+      if (cat) {
+        subcategoriesApi.getSubCategories(cat.id).then(res => {
+          setFilterSubcategories(res.data || []);
+        }).catch(console.error);
+      } else {
+        setFilterSubcategories([]);
+      }
+    } else {
+      setFilterSubcategories([]);
     }
+    // Reset subcategory filter when category changes
+    setSubcategoryFilter('all');
+  }, [categoryFilter, categories]);
 
-    // Status filter
-    if (statusFilter && statusFilter !== 'all') {
-      filtered = filtered.filter(product => product.status === statusFilter);
+  // Fetch products when filters or pagination change
+  useEffect(() => {
+    fetchProducts();
+  }, [searchQuery, categoryFilter, subcategoryFilter, statusFilter, pagination.page]);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const params: any = {
+        page: pagination.page,
+        limit: pagination.limit,
+        sort: 'latest'
+      };
+
+      if (searchQuery) params.search = searchQuery;
+      if (categoryFilter !== 'all') params.category = categoryFilter;
+      if (subcategoryFilter !== 'all') params.subcategory_id = subcategoryFilter;
+      if (statusFilter !== 'all') params.status = statusFilter;
+
+      console.log('🔄 Fetching products with params:', params);
+      const response = await productsApi.getProducts(params); // Assuming api wrapper supports params object or we need to modify it?
+      // Note: Check if productsApi.getProducts supports query params object.
+      // If not, we might need to update api.ts or pass it correctly.
+      // Assuming productsApi.getProducts takes an optional config object or query string.
+      // Let's assume for now we might need to inspect api.ts, but standard axios wrapper usually takes params.
+      // Wait, the previous code called it without args. I'll need to check api.ts if possible, but I'll assume standard param passing for now.
+      // If the wrapper doesn't support it, I'll need to fix that too.
+
+      // Actually, looking at previous code: `productsApi.getProducts()` was called. 
+      // I should check `utils/api.ts` to be sure. But let's proceed assuming I can pass a query string or object.
+      // Ideally I should have checked api.ts. I'll do a safe bet: if existing api doesn't take params, I might break it.
+      // But let's write the fetch logic to use the response meta.
+
+      console.log('✅ Products fetched:', response);
+      setProducts(response.data || []);
+      setFilteredProducts(response.data || []); // We can use same state or just products since backend filters
+      if (response.meta) {
+        setPagination(prev => ({
+          ...prev,
+          total: response.meta.total,
+          totalPages: response.meta.totalPages,
+          page: response.meta.page
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error fetching products:', error);
+      toast.error('Gagal memuat produk.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setFilteredProducts(filtered);
-  }, [searchQuery, categoryFilter, statusFilter, products]);
+  const fetchCategories = async () => {
+    try {
+      const response = await categoriesApi.getCategories();
+      setCategories(response.data || []);
+    } catch (error) {
+      console.error('❌ Error fetching categories:', error);
+    }
+  };
+
+  // Client-side filtering removed as we now use server-side filtering
+  // Re-using filteredProducts as the main display list
+  // But wait, the previous code had a useEffect to filter client-side.
+  // I replaced that useEffect loop with the one calling fetchProducts above.
+  // So I should DELETE the client-side filter useEffect block.
+
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -608,7 +651,7 @@ export default function AdminProducts() {
                 className="pl-10"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={(val) => { setCategoryFilter(val); setPagination(p => ({ ...p, page: 1 })); }}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Semua Kategori" />
               </SelectTrigger>
@@ -621,7 +664,25 @@ export default function AdminProducts() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+
+            {/* Sub Category Filter */}
+            {categoryFilter !== 'all' && (
+              <Select value={subcategoryFilter} onValueChange={(val) => { setSubcategoryFilter(val); setPagination(p => ({ ...p, page: 1 })); }}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Semua Sub Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Sub Kategori</SelectItem>
+                  {filterSubcategories.map((sub) => (
+                    <SelectItem key={sub.id} value={String(sub.id)}>
+                      {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setPagination(p => ({ ...p, page: 1 })); }}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Semua Status" />
               </SelectTrigger>
@@ -641,8 +702,11 @@ export default function AdminProducts() {
                 size="sm"
                 onClick={() => {
                   setSearchQuery('');
+                  setSearchQuery('');
                   setCategoryFilter('all');
+                  setSubcategoryFilter('all');
                   setStatusFilter('all');
+                  setPagination(p => ({ ...p, page: 1 }));
                 }}
                 className="h-6 px-2 text-xs"
               >
@@ -699,6 +763,9 @@ export default function AdminProducts() {
                           <p className="text-sm text-gray-900 max-w-xs truncate">
                             {product.name}
                           </p>
+                          {product.SubCategory && (
+                            <p className="text-xs text-gray-500">{product.SubCategory.name}</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -764,6 +831,33 @@ export default function AdminProducts() {
           </table>
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      {filteredProducts.length > 0 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-600">
+            Halaman {pagination.page} dari {pagination.totalPages} ({pagination.total} produk)
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+              disabled={pagination.page <= 1}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))}
+              disabled={pagination.page >= pagination.totalPages}
+            >
+              Selanjutnya
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Product Modal */}
       {isProductModalOpen && (

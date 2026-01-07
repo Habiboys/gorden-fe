@@ -804,7 +804,9 @@ export default function CalculatorPageV2() {
           fabric: selectedFabric ? {
             id: selectedFabric.id,
             name: selectedFabric.name,
-            price: selectedFabric.price
+            price: selectedFabric.price,
+            image: selectedFabric.image,
+            images: selectedFabric.images
           } : null,
           items: items.map(item => {
             const prices = calculateItemPrice(item);
@@ -819,7 +821,8 @@ export default function CalculatorPageV2() {
                 id: item.product.id,
                 name: item.product.name,
                 price: item.product.price,
-                image: item.product.image
+                image: item.product.image,
+                images: item.product.images // Include images array
               } : null,
               dimensions: {
                 width: item.width,
@@ -835,7 +838,9 @@ export default function CalculatorPageV2() {
                 price: item.selectedVariant.price,
                 price_gross: item.selectedVariant.price_gross,
                 price_net: item.selectedVariant.price_net,
-                quantity_multiplier: item.selectedVariant.quantity_multiplier
+                quantity_multiplier: item.selectedVariant.quantity_multiplier,
+                image: item.selectedVariant.image,
+                images: item.selectedVariant.images
               } : null,
               fabricName: (prices as any).fabricName || selectedFabric?.name,
               fabricPricePerMeter: (prices as any).fabricPricePerMeter || selectedFabric?.price,
@@ -848,12 +853,20 @@ export default function CalculatorPageV2() {
                   label: comp?.label || 'Unknown',
                   productId: selection.product.id,
                   productName: selection.product.name,
+                  productImage: selection.product.image,
+                  productImages: selection.product.images, // Include images for component products
                   productPrice: selection.product.price,
                   productPriceGross: (selection.product as any).price_gross || selection.product.price,
                   productPriceNet: (selection.product as any).price_net || selection.product.price,
                   qty: selection.qty,
                   discount: selection.discount || 0,
-                  priceCalculation: comp?.price_calculation || 'per_unit'
+                  priceCalculation: comp?.price_calculation || 'per_unit',
+                  // Calculate component total with discount
+                  componentTotal: (() => {
+                    const price = (selection.product as any).price_net || selection.product.price;
+                    const disc = selection.discount || 0;
+                    return price * selection.qty * ((100 - disc) / 100);
+                  })()
                 };
               }),
               componentsPrice: prices.components,
