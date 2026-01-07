@@ -1819,7 +1819,7 @@ export default function CalculatorPageV2() {
 
       {/* Add Item Modal */}
       < Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen} >
-        <DialogContent className="w-full max-w-[92vw] sm:max-w-md max-h-[75vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className={isBlindFlow ? 'hidden lg:block' : ''}>
               {isBlindFlow ? `Tambah: ${tempSelectedProduct?.name || 'Blind'}` : 'Tambah Item Baru'}
@@ -1831,10 +1831,10 @@ export default function CalculatorPageV2() {
 
             {/* Show Product Image for Blind Flow */}
             {isBlindFlow && tempSelectedProduct && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl overflow-hidden">
                 <img src={getProductImageUrl(tempSelectedProduct.images || tempSelectedProduct.image)} className="w-12 h-12 lg:w-16 lg:h-16 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm lg:text-base font-medium text-gray-900 truncate">{tempSelectedProduct.name}</p>
+                  <p className="text-sm lg:text-base font-medium text-gray-900 break-words">{tempSelectedProduct.name}</p>
                   <p className="text-xs lg:text-sm text-[#EB216A] font-bold">
                     {tempSelectedProduct.minPrice && tempSelectedProduct.minPrice > 0
                       ? `Mulai Rp ${tempSelectedProduct.minPrice.toLocaleString('id-ID')}`
@@ -1843,7 +1843,7 @@ export default function CalculatorPageV2() {
                         : 'Lihat Varian'}
                   </p>
                   {tempSelectedProduct.selectedVariantName && (
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">Varian: {tempSelectedProduct.selectedVariantName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 break-words">Varian: {tempSelectedProduct.selectedVariantName}</p>
                   )}
                 </div>
               </div>
