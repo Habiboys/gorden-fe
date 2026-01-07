@@ -1,6 +1,7 @@
 import {
     ArrowLeft,
     Check,
+    Pencil,
     Plus,
     Save,
     Search,
@@ -1127,35 +1128,40 @@ export default function AdminDocumentCreate() {
                                                         const groupTotal = groupItems.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
 
                                                         return (
-                                                            <div key={groupId} className="bg-white border rounded-xl shadow-sm overflow-hidden mb-6">
+                                                            <div key={groupId} className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden mb-6">
                                                                 {/* Product Header */}
-                                                                <div className="bg-gray-50 p-4 flex items-center justify-between border-b">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <img
-                                                                            src={getProductImageUrl(groupProduct?.images || groupProduct?.image)}
-                                                                            className="w-16 h-16 rounded-lg object-cover bg-white border"
-                                                                        />
-                                                                        <div>
-                                                                            <h3 className="font-bold text-lg text-gray-900">{groupProduct?.name || 'Produk Custom'}</h3>
-                                                                            <p className="text-[#EB216A] font-medium">
+                                                                <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-start">
+                                                                    <div className="flex items-center gap-3 lg:gap-4">
+                                                                        <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white rounded-lg border border-gray-200 p-1 shrink-0">
+                                                                            <img
+                                                                                src={getProductImageUrl(groupProduct?.images || groupProduct?.image)}
+                                                                                className="w-full h-full object-cover rounded"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <h3 className="font-bold text-gray-900 text-sm lg:text-lg truncate">{groupProduct?.originalName || groupProduct?.name || 'Produk Custom'}</h3>
+                                                                            <p className="text-[#EB216A] font-medium text-sm lg:text-base">
                                                                                 {groupProduct?.minPrice ? (
-                                                                                    <>Mulai Rp {Number(groupProduct.minPrice).toLocaleString('id-ID')}/m</>
+                                                                                    <>Mulai Rp {Number(groupProduct.minPrice).toLocaleString('id-ID')}/m²</>
                                                                                 ) : (
                                                                                     <>Pilih varian</>
                                                                                 )}
                                                                             </p>
+                                                                            {firstItem?.selectedVariant && (
+                                                                                <p className="text-xs text-gray-500 truncate">
+                                                                                    Varian: {Object.entries(safeJSONParse(firstItem.selectedVariant.attributes, {}) as Record<string, any>).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                </p>
+                                                                            )}
+                                                                            <p className="text-xs text-gray-500">{groupItems.length} Ukuran</p>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            onClick={() => handleRemoveGroup(groupId)}
-                                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4 mr-2" /> Hapus Grup
-                                                                        </Button>
-                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => handleRemoveGroup(groupId)}
+                                                                        className="text-red-500 hover:text-red-700 p-2"
+                                                                        title="Hapus seluruh grup"
+                                                                    >
+                                                                        <Trash2 className="w-5 h-5" />
+                                                                    </button>
                                                                 </div>
 
                                                                 {/* Items Table */}
@@ -1308,29 +1314,38 @@ export default function AdminDocumentCreate() {
                                                     // (Calculations moved inline to layout)
 
                                                     return (
-                                                        <div key={item.id} className="mb-8 border rounded-xl overflow-hidden shadow-sm bg-white">
+                                                        <div key={item.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
                                                             {/* ITEM HEADER */}
-                                                            <div className="bg-gray-50 border-b px-4 py-3 flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-gray-800 text-lg">
-                                                                        {item.quantity} {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}
-                                                                    </span>
-                                                                    <span className="text-gray-500 mx-2">|</span>
-                                                                    <span className="font-medium text-gray-700">
-                                                                        Ukuran {item.width}cm x {item.height}cm
-                                                                    </span>
-                                                                    <span className="text-gray-500 mx-2">|</span>
-                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-                                                                        {item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja'}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Button variant="ghost" size="sm" onClick={() => setShowItemModal(true)} className="text-gray-500 hover:text-blue-600">
-                                                                        Edit Ukuran
-                                                                    </Button>
-                                                                    <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(item.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                                        <X className="w-4 h-4" />
-                                                                    </Button>
+                                                            <div className="bg-gradient-to-r from-gray-50 to-white p-4 border-b border-gray-100">
+                                                                <div className="flex items-start justify-between gap-4">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="w-12 h-12 bg-[#EB216A]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                                            <span className="text-lg font-bold text-[#EB216A]">{item.quantity}</span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <h3 className="text-lg font-semibold text-gray-900">
+                                                                                {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}
+                                                                                {item.packageType === 'gorden-lengkap' ? ' - Paket Lengkap' : ' - Gorden Saja'}
+                                                                            </h3>
+                                                                            <p className="text-sm text-gray-500">
+                                                                                {item.width} cm × {item.height} cm • Jumlah: {item.quantity}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex">
+                                                                        <button
+                                                                            onClick={() => setShowItemModal(true)}
+                                                                            className="text-gray-400 hover:text-blue-500 transition-colors p-2"
+                                                                        >
+                                                                            <Pencil className="w-5 h-5" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleRemoveItem(item.id)}
+                                                                            className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                                                                        >
+                                                                            <Trash2 className="w-5 h-5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -1776,7 +1791,7 @@ export default function AdminDocumentCreate() {
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div
                             className="bg-white rounded-xl mx-4 max-h-[80vh] overflow-hidden flex flex-col"
-                            style={{ width: '60vw', maxWidth: '1600px' }}
+                            style={{ width: 'clamp(320px, 95vw, 1200px)', maxWidth: '1600px' }}
                         >
                             <div className="p-4 border-b flex items-center justify-between">
                                 <h3 className="text-lg font-semibold">Pilih Varian</h3>
@@ -1900,9 +1915,11 @@ export default function AdminDocumentCreate() {
                                                                 {key}
                                                             </th>
                                                         ))}
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
-                                                            Cocok Untuk Pintu/Jendela
-                                                        </th>
+                                                        {!isBlindType() && (
+                                                            <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                                                                Cocok Untuk Pintu/Jendela
+                                                            </th>
+                                                        )}
                                                         <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
                                                             Harga
                                                         </th>
@@ -1944,25 +1961,27 @@ export default function AdminDocumentCreate() {
                                                                     );
                                                                 })}
                                                                 {/* Cocok Untuk Pintu/Jendela Cell */}
-                                                                <td className="px-3 py-3 text-gray-800 text-xs">
-                                                                    {(() => {
-                                                                        const lebar = getNum(attrs, ['lebar', 'width', 'l']);
-                                                                        const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
-                                                                        const sibak = getNum(attrs, ['sibak']);
-                                                                        const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
-                                                                        const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+                                                                {!isBlindType() && (
+                                                                    <td className="px-3 py-3 text-gray-800 text-xs">
+                                                                        {(() => {
+                                                                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                            const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                                                                            const sibak = getNum(attrs, ['sibak']);
+                                                                            const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                                                                            const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
 
-                                                                        if (calculatedLebar || calculatedTinggi) {
-                                                                            return (
-                                                                                <span>
-                                                                                    Lebar +/- {calculatedLebar || '-'}cm<br />
-                                                                                    Tinggi {calculatedTinggi || '-'}cm
-                                                                                </span>
-                                                                            );
-                                                                        }
-                                                                        return '-';
-                                                                    })()}
-                                                                </td>
+                                                                            if (calculatedLebar || calculatedTinggi) {
+                                                                                return (
+                                                                                    <span>
+                                                                                        Lebar +/- {calculatedLebar || '-'}cm<br />
+                                                                                        Tinggi {calculatedTinggi || '-'}cm
+                                                                                    </span>
+                                                                                );
+                                                                            }
+                                                                            return '-';
+                                                                        })()}
+                                                                    </td>
+                                                                )}
                                                                 <td className="px-3 py-3 text-right whitespace-nowrap">
                                                                     <span className="font-semibold text-[#EB216A]">
                                                                         Rp {displayPrice.toLocaleString('id-ID')}
