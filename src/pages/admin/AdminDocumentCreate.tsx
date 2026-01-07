@@ -1800,6 +1800,12 @@ export default function AdminDocumentCreate() {
                                                                                         className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
                                                                                     />
                                                                                 </div>
+                                                                                <div className="w-20">
+                                                                                    <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Qty</span>
+                                                                                    <div className="h-8 px-2 border border-gray-200 rounded text-sm bg-gray-50 flex items-center justify-center font-medium">
+                                                                                        {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}
+                                                                                    </div>
+                                                                                </div>
                                                                                 <div className="flex-1 text-right">
                                                                                     <span className="text-xs text-gray-500 block">Total</span>
                                                                                     <span className="font-bold text-[#EB216A] text-lg">Rp {prices.fabric.toLocaleString('id-ID')}</span>
@@ -2359,8 +2365,8 @@ export default function AdminDocumentCreate() {
                                                                         }
 
                                                                         return (
-                                                                            <span key={key} style={{ marginRight: '16px', marginBottom: '4px', whiteSpace: 'nowrap', display: 'inline-block' }}>
-                                                                                <span className="text-gray-500 text-xs">{key}:</span> <span className="font-semibold text-gray-900">{val}</span>
+                                                                            <span key={key} style={{ marginRight: '24px', marginBottom: '8px', whiteSpace: 'nowrap', display: 'inline-block', lineHeight: '1.6' }}>
+                                                                                <span className="text-gray-500 text-xs">{key}:</span> <span className="font-semibold text-gray-900 ml-1">{val}</span>
                                                                             </span>
                                                                         );
                                                                     })}
