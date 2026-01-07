@@ -1872,23 +1872,52 @@ export default function AdminDocumentCreate() {
                                                                                                     </div>
                                                                                                 </div>
 
-                                                                                                <div className="flex items-center justify-between">
-                                                                                                    {/* Implicit Discount Display if needed, or just Total */}
-                                                                                                    {(() => {
-                                                                                                        const gross = selection.product.price_gross || selection.product.price;
-                                                                                                        const net = selection.product.price_net || gross;
-                                                                                                        const disc = selection.discount || (gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0);
-                                                                                                        if (disc > 0) {
-                                                                                                            return (
-                                                                                                                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                                                                                                                    Disc {disc}%
-                                                                                                                </span>
-                                                                                                            );
-                                                                                                        }
-                                                                                                        return <span></span>;
-                                                                                                    })()}
+                                                                                                <div className="flex items-center gap-3 mt-3 border-t border-gray-50 pt-3">
+                                                                                                    {/* Disc Input */}
+                                                                                                    <div className="w-20">
+                                                                                                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Disc (%)</span>
+                                                                                                        <input
+                                                                                                            type="number"
+                                                                                                            min="0"
+                                                                                                            max="100"
+                                                                                                            value={selection.discount || 0}
+                                                                                                            className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                            onChange={(e) => {
+                                                                                                                const newDisc = parseInt(e.target.value) || 0;
+                                                                                                                setItems(items.map(i => i.id === item.id ? {
+                                                                                                                    ...i,
+                                                                                                                    components: {
+                                                                                                                        ...i.components,
+                                                                                                                        [comp.id]: { ...selection, discount: newDisc }
+                                                                                                                    }
+                                                                                                                } : i));
+                                                                                                            }}
+                                                                                                        />
+                                                                                                    </div>
 
-                                                                                                    <div className="text-right">
+                                                                                                    {/* Qty Input */}
+                                                                                                    <div className="w-20">
+                                                                                                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Qty</span>
+                                                                                                        <input
+                                                                                                            type="number"
+                                                                                                            min="1"
+                                                                                                            value={selection.qty}
+                                                                                                            className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                            onChange={(e) => {
+                                                                                                                const newQty = parseInt(e.target.value) || 1;
+                                                                                                                setItems(items.map(i => i.id === item.id ? {
+                                                                                                                    ...i,
+                                                                                                                    components: {
+                                                                                                                        ...i.components,
+                                                                                                                        [comp.id]: { ...selection, qty: newQty }
+                                                                                                                    }
+                                                                                                                } : i));
+                                                                                                            }}
+                                                                                                        />
+                                                                                                    </div>
+
+                                                                                                    {/* Total */}
+                                                                                                    <div className="flex-1 text-right">
                                                                                                         <span className="text-xs text-gray-500 block">Total</span>
                                                                                                         <span className="font-bold text-[#EB216A] text-lg">Rp {calculateComponentPrice(item, comp, selection).toLocaleString('id-ID')}</span>
                                                                                                     </div>
