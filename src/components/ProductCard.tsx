@@ -84,8 +84,8 @@ export function ProductCard({ id, name, price, minPrice, minPriceGross, image, i
             </Badge>
           )}
 
-          {/* Custom & Warranty Badges - Top Right Stacked */}
-          <div className="absolute top-4 right-14 flex flex-col items-end gap-1">
+          {/* Custom & Warranty Badges - Bottom Left (Fade out on hover to show Quick Add) */}
+          <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0">
             {is_warranty && (
               <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
                 Garansi 1 Tahun
