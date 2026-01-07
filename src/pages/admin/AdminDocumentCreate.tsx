@@ -439,6 +439,19 @@ export default function AdminDocumentCreate() {
         setSearchQuery('');
     };
 
+    // Edit Item Size/Qty
+    const handleEditItemSize = (item: CalculatorItem) => {
+        setEditingItemId(item.id);
+        setWidth(item.width?.toString() || '');
+        setHeight(item.height?.toString() || '');
+        setQuantity(item.quantity?.toString() || '1');
+        setItemName(item.name || '');
+        setItemType(item.itemType || 'jendela');
+        setPackageType(item.packageType || 'gorden-lengkap');
+        setItemModalTargetProduct(item.product);
+        setShowItemModal(true);
+    };
+
     // Add item
     const handleAddItem = async () => {
         if (!width || !height) {
@@ -448,6 +461,32 @@ export default function AdminDocumentCreate() {
 
         const itemWidth = parseFloat(width);
         const itemHeight = parseFloat(height);
+
+        if (editingItemId) {
+            // EDIT MODE
+            setItems(items.map(item => {
+                if (item.id === editingItemId) {
+                    // Recalculate panels
+                    const newPanels = isBlindType() ? 0 : calculatePanels(itemWidth, selectedCalcType?.fabric_multiplier || 2.4, selectedFabric?.maxWidth || 280);
+
+                    return {
+                        ...item,
+                        width: itemWidth,
+                        height: itemHeight,
+                        quantity: parseFloat(quantity),
+                        itemType: selectedCalcType?.has_item_type ? itemType : 'jendela',
+                        packageType: selectedCalcType?.has_package_type ? packageType : 'gorden-saja',
+                        name: itemName || undefined,
+                        panels: newPanels,
+                        // Retain other properties
+                    };
+                }
+                return item;
+            }));
+            setShowItemModal(false);
+            setEditingItemId(null);
+            return;
+        }
 
         const groupId = targetGroupId
             ? targetGroupId
@@ -1334,7 +1373,7 @@ export default function AdminDocumentCreate() {
                                                                     </div>
                                                                     <div className="flex">
                                                                         <button
-                                                                            onClick={() => setShowItemModal(true)}
+                                                                            onClick={() => handleEditItemSize(item)}
                                                                             className="text-gray-400 hover:text-blue-500 transition-colors p-2"
                                                                         >
                                                                             <Pencil className="w-5 h-5" />
