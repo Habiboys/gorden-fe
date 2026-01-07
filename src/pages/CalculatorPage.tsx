@@ -595,6 +595,7 @@ export default function CalculatorPageV2() {
         price_gross: Number(variant.price_gross) || 0,
         price_net: Number(variant.price_net) || 0,
         name: `${pendingProductForVariant.name} (${attrDisplay})`,
+        originalName: pendingProductForVariant.name,
         selectedVariantName: attrDisplay,
       };
 
@@ -1159,14 +1160,19 @@ export default function CalculatorPageV2() {
                           <div key={groupId} className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden mb-6">
                             {/* Group Header: Product Info */}
                             <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-start">
-                              <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-white rounded-lg border border-gray-200 p-1">
+                              <div className="flex items-center gap-3 lg:gap-4">
+                                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white rounded-lg border border-gray-200 p-1 shrink-0">
                                   <img src={getProductImageUrl(product.images || product.image)} className="w-full h-full object-cover rounded" />
                                 </div>
-                                <div>
-                                  <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
-                                  <p className="text-[#EB216A] font-medium">Rp {product.price?.toLocaleString('id-ID')}/m</p>
-                                  <p className="text-xs text-gray-500 mt-1">{groupItems.length} Ukuran</p>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-gray-900 text-sm lg:text-lg truncate">{product.originalName || product.name}</h3>
+                                  <p className="text-[#EB216A] font-medium text-sm lg:text-base">Rp {product.price?.toLocaleString('id-ID')}/m²</p>
+                                  {firstItem.selectedVariant && (
+                                    <p className="text-xs text-gray-500 truncate">
+                                      Varian: {Object.entries(firstItem.selectedVariant.attributes || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-500">{groupItems.length} Ukuran</p>
                                 </div>
                               </div>
                               <button
@@ -1567,25 +1573,12 @@ export default function CalculatorPageV2() {
                                     {/* FABRIC CARD */}
                                     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
                                       {/* Header */}
-                                      <div className="bg-[#EB216A] px-3 py-2 flex justify-between items-center text-white">
+                                      <div className="bg-gray-50 px-3 py-2 flex justify-between items-center border-b border-gray-100">
                                         <div className="flex items-center gap-2">
-                                          <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center">
-                                            <Pencil className="w-3 h-3 text-white" />
-                                          </div>
-                                          <span className="font-semibold text-sm">{isBlindFlow ? 'Produk' : 'Gorden'}</span>
+                                          <span className="font-semibold text-sm text-gray-700">{isBlindFlow ? 'Produk' : 'Gorden'}</span>
                                         </div>
                                         <button
-                                          className="h-6 px-2 text-xs rounded transition-all"
-                                          style={{
-                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                            color: 'white'
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                                          }}
+                                          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
                                           onClick={async () => {
                                             if (!selectedFabric || isBlindFlow) return;
                                             try {
@@ -1602,8 +1595,9 @@ export default function CalculatorPageV2() {
                                               console.error('Error loading variants:', error);
                                             }
                                           }}
+                                          title={item.selectedVariant ? 'Ganti Varian' : 'Pilih Varian'}
                                         >
-                                          {item.selectedVariant ? 'Ganti' : 'Pilih'}
+                                          <Pencil className="w-4 h-4 text-gray-500" />
                                         </button>
                                       </div>
 
@@ -1673,29 +1667,17 @@ export default function CalculatorPageV2() {
                                         return (
                                           <div key={comp.id} className="bg-white border rounded-xl overflow-hidden shadow-sm">
                                             {/* Header */}
-                                            <div className="bg-[#EB216A] px-3 py-2 flex justify-between items-center text-white">
+                                            <div className="bg-gray-50 px-3 py-2 flex justify-between items-center border-b border-gray-100">
                                               <div className="flex items-center gap-2">
-                                                <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center">
-                                                  <Pencil className="w-3 h-3 text-white" />
-                                                </div>
-                                                <span className="font-semibold text-sm">{comp.label}</span>
+                                                <span className="font-semibold text-sm text-gray-700">{comp.label}</span>
                                               </div>
                                               <button
-                                                className="h-6 px-2 text-xs rounded transition-all"
-                                                style={{
-                                                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                                  color: 'white'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                                                }}
+                                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
                                                 onClick={() => openComponentModal(item.id, comp.id)}
                                                 disabled={products.length === 0}
+                                                title={selection ? 'Ganti Produk' : 'Pilih Produk'}
                                               >
-                                                {selection ? 'Ganti' : 'Pilih'}
+                                                <Pencil className="w-4 h-4 text-gray-500" />
                                               </button>
                                             </div>
 
@@ -1837,7 +1819,7 @@ export default function CalculatorPageV2() {
 
       {/* Add Item Modal */}
       < Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen} >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className={isBlindFlow ? 'hidden lg:block' : ''}>
               {isBlindFlow ? `Tambah: ${tempSelectedProduct?.name || 'Blind'}` : 'Tambah Item Baru'}
