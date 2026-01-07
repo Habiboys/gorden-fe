@@ -8,7 +8,7 @@ import {
     Trash2,
     X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -138,6 +138,7 @@ export default function AdminDocumentCreate() {
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [editingComponentId, setEditingComponentId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedProductSubcategoryId, setSelectedProductSubcategoryId] = useState<number | null>(null);
 
     // Variant modal
     const [showVariantPicker, setShowVariantPicker] = useState(false);
@@ -291,6 +292,26 @@ export default function AdminDocumentCreate() {
     const isBlindType = () => {
         return selectedCalcType?.slug.includes('blind') || selectedCalcType?.has_item_type === false;
     };
+
+    // Get unique subcategories from products for current category (for Blind flow)
+    const productSubcategories = useMemo(() => {
+        if (!selectedCalcType?.category?.slug) return [];
+
+        const subcats = new Map<number, { id: number; name: string }>();
+        fabricProducts.forEach((p: any) => {
+            const productCategory = p.category?.slug || p.Category?.slug || '';
+            if (productCategory !== selectedCalcType?.category?.slug) return;
+
+            const subcatId = p.subcategory_id || p.SubCategory?.id || p.subcategory?.id;
+            const subcatName = p.SubCategory?.name || p.subcategory?.name || '';
+
+            if (subcatId && subcatName && !subcats.has(subcatId)) {
+                subcats.set(subcatId, { id: subcatId, name: subcatName });
+            }
+        });
+
+        return Array.from(subcats.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [selectedCalcType, fabricProducts]);
 
     // Open Add Item Modal (Create or Edit Size)
     // NOTE: This is mainly for SIZE editing. For Product Editing, we use handleEditItemProduct.
@@ -2115,21 +2136,63 @@ export default function AdminDocumentCreate() {
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden flex flex-col">
                             <div className="p-4 border-b flex items-center justify-between">
-                                <h3 className="text-lg font-semibold">Pilih Bahan Kain</h3>
-                                <Button size="sm" variant="ghost" onClick={() => setShowFabricPicker(false)}><X className="w-4 h-4" /></Button>
+                                <h3 className="text-lg font-semibold">{isBlindType() ? 'Pilih Jenis Blind' : 'Pilih Bahan Kain'}</h3>
+                                <Button size="sm" variant="ghost" onClick={() => {
+                                    setShowFabricPicker(false);
+                                    setSelectedProductSubcategoryId(null);
+                                    setSearchQuery('');
+                                }}><X className="w-4 h-4" /></Button>
                             </div>
+
+                            {/* Subcategory Tabs for Blind */}
+                            {isBlindType() && productSubcategories.length > 0 && (
+                                <div className="p-4 border-b">
+                                    <p className="text-sm text-gray-600 mb-2">Pilih Tipe Blind:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => setSelectedProductSubcategoryId(null)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedProductSubcategoryId === null
+                                                ? 'bg-[#EB216A] text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            Semua
+                                        </button>
+                                        {productSubcategories.map(subcat => (
+                                            <button
+                                                key={subcat.id}
+                                                onClick={() => setSelectedProductSubcategoryId(subcat.id)}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedProductSubcategoryId === subcat.id
+                                                    ? 'bg-[#EB216A] text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {subcat.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="p-4 border-b">
                                 <Input placeholder="Cari produk..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                {fabricProducts.filter(p => {
+                                {fabricProducts.filter((p: any) => {
                                     if (!p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
                                     // Category Filter
                                     if (selectedCalcType?.category?.slug) {
                                         const productCategory = p.category?.slug || p.Category?.slug || ''; // Handle potential case variance
-                                        return productCategory === selectedCalcType.category.slug;
+                                        if (productCategory !== selectedCalcType.category.slug) return false;
                                     }
+
+                                    // Subcategory Filter for Blind
+                                    if (isBlindType() && selectedProductSubcategoryId) {
+                                        const productSubcategoryId = p.subcategory_id || p.SubCategory?.id || p.subcategory?.id;
+                                        if (productSubcategoryId !== selectedProductSubcategoryId) return false;
+                                    }
+
                                     return true;
                                 }).slice(0, 20).map((product: any) => (
                                     <div key={product.id} className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#EB216A]" onClick={() => handleSelectFabric(product)}>
@@ -2166,7 +2229,7 @@ export default function AdminDocumentCreate() {
                                 const item = items.find(i => i.id === variantItemId);
                                 if (item) {
                                     return (
-                                        <div className="mx-4 mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed">
+                                        <div className="hidden lg:block mx-4 mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed">
                                             <p className="font-semibold">
                                                 Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {item.width} cm × Tinggi {item.height} cm
                                             </p>

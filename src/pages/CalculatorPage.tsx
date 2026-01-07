@@ -11,7 +11,7 @@ import {
   Search,
   Trash2
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CustomerInfoDialog } from '../components/CustomerInfoDialog';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -155,6 +155,7 @@ export default function CalculatorPageV2() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingComponentId, setEditingComponentId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProductSubcategoryId, setSelectedProductSubcategoryId] = useState<number | null>(null);
 
   // Variant state
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
@@ -903,11 +904,37 @@ export default function CalculatorPageV2() {
     if (currentType?.category?.slug) {
       // Handle potential case variance (category vs Category)
       const productCategory = p.category?.slug || p.Category?.slug || '';
-      return productCategory === currentType.category.slug;
+      if (productCategory !== currentType.category.slug) return false;
+    }
+
+    // Subcategory filter for Blind flow
+    if (isBlindFlow && selectedProductSubcategoryId) {
+      const productSubcategoryId = p.subcategory_id || p.SubCategory?.id || p.subcategory?.id;
+      if (productSubcategoryId !== selectedProductSubcategoryId) return false;
     }
 
     return true;
   });
+
+  // Get unique subcategories from products for current category (for Blind flow)
+  const productSubcategories = useMemo(() => {
+    if (!isBlindFlow || !currentType?.category?.slug) return [];
+
+    const subcats = new Map<number, { id: number; name: string }>();
+    fabricProducts.forEach(p => {
+      const productCategory = p.category?.slug || p.Category?.slug || '';
+      if (productCategory !== currentType?.category?.slug) return;
+
+      const subcatId = p.subcategory_id || p.SubCategory?.id || p.subcategory?.id;
+      const subcatName = p.SubCategory?.name || p.subcategory?.name || '';
+
+      if (subcatId && subcatName && !subcats.has(subcatId)) {
+        subcats.set(subcatId, { id: subcatId, name: subcatName });
+      }
+    });
+
+    return Array.from(subcats.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [isBlindFlow, currentType, fabricProducts]);
 
   // Loading state
   if (loading) {
@@ -1988,12 +2015,50 @@ export default function CalculatorPageV2() {
       </Dialog >
 
       {/* Product Selection Modal */}
-      < Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen} >
+      < Dialog open={isProductModalOpen} onOpenChange={(open: boolean) => {
+        setIsProductModalOpen(open);
+        if (!open) {
+          setSelectedProductSubcategoryId(null);
+          setSearchQuery('');
+        }
+      }} >
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Pilih Kain Gorden</DialogTitle>
-            <DialogDescription>Pilih jenis kain untuk gorden Anda</DialogDescription>
+            <DialogTitle>{isBlindFlow ? 'Pilih Jenis Blind' : 'Pilih Kain Gorden'}</DialogTitle>
+            <DialogDescription>
+              {isBlindFlow ? 'Pilih jenis blind yang Anda inginkan' : 'Pilih jenis kain untuk gorden Anda'}
+            </DialogDescription>
           </DialogHeader>
+
+          {/* Subcategory Tabs for Blind Flow */}
+          {isBlindFlow && productSubcategories.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Pilih Tipe Blind:</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedProductSubcategoryId(null)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedProductSubcategoryId === null
+                    ? 'bg-[#EB216A] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Semua
+                </button>
+                {productSubcategories.map(subcat => (
+                  <button
+                    key={subcat.id}
+                    onClick={() => setSelectedProductSubcategoryId(subcat.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedProductSubcategoryId === subcat.id
+                      ? 'bg-[#EB216A] text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                  >
+                    {subcat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="relative mb-4">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -2001,43 +2066,62 @@ export default function CalculatorPageV2() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari kain..."
+              placeholder={isBlindFlow ? "Cari blind..." : "Cari kain..."}
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
             />
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {filteredProducts.map(product => (
-                <div
-                  key={product.id}
-                  onClick={() => handleSelectFabric(product)}
-                  className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.02] ${selectedFabric?.id === product.id
-                    ? 'border-[#EB216A] bg-[#EB216A]/5 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                >
-                  {selectedFabric?.id === product.id && (
-                    <div className="absolute top-2 right-2 w-6 h-6 bg-[#EB216A] rounded-full flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  <img
-                    src={getProductImageUrl(product.images || product.image)}
-                    alt={product.name}
-                    className="w-full aspect-square object-cover rounded-lg mb-2"
-                  />
-                  <h4 className="font-medium text-gray-900 text-sm truncate">{product.name}</h4>
-                  <p className="text-[#EB216A] font-bold">
-                    {product.minPrice && product.minPrice > 0
-                      ? `Mulai Rp ${product.minPrice.toLocaleString('id-ID')}`
-                      : product.price > 0
-                        ? `Rp ${product.price.toLocaleString('id-ID')}/m`
-                        : 'Lihat Varian'}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">
+                  {isBlindFlow && selectedProductSubcategoryId
+                    ? 'Tidak ada produk untuk tipe ini'
+                    : 'Tidak ada produk ditemukan'}
+                </p>
+                {isBlindFlow && selectedProductSubcategoryId && (
+                  <button
+                    onClick={() => setSelectedProductSubcategoryId(null)}
+                    className="mt-2 text-[#EB216A] hover:underline"
+                  >
+                    Lihat semua tipe
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {filteredProducts.map(product => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleSelectFabric(product)}
+                    className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.02] ${selectedFabric?.id === product.id
+                      ? 'border-[#EB216A] bg-[#EB216A]/5 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    {selectedFabric?.id === product.id && (
+                      <div className="absolute top-2 right-2 w-6 h-6 bg-[#EB216A] rounded-full flex items-center justify-center">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <img
+                      src={getProductImageUrl(product.images || product.image)}
+                      alt={product.name}
+                      className="w-full aspect-square object-cover rounded-lg mb-2"
+                    />
+                    <h4 className="font-medium text-gray-900 text-sm truncate">{product.name}</h4>
+                    <p className="text-[#EB216A] font-bold">
+                      {product.minPrice && product.minPrice > 0
+                        ? `Mulai Rp ${product.minPrice.toLocaleString('id-ID')}`
+                        : product.price > 0
+                          ? `Rp ${product.price.toLocaleString('id-ID')}/m`
+                          : 'Lihat Varian'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog >

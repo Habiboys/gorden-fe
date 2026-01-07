@@ -77,24 +77,23 @@ export function ProductCard({ id, name, price, minPrice, minPriceGross, image, i
           {/* Gradient Overlay on Hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Badge */}
+          {/* Main Badge (Featured/Best Seller/New) */}
           {(featured || bestSeller || newArrival) && (
             <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
               {bestSeller ? 'Best Seller' : newArrival ? 'New' : 'Featured'}
             </Badge>
           )}
 
-          {/* Custom Badge - Bottom Left */}
-          {/* Custom & Warranty Badges - Side by Side */}
-          <div className="absolute bottom-4 left-4 flex items-center gap-1">
+          {/* Custom & Warranty Badges - Top Right Stacked */}
+          <div className="absolute top-4 right-14 flex flex-col items-end gap-1">
             {is_warranty && (
-              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
-                Garansi
+              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
+                Garansi 1 Tahun
               </Badge>
             )}
             {is_custom && (
-              <Badge className="bg-pink-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
-                Custom
+              <Badge className="bg-purple-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
+                Gorden Custom
               </Badge>
             )}
           </div>

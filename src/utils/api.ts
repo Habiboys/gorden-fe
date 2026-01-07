@@ -76,7 +76,18 @@ export const productsApi = {
         return apiCall(`/products${query ? `?${query}` : ''}`);
     },
 
-    getProducts: () => apiCall('/products'),
+    getProducts: (params?: { page?: number; limit?: number; search?: string; category?: string; subcategory_id?: string; status?: string; sort?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.subcategory_id) queryParams.append('subcategory_id', params.subcategory_id);
+        if (params?.status) queryParams.append('status', params.status);
+        if (params?.sort) queryParams.append('sort', params.sort);
+        const query = queryParams.toString();
+        return apiCall(`/products${query ? `?${query}` : ''}`);
+    },
 
     getById: (id: string) => apiCall(`/products/${id}`),
 
@@ -101,6 +112,69 @@ export const productsApi = {
     duplicate: (id: string) => apiCall(`/products/${id}/duplicate`, {
         method: 'POST',
     }),
+
+    // Excel Import Functions
+    downloadProductTemplate: async () => {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/products/import/template/products`, {
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        });
+        if (!response.ok) throw new Error('Failed to download template');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'products_template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    },
+
+    downloadVariantTemplate: async () => {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/products/import/template/variants`, {
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        });
+        if (!response.ok) throw new Error('Failed to download template');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'variants_template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    },
+
+    importProducts: async (file: File) => {
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_BASE_URL}/products/import/products`, {
+            method: 'POST',
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+            body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Import failed');
+        return data;
+    },
+
+    importVariants: async (file: File) => {
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_BASE_URL}/products/import/variants`, {
+            method: 'POST',
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+            body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Import failed');
+        return data;
+    },
 };
 
 // Product Variants API

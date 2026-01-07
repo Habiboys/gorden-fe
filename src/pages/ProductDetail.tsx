@@ -784,16 +784,16 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
             </Badge>
           )}
 
-          {/* Custom & Warranty Badges */}
-          <div className="absolute bottom-3 left-3 flex flex-row gap-1 items-center">
+          {/* Custom & Warranty Badges - Top Right Stacked */}
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
             {product.is_warranty && (
-              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
-                Garansi
+              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
+                Garansi 1 Tahun
               </Badge>
             )}
             {product.is_custom && (
-              <Badge className="bg-pink-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
-                Custom
+              <Badge className="bg-purple-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
+                Gorden Custom
               </Badge>
             )}
           </div>

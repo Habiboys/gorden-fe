@@ -1,7 +1,9 @@
 import {
   Copy,
+  Download,
   Edit,
   Eye,
+  FileSpreadsheet,
   MoreVertical,
   Plus,
   Search,
@@ -170,7 +172,7 @@ export default function AdminProducts() {
   const [selectedSubcategoryHasMaxLength, setSelectedSubcategoryHasMaxLength] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 12,
+    limit: 10,
     total: 0,
     totalPages: 1
   });
@@ -190,10 +192,16 @@ export default function AdminProducts() {
     attribute_value: '',
     price_gross: 0,
     price_net: 0,
-    price_net: 0,
     satuan: '',
     quantity_multiplier: 1,
   });
+
+  // Import Modal state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importTab, setImportTab] = useState<'products' | 'variants'>('products');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -284,8 +292,8 @@ export default function AdminProducts() {
         setPagination(prev => ({
           ...prev,
           total: response.meta.total,
-          totalPages: response.meta.totalPages,
-          page: response.meta.page
+          totalPages: response.meta.totalPages
+          // Don't reset page from response - keep user's selected page
         }));
       }
     } catch (error) {
@@ -564,9 +572,10 @@ export default function AdminProducts() {
       try {
         await productsApi.delete(productId);
         toast.success('Produk berhasil dihapus!');
-        // Refresh products list
-        const response = await productsApi.getProducts();
-        setProducts(response.data || response);
+        // Remove product from local state immediately
+        setProducts(prev => prev.filter(p => p.id !== productId));
+        // Update total count
+        setPagination(prev => ({ ...prev, total: prev.total - 1 }));
       } catch (error) {
         console.error('Error deleting product:', error);
         toast.error('Gagal menghapus produk!');
@@ -622,10 +631,17 @@ export default function AdminProducts() {
         </div>
         <div className="flex gap-2">
           <Button
+            variant="outline"
+            onClick={() => setIsImportModalOpen(true)}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Import Excel
+          </Button>
+          <Button
             className="bg-green-600 hover:bg-green-700 text-white"
             onClick={handleExportCSV}
           >
-            <Upload className="w-4 h-4 mr-2 rotate-180" /> {/* Reusing Upload icon rotated for Export/Download look if Download not imported? Download IS imported in other files but checked imports here... Upload is imported. Download is NOT. Use Upload rotated or add Download import. Let's add Download import later or reuse. Upload rotated 180 is basically Download. */}
+            <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
           <Button
@@ -833,12 +849,12 @@ export default function AdminProducts() {
       </Card>
 
       {/* Pagination Controls */}
-      {filteredProducts.length > 0 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-gray-600">
-            Halaman {pagination.page} dari {pagination.totalPages} ({pagination.total} produk)
+      {products.length > 0 && (
+        <div className="flex items-center justify-between mt-4 bg-white rounded-xl border border-gray-100 p-4">
+          <div className="text-sm text-gray-500">
+            Menampilkan {(pagination.page - 1) * pagination.limit + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} dari {pagination.total} produk
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -847,6 +863,31 @@ export default function AdminProducts() {
             >
               Sebelumnya
             </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                let pageNum = i + 1;
+                if (pagination.totalPages > 5) {
+                  if (pagination.page > 3) {
+                    pageNum = pagination.page - 2 + i;
+                  }
+                  if (pageNum > pagination.totalPages) {
+                    pageNum = pagination.totalPages - (4 - i);
+                  }
+                }
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${pagination.page === pageNum
+                      ? 'bg-[#EB216A] text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -1725,6 +1766,229 @@ export default function AdminProducts() {
               >
                 {editingVariant ? 'Update' : 'Simpan'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl text-gray-900">Import Data dari Excel</h2>
+              <button
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setImportFile(null);
+                  setImportResult(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100">
+              <button
+                onClick={() => { setImportTab('products'); setImportFile(null); setImportResult(null); }}
+                className={`flex-1 py-3 px-4 text-sm font-medium ${importTab === 'products'
+                  ? 'text-[#EB216A] border-b-2 border-[#EB216A]'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                Import Produk
+              </button>
+              <button
+                onClick={() => { setImportTab('variants'); setImportFile(null); setImportResult(null); }}
+                className={`flex-1 py-3 px-4 text-sm font-medium ${importTab === 'variants'
+                  ? 'text-[#EB216A] border-b-2 border-[#EB216A]'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                Import Varian
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Download Template */}
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    {importTab === 'products' ? 'Template Produk' : 'Template Varian'}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Download template lalu isi dengan data Anda
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      if (importTab === 'products') {
+                        await productsApi.downloadProductTemplate();
+                      } else {
+                        await productsApi.downloadVariantTemplate();
+                      }
+                      toast.success('Template berhasil didownload');
+                    } catch (error) {
+                      toast.error('Gagal download template');
+                    }
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Template
+                </Button>
+              </div>
+
+              {/* File Upload */}
+              <div
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${importFile ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                    setImportFile(file);
+                    setImportResult(null);
+                  } else {
+                    toast.error('Hanya file Excel (.xlsx, .xls) yang diperbolehkan');
+                  }
+                }}
+              >
+                {importFile ? (
+                  <div className="space-y-2">
+                    <FileSpreadsheet className="w-12 h-12 mx-auto text-green-600" />
+                    <p className="text-sm font-medium text-green-900">{importFile.name}</p>
+                    <p className="text-xs text-green-600">{(importFile.size / 1024).toFixed(1)} KB</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setImportFile(null); setImportResult(null); }}
+                    >
+                      Ganti File
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Upload className="w-12 h-12 mx-auto text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      Drag & drop file Excel atau{' '}
+                      <label className="text-[#EB216A] cursor-pointer hover:underline">
+                        pilih file
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setImportFile(file);
+                              setImportResult(null);
+                            }
+                          }}
+                        />
+                      </label>
+                    </p>
+                    <p className="text-xs text-gray-400">Format: .xlsx atau .xls (Max 5MB)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Import Result */}
+              {importResult && (
+                <div className="space-y-3">
+                  <div className="p-4 rounded-lg bg-gray-50">
+                    <p className="text-sm font-medium text-gray-900">{importResult.message}</p>
+                  </div>
+                  {importResult.results?.success?.length > 0 && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">
+                        ✓ Berhasil: {importResult.results.success.length} data
+                      </p>
+                    </div>
+                  )}
+                  {importResult.results?.skipped?.length > 0 && (
+                    <div className="p-3 bg-yellow-50 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-800">
+                        ⚠ Dilewati: {importResult.results.skipped.length} data
+                      </p>
+                      <ul className="mt-1 text-xs text-yellow-700 space-y-0.5">
+                        {importResult.results.skipped.slice(0, 3).map((s: any, i: number) => (
+                          <li key={i}>Row {s.row}: {s.message}</li>
+                        ))}
+                        {importResult.results.skipped.length > 3 && (
+                          <li>...dan {importResult.results.skipped.length - 3} lainnya</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                  {importResult.results?.errors?.length > 0 && (
+                    <div className="p-3 bg-red-50 rounded-lg">
+                      <p className="text-sm font-medium text-red-800">
+                        ✕ Error: {importResult.results.errors.length} data
+                      </p>
+                      <ul className="mt-1 text-xs text-red-700 space-y-0.5">
+                        {importResult.results.errors.slice(0, 3).map((e: any, i: number) => (
+                          <li key={i}>Row {e.row}: {e.message}</li>
+                        ))}
+                        {importResult.results.errors.length > 3 && (
+                          <li>...dan {importResult.results.errors.length - 3} lainnya</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setImportFile(null);
+                  setImportResult(null);
+                }}
+              >
+                {importResult ? 'Tutup' : 'Batal'}
+              </Button>
+              {!importResult && (
+                <Button
+                  className="bg-[#EB216A] hover:bg-[#d11d5e] text-white"
+                  disabled={!importFile || importing}
+                  onClick={async () => {
+                    if (!importFile) return;
+                    setImporting(true);
+                    try {
+                      let result;
+                      if (importTab === 'products') {
+                        result = await productsApi.importProducts(importFile);
+                      } else {
+                        result = await productsApi.importVariants(importFile);
+                      }
+                      setImportResult(result);
+                      if (result.results?.success?.length > 0) {
+                        toast.success(`${result.results.success.length} data berhasil diimport`);
+                        fetchProducts(); // Refresh product list
+                      }
+                    } catch (error: any) {
+                      toast.error(error.message || 'Import gagal');
+                      setImportResult({ success: false, message: error.message || 'Import gagal' });
+                    } finally {
+                      setImporting(false);
+                    }
+                  }}
+                >
+                  {importing ? 'Memproses...' : 'Import Data'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
