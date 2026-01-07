@@ -1362,14 +1362,15 @@ export default function AdminDocumentCreate() {
                                                                 </div>
 
                                                                 {/* 1. Main Fabric Row */}
-                                                                <div className="flex items-center justify-between py-3 border-t border-gray-200 gap-4">
+                                                                <div className="flex items-center justify-between py-3 px-3 border-t border-gray-200 gap-4">
                                                                     <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                                                                        <Button
+                                                                        <button
+                                                                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors flex-shrink-0"
                                                                             onClick={() => handleEditItemProduct(item)}
-                                                                            className={`text-xs px-3 h-8 shadow-sm flex-shrink-0 ${item.product ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-[#EB216A] hover:bg-[#D41B5B] text-white'}`}
+                                                                            title={item.product ? 'Ganti Produk' : 'Pilih Produk'}
                                                                         >
-                                                                            {item.product ? 'Ganti' : 'Pilih'}
-                                                                        </Button>
+                                                                            <Pencil className="w-4 h-4 text-gray-500" />
+                                                                        </button>
 
                                                                         <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
                                                                             <img
@@ -1456,6 +1457,7 @@ export default function AdminDocumentCreate() {
                                                                 {/* 2. Components Rows */}
                                                                 {selectedCalcType?.components
                                                                     ?.filter(comp => {
+                                                                        if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
                                                                         if (comp.hide_on_door && item.itemType === 'pintu') {
                                                                             return false;
                                                                         }
@@ -1472,16 +1474,15 @@ export default function AdminDocumentCreate() {
                                                                         const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
 
                                                                         return (
-                                                                            <div key={comp.id} className="flex items-center justify-between py-3 border-t border-gray-200 gap-4">
+                                                                            <div key={comp.id} className="flex items-center justify-between py-3 px-3 border-t border-gray-200 gap-4">
                                                                                 <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                                                                                    <Button
-                                                                                        variant="outline"
-                                                                                        size="sm"
+                                                                                    <button
+                                                                                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors flex-shrink-0"
                                                                                         onClick={() => openComponentPicker(item.id, comp.id)}
-                                                                                        className={`text-xs px-3 h-8 w-16 flex-shrink-0 ${selection ? 'bg-white' : 'border-dashed text-gray-400'}`}
+                                                                                        title={selection ? 'Ganti Produk' : 'Pilih Produk'}
                                                                                     >
-                                                                                        {selection ? 'Ganti' : 'Pilih'}
-                                                                                    </Button>
+                                                                                        <Pencil className="w-4 h-4 text-gray-500" />
+                                                                                    </button>
                                                                                     <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
                                                                                         <img
                                                                                             src={getProductImageUrl(selection?.product?.images || selection?.product?.image)}

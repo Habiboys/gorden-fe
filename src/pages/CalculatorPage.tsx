@@ -1349,7 +1349,8 @@ export default function CalculatorPageV2() {
                             {/* Item Details */}
                             <div className="px-2 py-4 sm:p-6 space-y-3">
                               {/* Dynamic Components - Table Layout */}
-                              {item.packageType === 'gorden-lengkap' && (
+                              {/* Dynamic Components - Table Layout */}
+                              {(item.packageType === 'gorden-lengkap' || item.packageType === 'gorden-saja') && (
                                 <>
                                   {/* DESKTOP VIEW: Table - only show on large screens */}
                                   <div className="hidden lg:block border rounded-lg overflow-hidden bg-white">
@@ -1446,6 +1447,7 @@ export default function CalculatorPageV2() {
                                         {/* Component Rows */}
                                         {currentType?.components
                                           ?.filter(comp => {
+                                            if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
                                             if (comp.hide_on_door && item.itemType === 'pintu') {
                                               return false;
                                             }
@@ -1654,6 +1656,7 @@ export default function CalculatorPageV2() {
                                     {/* COMPONENT CARDS */}
                                     {currentType?.components
                                       ?.filter(comp => {
+                                        if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
                                         if (comp.hide_on_door && item.itemType === 'pintu') {
                                           return false;
                                         }
