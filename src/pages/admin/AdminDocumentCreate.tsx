@@ -2044,73 +2044,151 @@ export default function AdminDocumentCreate() {
             }
             {/* Add/Edit Item Modal */}
             <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
-                <DialogContent>
+                <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto overflow-x-hidden">
                     <DialogHeader>
-                        <DialogTitle>{editingItemId ? 'Edit Item' : 'Tambah Item'}</DialogTitle>
-                        <DialogDescription>
-                            {isBlindType()
-                                ? `Masukkan ukuran untuk produk: ${itemModalTargetProduct?.name || 'Blind'}`
-                                : 'Masukkan detail ukuran jendela/pintu'
-                            }
-                        </DialogDescription>
+                        <DialogTitle className={isBlindType() ? 'hidden lg:block' : ''}>
+                            {editingItemId ? 'Edit Item' : (isBlindType() ? `Tambah: ${itemModalTargetProduct?.name || 'Blind'}` : 'Tambah Item Baru')}
+                        </DialogTitle>
+                        <DialogDescription>Masukkan detail ukuran dan kebutuhan</DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-4 py-4">
-                        {isBlindType() ? (
-                            <div className="grid gap-2">
-                                <Label>Nama Jendela (Label)</Label>
-                                <Input
+                    <div className="space-y-4 py-4">
+
+                        {/* Show Product Image for Blind Flow */}
+                        {isBlindType() && itemModalTargetProduct && (
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl overflow-hidden">
+                                <img src={getProductImageUrl(itemModalTargetProduct.images || itemModalTargetProduct.image)} className="w-12 h-12 lg:w-16 lg:h-16 rounded-lg object-cover" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm lg:text-base font-medium text-gray-900 break-words">{itemModalTargetProduct.originalName || itemModalTargetProduct.name}</p>
+                                    <p className="text-xs lg:text-sm text-[#EB216A] font-bold">
+                                        {itemModalTargetProduct.minPrice && itemModalTargetProduct.minPrice > 0
+                                            ? `Mulai Rp ${Number(itemModalTargetProduct.minPrice).toLocaleString('id-ID')}`
+                                            : itemModalTargetProduct.price > 0
+                                                ? `Rp ${Number(itemModalTargetProduct.price).toLocaleString('id-ID')}/m²`
+                                                : 'Lihat Varian'}
+                                    </p>
+                                    {itemModalTargetProduct.selectedVariant && (
+                                        <p className="text-xs text-gray-500 mt-0.5 break-words">
+                                            Varian: {Object.entries(safeJSONParse(itemModalTargetProduct.selectedVariant.attributes, {}) as Record<string, any>).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Item Name (Blind Flow) */}
+                        {isBlindType() && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Nama Jendela / Identitas</label>
+                                <input
+                                    type="text"
                                     value={itemName}
                                     onChange={(e) => setItemName(e.target.value)}
-                                    placeholder="Contoh: Jendela Kamar Depan"
+                                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                    placeholder="Contoh: Jendela Depan, Jendela Kamar"
                                 />
                             </div>
-                        ) : (
+                        )}
+
+                        {/* Item Type & Package Type (Non-Blind Flow) */}
+                        {!isBlindType() && (
                             <div className="grid grid-cols-2 gap-4">
                                 {selectedCalcType?.has_item_type && (
                                     <div>
-                                        <Label>Jenis</Label>
-                                        <select value={itemType} onChange={e => setItemType(e.target.value as any)} className="w-full mt-1 px-3 py-2 border rounded-md text-sm">
-                                            <option value="jendela">Jendela</option>
-                                            <option value="pintu">Pintu</option>
-                                        </select>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Item</label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setItemType('jendela')}
+                                                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${itemType === 'jendela'
+                                                    ? 'bg-[#EB216A] text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                Jendela
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setItemType('pintu')}
+                                                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${itemType === 'pintu'
+                                                    ? 'bg-[#EB216A] text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                Pintu
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                                 {selectedCalcType?.has_package_type && (
                                     <div>
-                                        <Label>Paket</Label>
-                                        <select value={packageType} onChange={e => setPackageType(e.target.value as any)} className="w-full mt-1 px-3 py-2 border rounded-md text-sm">
-                                            <option value="gorden-lengkap">Paket Lengkap</option>
-                                            <option value="gorden-saja">Gorden Saja</option>
-                                        </select>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Paket</label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPackageType('gorden-lengkap')}
+                                                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${packageType === 'gorden-lengkap'
+                                                    ? 'bg-[#EB216A] text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                Lengkap
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPackageType('gorden-saja')}
+                                                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${packageType === 'gorden-saja'
+                                                    ? 'bg-[#EB216A] text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                Gorden Saja
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         )}
 
+                        {/* Dimensions */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label>Lebar (cm)</Label>
-                                <Input type="number" value={width} onChange={e => setWidth(e.target.value)} />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Lebar (cm)</label>
+                                <input
+                                    type="number"
+                                    value={width}
+                                    onChange={e => setWidth(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                    placeholder="200"
+                                />
                             </div>
                             <div>
-                                <Label>Tinggi (cm)</Label>
-                                <Input type="number" value={height} onChange={e => setHeight(e.target.value)} />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Tinggi (cm)</label>
+                                <input
+                                    type="number"
+                                    value={height}
+                                    onChange={e => setHeight(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                    placeholder="250"
+                                />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Qty</Label>
-                                <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} />
-                            </div>
-
-
+                        {/* Quantity */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Jumlah Unit (Set)</label>
+                            <input
+                                type="number"
+                                value={quantity}
+                                onChange={e => setQuantity(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#EB216A] focus:border-[#EB216A] outline-none"
+                                placeholder="1"
+                            />
                         </div>
 
                         {!isBlindType() && (
                             <p className="text-xs text-gray-400 italic">
-                                * Jumlah panel dihitung otomatis atau tidak diperlukan untuk model ini.
+                                * Jumlah panel dihitung otomatis.
                             </p>
                         )}
                     </div>
