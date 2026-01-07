@@ -1819,7 +1819,7 @@ export default function CalculatorPageV2() {
 
       {/* Add Item Modal */}
       < Dialog open={isAddItemModalOpen} onOpenChange={setIsAddItemModalOpen} >
-        <DialogContent className="w-full max-w-[90vw] sm:max-w-md max-h-[85vh] overflow-y-auto mx-4">
+        <DialogContent className="w-full max-w-[92vw] sm:max-w-md max-h-[75vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className={isBlindFlow ? 'hidden lg:block' : ''}>
               {isBlindFlow ? `Tambah: ${tempSelectedProduct?.name || 'Blind'}` : 'Tambah Item Baru'}
