@@ -2359,10 +2359,9 @@ export default function AdminDocumentCreate() {
                                                                         }
 
                                                                         return (
-                                                                            <div key={key} className="mr-4 mb-1">
-                                                                                <span className="text-xs text-gray-500 block uppercase tracking-wider">{key}</span>
-                                                                                <span className="font-medium">{val}</span>
-                                                                            </div>
+                                                                            <span key={key} style={{ marginRight: '16px', marginBottom: '4px', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                                                                <span className="text-gray-500 text-xs">{key}:</span> <span className="font-semibold text-gray-900">{val}</span>
+                                                                            </span>
                                                                         );
                                                                     })}
                                                                 </div>
