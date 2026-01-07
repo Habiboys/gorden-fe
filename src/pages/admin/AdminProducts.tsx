@@ -237,7 +237,7 @@ export default function AdminProducts() {
   // Fetch subcategories for filter when category filter changes
   useEffect(() => {
     if (categoryFilter && categoryFilter !== 'all') {
-      const cat = categories.find(c => c.name === categoryFilter);
+      const cat = categories.find(c => c.slug === categoryFilter);
       if (cat) {
         subcategoriesApi.getSubCategories(cat.id).then(res => {
           setFilterSubcategories(res.data || []);
@@ -674,7 +674,7 @@ export default function AdminProducts() {
               <SelectContent>
                 <SelectItem value="all">Semua Kategori</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
+                  <SelectItem key={cat.id} value={cat.slug}>
                     {cat.name}
                   </SelectItem>
                 ))}
