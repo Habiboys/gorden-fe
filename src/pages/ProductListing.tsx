@@ -29,7 +29,7 @@ export default function ProductListing() {
     const fetchProducts = async () => {
       try {
         console.log('🔄 Fetching products from backend...');
-        const response = await productsApi.getAll();
+        const response = await productsApi.getAll({ limit: 1000 });
         console.log('✅ Products fetched:', response);
         const mappedProducts = (response.data || []).map((p: any) => ({
           ...p,

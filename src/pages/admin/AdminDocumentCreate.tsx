@@ -255,7 +255,7 @@ export default function AdminDocumentCreate() {
 
     const loadFabricProducts = async () => {
         try {
-            const response = await productsApi.getAll();
+            const response = await productsApi.getAll({ limit: 1000 });
             if (response.success) {
                 setFabricProducts(response.data || []);
             }
