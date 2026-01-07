@@ -1347,7 +1347,7 @@ export default function CalculatorPageV2() {
                             </div>
 
                             {/* Item Details */}
-                            <div className="p-4 sm:p-6 space-y-3">
+                            <div className="px-2 py-4 sm:p-6 space-y-3">
                               {/* Dynamic Components - Table Layout */}
                               {item.packageType === 'gorden-lengkap' && (
                                 <>
@@ -1571,9 +1571,9 @@ export default function CalculatorPageV2() {
                                   {/* MOBILE VIEW: Cards - only show on small screens */}
                                   <div className="lg:hidden space-y-4">
                                     {/* FABRIC CARD */}
-                                    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                                    <div className="border-t border-gray-200 pt-3">
                                       {/* Header */}
-                                      <div className="bg-gray-50 px-3 py-2 flex justify-between items-center border-b border-gray-100">
+                                      <div className="flex justify-between items-center mb-2">
                                         <div className="flex items-center gap-2">
                                           <span className="font-semibold text-sm text-gray-700">{isBlindFlow ? 'Produk' : 'Gorden'}</span>
                                         </div>
@@ -1665,9 +1665,9 @@ export default function CalculatorPageV2() {
                                         const compPrice = selection ? calculateComponentPrice(item, comp, selection) : 0;
 
                                         return (
-                                          <div key={comp.id} className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                                          <div key={comp.id} className="border-t border-gray-200 pt-3">
                                             {/* Header */}
-                                            <div className="bg-gray-50 px-3 py-2 flex justify-between items-center border-b border-gray-100">
+                                            <div className="flex justify-between items-center mb-2">
                                               <div className="flex items-center gap-2">
                                                 <span className="font-semibold text-sm text-gray-700">{comp.label}</span>
                                               </div>
