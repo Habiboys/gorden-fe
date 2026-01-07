@@ -1390,226 +1390,346 @@ export default function AdminDocumentCreate() {
 
                                                             {/* COMPONENT LIST (Card Style) */}
                                                             <div className="p-4 space-y-3">
-                                                                {/* Column Headers */}
-                                                                <div className="flex items-center justify-between p-3 text-xs font-medium text-gray-500 border-b border-dashed mb-2 gap-4">
-                                                                    <div className="flex-1">Produk</div>
-                                                                    <div className="w-28 text-right">Harga</div>
-                                                                    <div className="w-16 text-center">Disc(%)</div>
-                                                                    <div className="w-28 text-right">Harga Net</div>
-                                                                    <div className="w-16 text-center">Qty</div>
-                                                                    <div className="w-28 text-right">Total</div>
-                                                                </div>
+                                                                {/* DESKTOP VIEW: Table Layout */}
+                                                                <div className="hidden lg:block">
+                                                                    {/* Column Headers */}
+                                                                    <div className="flex items-center justify-between p-3 text-xs font-medium text-gray-500 border-b border-dashed mb-2 gap-4">
+                                                                        <div className="flex-1">Produk</div>
+                                                                        <div className="w-28 text-right">Harga</div>
+                                                                        <div className="w-16 text-center">Disc(%)</div>
+                                                                        <div className="w-28 text-right">Harga Net</div>
+                                                                        <div className="w-16 text-center">Qty</div>
+                                                                        <div className="w-28 text-right">Total</div>
+                                                                    </div>
 
-                                                                {/* 1. Main Fabric Row */}
-                                                                <div className="flex items-center justify-between py-3 px-3 border-t border-gray-200 gap-4">
-                                                                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                                                                        <button
-                                                                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors flex-shrink-0"
-                                                                            onClick={() => handleEditItemProduct(item)}
-                                                                            title={item.product ? 'Ganti Produk' : 'Pilih Produk'}
-                                                                        >
-                                                                            <Pencil className="w-4 h-4 text-gray-500" />
-                                                                        </button>
+                                                                    {/* 1. Main Fabric Row */}
+                                                                    <div className="flex items-center justify-between py-3 px-3 border-t border-gray-200 gap-4">
+                                                                        <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                                                                            <button
+                                                                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors flex-shrink-0"
+                                                                                onClick={() => handleEditItemProduct(item)}
+                                                                                title={item.product ? 'Ganti Produk' : 'Pilih Produk'}
+                                                                            >
+                                                                                <Pencil className="w-4 h-4 text-gray-500" />
+                                                                            </button>
 
-                                                                        <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                                                                            <img
-                                                                                src={getProductImageUrl(item.product?.images || item.product?.image || selectedFabric?.images || selectedFabric?.image)}
-                                                                                className="w-full h-full object-cover"
-                                                                                alt=""
-                                                                            />
-                                                                        </div>
+                                                                            <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                                                                <img
+                                                                                    src={getProductImageUrl(item.product?.images || item.product?.image || selectedFabric?.images || selectedFabric?.image)}
+                                                                                    className="w-full h-full object-cover"
+                                                                                    alt=""
+                                                                                />
+                                                                            </div>
 
-                                                                        <div className="flex flex-col leading-tight min-w-0">
-                                                                            <span className="font-semibold text-gray-900 line-clamp-2" title={item.product?.name}>
-                                                                                {item.product?.name || `Gorden ${selectedCalcType?.name}`}
-                                                                            </span>
-                                                                            {item.selectedVariant && (
-                                                                                <div className="flex flex-col">
-                                                                                    {(() => {
-                                                                                        const attrs = safeJSONParse(item.selectedVariant.attributes, {});
-                                                                                        const entries = Object.entries(attrs);
-                                                                                        if (entries.length > 0) {
-                                                                                            return (
+                                                                            <div className="flex flex-col leading-tight min-w-0">
+                                                                                <span className="font-semibold text-gray-900 line-clamp-2" title={item.product?.name}>
+                                                                                    {item.product?.name || `Gorden ${selectedCalcType?.name}`}
+                                                                                </span>
+                                                                                {item.selectedVariant && (
+                                                                                    <div className="flex flex-col">
+                                                                                        {(() => {
+                                                                                            const attrs = safeJSONParse(item.selectedVariant.attributes, {});
+                                                                                            const entries = Object.entries(attrs);
+                                                                                            if (entries.length > 0) {
+                                                                                                return (
+                                                                                                    <span className="text-[10px] text-gray-500 truncate">
+                                                                                                        {entries.map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                                    </span>
+                                                                                                );
+                                                                                            }
+                                                                                            return item.selectedVariant.name ? (
                                                                                                 <span className="text-[10px] text-gray-500 truncate">
-                                                                                                    {entries.map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                                    {item.selectedVariant.name}
                                                                                                 </span>
-                                                                                            );
-                                                                                        }
-                                                                                        return item.selectedVariant.name ? (
-                                                                                            <span className="text-[10px] text-gray-500 truncate">
-                                                                                                {item.selectedVariant.name}
-                                                                                            </span>
-                                                                                        ) : null;
-                                                                                    })()}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Pricing Columns */}
-                                                                    {(() => {
-                                                                        // Calculate effective discount from price_gross/price_net if fabricDiscount is 0
-                                                                        const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
-                                                                        const net = Number(item.selectedVariant?.price_net) || gross;
-                                                                        const effectiveDiscount = item.fabricDiscount || (gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0);
-
-                                                                        return (
-                                                                            <>
-                                                                                {/* Harga Gross */}
-                                                                                <div className="w-28 text-right text-sm text-gray-600">
-                                                                                    Rp {gross.toLocaleString('id-ID')}
-                                                                                </div>
-
-                                                                                {/* Disc */}
-                                                                                <div className="w-16 flex justify-center">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="0"
-                                                                                        max="100"
-                                                                                        value={effectiveDiscount}
-                                                                                        onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
-                                                                                        className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                    />
-                                                                                </div>
-
-                                                                                {/* Harga Net */}
-                                                                                <div className="w-28 text-right text-sm font-medium text-gray-800">
-                                                                                    Rp {net.toLocaleString('id-ID')}
-                                                                                </div>
-                                                                            </>
-                                                                        );
-                                                                    })()}
-
-                                                                    {/* Qty */}
-                                                                    <div className="w-16 flex justify-center">
-                                                                        <span className="inline-flex items-center justify-center w-14 h-8 bg-gray-100 rounded text-sm text-gray-600">
-                                                                            {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {/* Total */}
-                                                                    <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
-                                                                        Rp {prices.fabric.toLocaleString('id-ID')}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* 2. Components Rows */}
-                                                                {selectedCalcType?.components
-                                                                    ?.filter(comp => {
-                                                                        if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
-                                                                        if (comp.hide_on_door && item.itemType === 'pintu') {
-                                                                            return false;
-                                                                        }
-                                                                        return true;
-                                                                    })
-                                                                    .map(comp => {
-                                                                        const selection = item.components[comp.id];
-
-                                                                        // Calculate display values with effective discount from gross/net
-                                                                        const compGross = (selection?.product as any)?.price_gross || selection?.product?.price || 0;
-                                                                        const compNetActual = (selection?.product as any)?.price_net || compGross;
-                                                                        const effectiveCompDisc = selection?.discount || (compGross > 0 ? Math.round(((compGross - compNetActual) / compGross) * 100) : 0);
-
-                                                                        const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
-
-                                                                        return (
-                                                                            <div key={comp.id} className="flex items-center justify-between py-3 px-3 border-t border-gray-200 gap-4">
-                                                                                <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                                                                                    <button
-                                                                                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors flex-shrink-0"
-                                                                                        onClick={() => openComponentPicker(item.id, comp.id)}
-                                                                                        title={selection ? 'Ganti Produk' : 'Pilih Produk'}
-                                                                                    >
-                                                                                        <Pencil className="w-4 h-4 text-gray-500" />
-                                                                                    </button>
-                                                                                    <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                                                                                        <img
-                                                                                            src={getProductImageUrl(selection?.product?.images || selection?.product?.image)}
-                                                                                            className="w-full h-full object-cover"
-                                                                                            alt=""
-                                                                                        />
-                                                                                    </div>
-                                                                                    <div className="flex flex-col leading-tight min-w-0">
-                                                                                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
-                                                                                        <span className="text-sm font-medium text-gray-900 line-clamp-2" title={selection?.product?.name}>
-                                                                                            {selection?.product?.name || '-'}
-                                                                                        </span>
-                                                                                        {selection?.product && (
-                                                                                            <span className="text-[10px] text-gray-500 truncate">
-                                                                                                {(() => {
-                                                                                                    if (selection.product.variantAttributes) {
-                                                                                                        const attrs = safeJSONParse(selection.product.variantAttributes, {});
-                                                                                                        return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                                                                    }
-                                                                                                    return '';
-                                                                                                })()}
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                {selection ? (
-                                                                                    <>
-                                                                                        <div className="w-28 text-right text-sm text-gray-600">
-                                                                                            Rp {compGross.toLocaleString('id-ID')}
-                                                                                        </div>
-
-                                                                                        <div className="w-16 flex justify-center">
-                                                                                            <input
-                                                                                                type="number"
-                                                                                                min="0"
-                                                                                                max="100"
-                                                                                                value={effectiveCompDisc}
-                                                                                                className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                                onChange={(e) => {
-                                                                                                    const newDisc = parseInt(e.target.value) || 0;
-                                                                                                    setItems(items.map(i => i.id === item.id ? {
-                                                                                                        ...i,
-                                                                                                        components: {
-                                                                                                            ...i.components,
-                                                                                                            [comp.id]: { ...selection, discount: newDisc }
-                                                                                                        }
-                                                                                                    } : i));
-                                                                                                }}
-                                                                                            />
-                                                                                        </div>
-
-                                                                                        <div className="w-28 text-right text-sm font-medium text-gray-800">
-                                                                                            Rp {Math.round(compNetActual).toLocaleString('id-ID')}
-                                                                                        </div>
-
-                                                                                        <div className="w-16 flex justify-center">
-                                                                                            <input
-                                                                                                type="number"
-                                                                                                min="1"
-                                                                                                value={selection.qty}
-                                                                                                className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                                onChange={(e) => {
-                                                                                                    const newQty = parseInt(e.target.value) || 1;
-                                                                                                    setItems(items.map(i => i.id === item.id ? {
-                                                                                                        ...i,
-                                                                                                        components: {
-                                                                                                            ...i.components,
-                                                                                                            [comp.id]: { ...selection, qty: newQty }
-                                                                                                        }
-                                                                                                    } : i));
-                                                                                                }}
-                                                                                                title="Qty Per Window"
-                                                                                            />
-                                                                                        </div>
-
-                                                                                        <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
-                                                                                            Rp {Math.round(rowTotal).toLocaleString('id-ID')}
-                                                                                        </div>
-                                                                                    </>
-                                                                                ) : (
-                                                                                    <div className="flex-1 text-right text-gray-300 text-xs italic pr-4">
-                                                                                        Belum dipilih
+                                                                                            ) : null;
+                                                                                        })()}
                                                                                     </div>
                                                                                 )}
                                                                             </div>
-                                                                        );
-                                                                    })}
+                                                                        </div>
+
+                                                                        {/* Pricing Columns */}
+                                                                        {(() => {
+                                                                            // Calculate effective discount from price_gross/price_net if fabricDiscount is 0
+                                                                            const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                                                            const net = Number(item.selectedVariant?.price_net) || gross;
+                                                                            const effectiveDiscount = item.fabricDiscount || (gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0);
+
+                                                                            return (
+                                                                                <>
+                                                                                    {/* Harga Gross */}
+                                                                                    <div className="w-28 text-right text-sm text-gray-600">
+                                                                                        Rp {gross.toLocaleString('id-ID')}
+                                                                                    </div>
+
+                                                                                    {/* Disc */}
+                                                                                    <div className="w-16 flex justify-center">
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="0"
+                                                                                            max="100"
+                                                                                            value={effectiveDiscount}
+                                                                                            onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
+                                                                                            className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    {/* Harga Net */}
+                                                                                    <div className="w-28 text-right text-sm font-medium text-gray-800">
+                                                                                        Rp {net.toLocaleString('id-ID')}
+                                                                                    </div>
+                                                                                </>
+                                                                            );
+                                                                        })()}
+
+                                                                        {/* Qty */}
+                                                                        <div className="w-16 flex justify-center">
+                                                                            <span className="inline-flex items-center justify-center w-14 h-8 bg-gray-100 rounded text-sm text-gray-600">
+                                                                                {(item.selectedVariant?.quantity_multiplier || 1) * item.quantity}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {/* Total */}
+                                                                        <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
+                                                                            Rp {prices.fabric.toLocaleString('id-ID')}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* 2. Components Rows */}
+                                                                    {selectedCalcType?.components
+                                                                        ?.filter(comp => {
+                                                                            if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
+                                                                            if (comp.hide_on_door && item.itemType === 'pintu') {
+                                                                                return false;
+                                                                            }
+                                                                            return true;
+                                                                        })
+                                                                        .map(comp => {
+                                                                            const selection = item.components[comp.id];
+
+                                                                            // Calculate display values with effective discount from gross/net
+                                                                            const compGross = (selection?.product as any)?.price_gross || selection?.product?.price || 0;
+                                                                            const compNetActual = (selection?.product as any)?.price_net || compGross;
+                                                                            const effectiveCompDisc = selection?.discount || (compGross > 0 ? Math.round(((compGross - compNetActual) / compGross) * 100) : 0);
+
+                                                                            const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
+
+                                                                            return (
+                                                                                <div key={comp.id} className="flex items-center justify-between py-3 px-3 border-t border-gray-200 gap-4">
+                                                                                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                                                                                        <button
+                                                                                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors flex-shrink-0"
+                                                                                            onClick={() => openComponentPicker(item.id, comp.id)}
+                                                                                            title={selection ? 'Ganti Produk' : 'Pilih Produk'}
+                                                                                        >
+                                                                                            <Pencil className="w-4 h-4 text-gray-500" />
+                                                                                        </button>
+                                                                                        <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                                                                            <img
+                                                                                                src={getProductImageUrl(selection?.product?.images || selection?.product?.image)}
+                                                                                                className="w-full h-full object-cover"
+                                                                                                alt=""
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div className="flex flex-col leading-tight min-w-0">
+                                                                                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
+                                                                                            <span className="text-sm font-medium text-gray-900 line-clamp-2" title={selection?.product?.name}>
+                                                                                                {selection?.product?.name || '-'}
+                                                                                            </span>
+                                                                                            {selection?.product && (
+                                                                                                <span className="text-[10px] text-gray-500 truncate">
+                                                                                                    {(() => {
+                                                                                                        if (selection.product.variantAttributes) {
+                                                                                                            const attrs = safeJSONParse(selection.product.variantAttributes, {});
+                                                                                                            return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                                                                        }
+                                                                                                        return '';
+                                                                                                    })()}
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {selection ? (
+                                                                                        <>
+                                                                                            <div className="w-28 text-right text-sm text-gray-600">
+                                                                                                Rp {compGross.toLocaleString('id-ID')}
+                                                                                            </div>
+
+                                                                                            <div className="w-16 flex justify-center">
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    min="0"
+                                                                                                    max="100"
+                                                                                                    value={effectiveCompDisc}
+                                                                                                    className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                    onChange={(e) => {
+                                                                                                        const newDisc = parseInt(e.target.value) || 0;
+                                                                                                        setItems(items.map(i => i.id === item.id ? {
+                                                                                                            ...i,
+                                                                                                            components: {
+                                                                                                                ...i.components,
+                                                                                                                [comp.id]: { ...selection, discount: newDisc }
+                                                                                                            }
+                                                                                                        } : i));
+                                                                                                    }}
+                                                                                                />
+                                                                                            </div>
+
+                                                                                            <div className="w-28 text-right text-sm font-medium text-gray-800">
+                                                                                                Rp {Math.round(compNetActual).toLocaleString('id-ID')}
+                                                                                            </div>
+
+                                                                                            <div className="w-16 flex justify-center">
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    min="1"
+                                                                                                    value={selection.qty}
+                                                                                                    className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                    onChange={(e) => {
+                                                                                                        const newQty = parseInt(e.target.value) || 1;
+                                                                                                        setItems(items.map(i => i.id === item.id ? {
+                                                                                                            ...i,
+                                                                                                            components: {
+                                                                                                                ...i.components,
+                                                                                                                [comp.id]: { ...selection, qty: newQty }
+                                                                                                            }
+                                                                                                        } : i));
+                                                                                                    }}
+                                                                                                    title="Qty Per Window"
+                                                                                                />
+                                                                                            </div>
+
+                                                                                            <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
+                                                                                                Rp {Math.round(rowTotal).toLocaleString('id-ID')}
+                                                                                            </div>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <div className="flex-1 text-right text-gray-300 text-xs italic pr-4">
+                                                                                            Belum dipilih
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                </div>
+
+                                                                {/* MOBILE VIEW: Cards Layout */}
+                                                                <div className="lg:hidden space-y-4">
+                                                                    {/* FABRIC CARD */}
+                                                                    <div className="border border-gray-100 rounded-xl p-3 bg-gray-50/50">
+                                                                        <div className="flex justify-between items-center mb-2">
+                                                                            <span className="font-semibold text-sm text-gray-700">Produk Utama</span>
+                                                                            <button
+                                                                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                                                                                onClick={() => handleEditItemProduct(item)}
+                                                                                title={item.product ? 'Ganti Produk' : 'Pilih Produk'}
+                                                                            >
+                                                                                <Pencil className="w-4 h-4 text-gray-500" />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className="flex gap-3">
+                                                                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                                                <img
+                                                                                    src={getProductImageUrl(item.product?.images || item.product?.image || selectedFabric?.images || selectedFabric?.image)}
+                                                                                    className="w-full h-full object-cover"
+                                                                                    alt=""
+                                                                                />
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                                                                                    {item.product?.name || `Gorden ${selectedCalcType?.name}`}
+                                                                                </h4>
+                                                                                {item.selectedVariant && (
+                                                                                    <div className="text-xs text-gray-500 mt-1 truncate">
+                                                                                        {(() => {
+                                                                                            const attrs = safeJSONParse(item.selectedVariant.attributes, {});
+                                                                                            const entries = Object.entries(attrs);
+                                                                                            return entries.length > 0
+                                                                                                ? entries.map(([k, v]) => `${k}: ${v}`).join(', ')
+                                                                                                : item.selectedVariant.name || '';
+                                                                                        })()}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm border-t border-gray-100 pt-2">
+                                                                            <div>
+                                                                                <span className="text-xs text-gray-500 block">Harga</span>
+                                                                                <span className="font-medium">Rp {(Number(item.selectedVariant?.price_net) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0).toLocaleString('id-ID')}</span>
+                                                                            </div>
+                                                                            <div className="text-right">
+                                                                                <span className="text-xs text-gray-500 block">Total</span>
+                                                                                <span className="font-bold text-[#EB216A]">Rp {prices.fabric.toLocaleString('id-ID')}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* COMPONENT CARDS */}
+                                                                    {selectedCalcType?.components
+                                                                        ?.filter(comp => {
+                                                                            if (item.packageType === 'gorden-saja') return false;
+                                                                            if (comp.hide_on_door && item.itemType === 'pintu') return false;
+                                                                            return true;
+                                                                        })
+                                                                        .map(comp => {
+                                                                            const selection = item.components[comp.id];
+                                                                            return (
+                                                                                <div key={comp.id} className="border border-gray-100 rounded-xl p-3 bg-gray-50/50">
+                                                                                    <div className="flex justify-between items-center mb-2">
+                                                                                        <span className="font-semibold text-sm text-gray-700">{comp.label}</span>
+                                                                                        <button
+                                                                                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                                                                                            onClick={() => openComponentPicker(item.id, comp.id)}
+                                                                                            title={selection ? 'Ganti Produk' : 'Pilih Produk'}
+                                                                                        >
+                                                                                            <Pencil className="w-4 h-4 text-gray-500" />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    {selection ? (
+                                                                                        <>
+                                                                                            <div className="flex gap-3">
+                                                                                                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                                                                    <img
+                                                                                                        src={getProductImageUrl(selection.product.images || selection.product.image)}
+                                                                                                        className="w-full h-full object-cover"
+                                                                                                        alt={selection.product.name}
+                                                                                                    />
+                                                                                                </div>
+                                                                                                <div className="flex-1 min-w-0">
+                                                                                                    <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                                                                                                        {selection.product.name}
+                                                                                                    </h4>
+                                                                                                    {selection.product.variantAttributes && (
+                                                                                                        <div className="text-xs text-gray-500 mt-1 truncate">
+                                                                                                            {(() => {
+                                                                                                                const attrs = safeJSONParse(selection.product.variantAttributes, {});
+                                                                                                                return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                                                                            })()}
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm border-t border-gray-100 pt-2">
+                                                                                                <div>
+                                                                                                    <span className="text-xs text-gray-500 block">Harga</span>
+                                                                                                    <span className="font-medium">Rp {selection.product.price.toLocaleString('id-ID')}</span>
+                                                                                                </div>
+                                                                                                <div className="text-right">
+                                                                                                    <span className="text-xs text-gray-500 block">Total</span>
+                                                                                                    <span className="font-bold text-[#EB216A]">Rp {calculateComponentPrice(item, comp, selection).toLocaleString('id-ID')}</span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <div className="text-center py-4 text-gray-400 text-sm italic">
+                                                                                            Belum ada produk dipilih
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                </div>
 
                                                                 {/* FOOTER per Item */}
                                                                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-dashed">
