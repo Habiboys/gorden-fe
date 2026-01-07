@@ -1763,14 +1763,47 @@ export default function AdminDocumentCreate() {
                                                                                 )}
                                                                             </div>
                                                                         </div>
-                                                                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm border-t border-gray-100 pt-2">
-                                                                            <div>
-                                                                                <span className="text-xs text-gray-500 block">Harga</span>
-                                                                                <span className="font-medium">Rp {(Number(item.selectedVariant?.price_net) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0).toLocaleString('id-ID')}</span>
+                                                                        <div className="mt-3 text-sm border-t border-gray-100 pt-2 space-y-3">
+                                                                            {/* Price Details Grid */}
+                                                                            <div className="grid grid-cols-2 gap-3">
+                                                                                <div>
+                                                                                    <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Gross</span>
+                                                                                    {(() => {
+                                                                                        const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                                                                        return <span className="font-medium">Rp {gross.toLocaleString('id-ID')}</span>;
+                                                                                    })()}
+                                                                                </div>
+                                                                                <div>
+                                                                                    <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Net</span>
+                                                                                    {(() => {
+                                                                                        const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                                                                        const net = Number(item.selectedVariant?.price_net) || gross;
+                                                                                        return <span className="font-medium">Rp {net.toLocaleString('id-ID')}</span>;
+                                                                                    })()}
+                                                                                </div>
                                                                             </div>
-                                                                            <div className="text-right">
-                                                                                <span className="text-xs text-gray-500 block">Total</span>
-                                                                                <span className="font-bold text-[#EB216A]">Rp {prices.fabric.toLocaleString('id-ID')}</span>
+
+                                                                            {/* Input Grid: Disc & Total */}
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="w-20">
+                                                                                    <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Disc (%)</span>
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="0"
+                                                                                        max="100"
+                                                                                        value={(() => {
+                                                                                            const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                                                                            const net = Number(item.selectedVariant?.price_net) || gross;
+                                                                                            return item.fabricDiscount || (gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0);
+                                                                                        })()}
+                                                                                        onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
+                                                                                        className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="flex-1 text-right">
+                                                                                    <span className="text-xs text-gray-500 block">Total</span>
+                                                                                    <span className="font-bold text-[#EB216A] text-lg">Rp {prices.fabric.toLocaleString('id-ID')}</span>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1820,14 +1853,39 @@ export default function AdminDocumentCreate() {
                                                                                                     )}
                                                                                                 </div>
                                                                                             </div>
-                                                                                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm border-t border-gray-100 pt-2">
-                                                                                                <div>
-                                                                                                    <span className="text-xs text-gray-500 block">Harga</span>
-                                                                                                    <span className="font-medium">Rp {selection.product.price.toLocaleString('id-ID')}</span>
+                                                                                            <div className="mt-3 text-sm border-t border-gray-100 pt-2 space-y-3">
+                                                                                                {/* Price Details */}
+                                                                                                <div className="grid grid-cols-2 gap-3">
+                                                                                                    <div>
+                                                                                                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Gross</span>
+                                                                                                        <span className="font-medium">Rp {(selection.product.price_gross || selection.product.price).toLocaleString('id-ID')}</span>
+                                                                                                    </div>
+                                                                                                    <div>
+                                                                                                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Net</span>
+                                                                                                        <span className="font-medium">Rp {(selection.product.price_net || selection.product.price).toLocaleString('id-ID')}</span>
+                                                                                                    </div>
                                                                                                 </div>
-                                                                                                <div className="text-right">
-                                                                                                    <span className="text-xs text-gray-500 block">Total</span>
-                                                                                                    <span className="font-bold text-[#EB216A]">Rp {calculateComponentPrice(item, comp, selection).toLocaleString('id-ID')}</span>
+
+                                                                                                <div className="flex items-center justify-between">
+                                                                                                    {/* Implicit Discount Display if needed, or just Total */}
+                                                                                                    {(() => {
+                                                                                                        const gross = selection.product.price_gross || selection.product.price;
+                                                                                                        const net = selection.product.price_net || gross;
+                                                                                                        const disc = selection.discount || (gross > 0 ? Math.round(((gross - net) / gross) * 100) : 0);
+                                                                                                        if (disc > 0) {
+                                                                                                            return (
+                                                                                                                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                                                                                    Disc {disc}%
+                                                                                                                </span>
+                                                                                                            );
+                                                                                                        }
+                                                                                                        return <span></span>;
+                                                                                                    })()}
+
+                                                                                                    <div className="text-right">
+                                                                                                        <span className="text-xs text-gray-500 block">Total</span>
+                                                                                                        <span className="font-bold text-[#EB216A] text-lg">Rp {calculateComponentPrice(item, comp, selection).toLocaleString('id-ID')}</span>
+                                                                                                    </div>
                                                                                                 </div>
                                                                                             </div>
                                                                                         </>
@@ -2176,104 +2234,177 @@ export default function AdminDocumentCreate() {
                                     });
 
                                     return (
-                                        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                                            <table className="w-full text-sm">
-                                                <thead className="bg-gray-50 border-b border-gray-200">
-                                                    <tr>
-                                                        {columnKeys.map(key => (
-                                                            <th key={key} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
-                                                                {key}
+                                        <>
+                                            <div className="hidden lg:block overflow-x-auto border border-gray-200 rounded-lg">
+                                                <table className="w-full text-sm">
+                                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                                        <tr>
+                                                            {columnKeys.map(key => (
+                                                                <th key={key} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                                                                    {key}
+                                                                </th>
+                                                            ))}
+                                                            {!isBlindType() && (
+                                                                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                                                                    Cocok Untuk Pintu/Jendela
+                                                                </th>
+                                                            )}
+                                                            <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                                                                Harga
                                                             </th>
-                                                        ))}
-                                                        {!isBlindType() && (
-                                                            <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
-                                                                Cocok Untuk Pintu/Jendela
+                                                            <th className="px-3 py-2 text-center font-semibold text-gray-700 whitespace-nowrap">
+                                                                Pilih
                                                             </th>
-                                                        )}
-                                                        <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
-                                                            Harga
-                                                        </th>
-                                                        <th className="px-3 py-2 text-center font-semibold text-gray-700 whitespace-nowrap">
-                                                            Pilih
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100">
-                                                    {sorted.map((v: any) => {
-                                                        const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
-                                                        const priceNet = Number(v.price_net) || 0;
-                                                        const priceGross = Number(v.price_gross) || 0;
-                                                        const displayPrice = priceNet || priceGross;
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100">
+                                                        {sorted.map((v: any) => {
+                                                            const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                                                            const priceNet = Number(v.price_net) || 0;
+                                                            const priceGross = Number(v.price_gross) || 0;
+                                                            const displayPrice = priceNet || priceGross;
 
-                                                        return (
-                                                            <tr
-                                                                key={v.id}
-                                                                className="hover:bg-pink-50 cursor-pointer transition-colors"
-                                                                onClick={() => handleSelectVariant(v)}
-                                                            >
-                                                                {columnKeys.map(key => {
-                                                                    // Dynamic Gelombang Logic
-                                                                    if (key === 'Gelombang') {
-                                                                        const lebar = getNum(attrs, ['lebar', 'width', 'l']);
-                                                                        const val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                                                            return (
+                                                                <tr
+                                                                    key={v.id}
+                                                                    className="hover:bg-pink-50 cursor-pointer transition-colors"
+                                                                    onClick={() => handleSelectVariant(v)}
+                                                                >
+                                                                    {columnKeys.map(key => {
+                                                                        // Dynamic Gelombang Logic
+                                                                        if (key === 'Gelombang') {
+                                                                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                            const val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                                                                            return (
+                                                                                <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
+                                                                                    {val}
+                                                                                </td>
+                                                                            );
+                                                                        }
+                                                                        const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                                                        const val = matchKey ? attrs[matchKey] : '-';
                                                                         return (
                                                                             <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
                                                                                 {val}
                                                                             </td>
                                                                         );
-                                                                    }
-                                                                    const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                                                                    const val = matchKey ? attrs[matchKey] : '-';
-                                                                    return (
-                                                                        <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
-                                                                            {val}
-                                                                        </td>
-                                                                    );
-                                                                })}
-                                                                {/* Cocok Untuk Pintu/Jendela Cell */}
-                                                                {!isBlindType() && (
-                                                                    <td className="px-3 py-3 text-gray-800 text-xs">
-                                                                        {(() => {
-                                                                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
-                                                                            const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
-                                                                            const sibak = getNum(attrs, ['sibak']);
-                                                                            const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
-                                                                            const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+                                                                    })}
+                                                                    {/* Cocok Untuk Pintu/Jendela Cell */}
+                                                                    {!isBlindType() && (
+                                                                        <td className="px-3 py-3 text-gray-800 text-xs">
+                                                                            {(() => {
+                                                                                const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                                const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                                                                                const sibak = getNum(attrs, ['sibak']);
+                                                                                const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                                                                                const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
 
-                                                                            if (calculatedLebar || calculatedTinggi) {
-                                                                                return (
-                                                                                    <span>
-                                                                                        Lebar +/- {calculatedLebar || '-'}cm<br />
-                                                                                        Tinggi {calculatedTinggi || '-'}cm
-                                                                                    </span>
-                                                                                );
-                                                                            }
-                                                                            return '-';
-                                                                        })()}
+                                                                                if (calculatedLebar || calculatedTinggi) {
+                                                                                    return (
+                                                                                        <span>
+                                                                                            Lebar +/- {calculatedLebar || '-'}cm<br />
+                                                                                            Tinggi {calculatedTinggi || '-'}cm
+                                                                                        </span>
+                                                                                    );
+                                                                                }
+                                                                                return '-';
+                                                                            })()}
+                                                                        </td>
+                                                                    )}
+                                                                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                                                                        <span className="font-semibold text-[#EB216A]">
+                                                                            Rp {displayPrice.toLocaleString('id-ID')}
+                                                                        </span>
                                                                     </td>
-                                                                )}
-                                                                <td className="px-3 py-3 text-right whitespace-nowrap">
-                                                                    <span className="font-semibold text-[#EB216A]">
-                                                                        Rp {displayPrice.toLocaleString('id-ID')}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 py-3 text-center">
-                                                                    <Button
-                                                                        size="sm"
-                                                                        className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
-                                                                    >
-                                                                        Pilih
-                                                                    </Button>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                                    <td className="px-3 py-3 text-center">
+                                                                        <Button
+                                                                            size="sm"
+                                                                            className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1"
+                                                                        >
+                                                                            Pilih
+                                                                        </Button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* MOBILE: Card View */}
+                                            <div className="lg:hidden space-y-3">
+                                                {sorted.map((v: any) => {
+                                                    const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
+                                                    const priceNet = Number(v.price_net) || 0;
+                                                    const priceGross = Number(v.price_gross) || 0;
+                                                    const displayPrice = priceNet || priceGross;
+
+                                                    return (
+                                                        <div
+                                                            key={v.id}
+                                                            className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-pink-50 cursor-pointer transition-all flex items-center justify-between gap-4"
+                                                            onClick={() => handleSelectVariant(v)}
+                                                        >
+                                                            {/* Left Info */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex flex-wrap text-sm text-gray-700 mb-2">
+                                                                    {columnKeys.map(key => {
+                                                                        let val: any;
+                                                                        if (key === 'Gelombang') {
+                                                                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                            val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
+                                                                        } else {
+                                                                            const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
+                                                                            val = matchKey ? attrs[matchKey] : '-';
+                                                                        }
+
+                                                                        return (
+                                                                            <div key={key} className="mr-4 mb-1">
+                                                                                <span className="text-xs text-gray-500 block uppercase tracking-wider">{key}</span>
+                                                                                <span className="font-medium">{val}</span>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                                {/* Cocok Untuk - Mobile */}
+                                                                {!isBlindType() && (() => {
+                                                                    const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                    const tinggi = getNum(attrs, ['tinggi', 'height', 't']);
+                                                                    const sibak = getNum(attrs, ['sibak']);
+                                                                    const calculatedLebar = lebar !== 999999 ? (sibak !== 999999 ? lebar * sibak : lebar) : null;
+                                                                    const calculatedTinggi = tinggi !== 999999 ? tinggi : null;
+
+                                                                    if (calculatedLebar || calculatedTinggi) {
+                                                                        return (
+                                                                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded inline-block">
+                                                                                Cocok untuk: Lebar {calculatedLebar || '-'}cm × Tinggi {calculatedTinggi || '-'}cm
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
+                                                            </div>
+
+                                                            {/* Right Info */}
+                                                            <div className="flex flex-col items-end gap-2 shrink-0">
+                                                                <span className="font-bold text-[#EB216A] text-lg">
+                                                                    Rp {displayPrice.toLocaleString('id-ID')}
+                                                                </span>
+                                                                <Button
+                                                                    size="sm"
+                                                                    className="bg-[#EB216A] hover:bg-[#d11d5e] text-white text-xs px-3 py-1 w-full"
+                                                                >
+                                                                    Pilih
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
                                     );
                                 })()}
-                            </div>
+                            </div >
                         </div>
                     </div>
                 )
