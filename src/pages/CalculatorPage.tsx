@@ -182,7 +182,7 @@ export default function CalculatorPageV2() {
         setLoading(true);
         const [typesRes, productsRes] = await Promise.all([
           calculatorTypesApi.getTypes(),
-          productsApi.getAll()
+          productsApi.getAll({ limit: 1000 })
         ]);
 
         if (typesRes.success && typesRes.data?.length > 0) {
