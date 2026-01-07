@@ -1347,7 +1347,7 @@ export default function AdminDocumentCreate() {
                                                                 </div>
 
                                                                 {/* 1. Main Fabric Row */}
-                                                                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white shadow-sm gap-4">
+                                                                <div className="flex items-center justify-between py-3 border-t border-gray-200 gap-4">
                                                                     <div className="flex items-center gap-3 flex-1 overflow-hidden">
                                                                         <Button
                                                                             onClick={() => handleEditItemProduct(item)}
@@ -1457,7 +1457,7 @@ export default function AdminDocumentCreate() {
                                                                         const rowTotal = selection ? calculateComponentPrice(item, comp, selection) : 0;
 
                                                                         return (
-                                                                            <div key={comp.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-white gap-4">
+                                                                            <div key={comp.id} className="flex items-center justify-between py-3 border-t border-gray-200 gap-4">
                                                                                 <div className="flex items-center gap-3 flex-1 overflow-hidden">
                                                                                     <Button
                                                                                         variant="outline"
