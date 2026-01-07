@@ -2109,7 +2109,7 @@ export default function CalculatorPageV2() {
       < Dialog open={isVariantModalOpen} onOpenChange={(open: boolean) => { setIsVariantModalOpen(open); if (!open) setVariantSearchQuery(''); }
       }>
         <DialogContent
-          className="w-[98vw] md:w-[60vw] max-w-[1600px] max-h-[80vh] overflow-hidden flex flex-col"
+          className="!w-[95vw] md:!w-[60vw] !max-w-[1600px] max-h-[80vh] overflow-hidden flex flex-col"
         >
           <DialogHeader>
             <DialogTitle>Pilih Varian - {pendingProductForVariant?.name}</DialogTitle>
