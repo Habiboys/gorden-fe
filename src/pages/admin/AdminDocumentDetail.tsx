@@ -760,7 +760,9 @@ export default function AdminDocumentDetail() {
                                                     const compGross = Number(comp.productPriceGross) || Number(comp.productPrice) || Number(comp.product?.price_gross) || Number(comp.product?.price) || 0;
                                                     const compNet = Number(comp.productPriceNet) || Number(comp.product?.price_net) || compGross;
                                                     const effectiveCompDiscount = comp.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
-                                                    const compQty = comp.displayQty || comp.qty || 1;  // Use displayQty for multiplied qty
+                                                    // If displayQty is missing (legacy data), calculate it: selection.qty * item.quantity (window count)
+                                                    // This assumes components in a package always scale with the number of windows
+                                                    const compQty = comp.displayQty || ((comp.qty || 1) * item.quantity);
                                                     const compTotal = comp.componentTotal || (compNet * compQty);
                                                     const compName = comp.productName || comp.product?.name || comp.name || 'Komponen';
                                                     const compLabel = comp.label || 'Komponen';
