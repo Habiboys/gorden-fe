@@ -2323,15 +2323,19 @@ export default function AdminDocumentCreate() {
                             {/* General Recommendation Banner */}
                             {(() => {
                                 const item = items.find(i => i.id === variantItemId);
-                                if (item) {
+                                const w = item ? item.width : width;
+                                const h = item ? item.height : height;
+
+                                if (w && h) {
                                     return (
-                                        <div className="hidden lg:block mx-4 mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed">
+                                        <div className="mx-4 mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed">
                                             <p className="font-semibold">
-                                                Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {item.width} cm × Tinggi {item.height} cm
+                                                Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {w} cm × Tinggi {h} cm
                                             </p>
                                         </div>
                                     );
                                 }
+                                return null;
                                 return null;
                             })()}
 
@@ -2636,7 +2640,7 @@ export default function AdminDocumentCreate() {
                     </div>
                 )
             }
-            {/* Add/Edit Item Modal */}
+            {/* Add/Edit Item Modal */} 
             <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
                 <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto overflow-x-hidden">
                     <DialogHeader>

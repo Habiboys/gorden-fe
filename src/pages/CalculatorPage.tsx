@@ -2229,7 +2229,7 @@ export default function CalculatorPageV2() {
 
                 if (item) {
                   return (
-                    <div className="hidden lg:block p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed text-left mt-2 mb-2">
+                    <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg text-sm text-pink-900 leading-relaxed text-left mt-2 mb-2">
                       <p className="font-semibold">
                         Rekomendasi Umum: Cocok Untuk Pintu/Jendela Lebar {item.width} cm × Tinggi {item.height} cm
                       </p>
