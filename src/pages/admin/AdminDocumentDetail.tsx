@@ -632,19 +632,19 @@ export default function AdminDocumentDetail() {
                                                                                         {prices.fabricMeters.toFixed(2)}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-right text-gray-600">
-                                                                                        Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID')}
+                                                                                        Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-center text-gray-600">
                                                                                         {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-right text-gray-700 bg-gray-50/50">
-                                                                                        Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                        Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-center font-medium">
                                                                                         {item.quantity}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-right font-bold text-gray-900">
-                                                                                        Rp {prices.total.toLocaleString('id-ID')}
+                                                                                        Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                                     </td>
                                                                                 </tr>
                                                                             );
@@ -662,10 +662,10 @@ export default function AdminDocumentDetail() {
                                                                                 <div className="flex flex-col items-end">
                                                                                     {groupDiscount > 0 && (
                                                                                         <span className="text-xs text-gray-400 line-through font-normal">
-                                                                                            Rp {groupTotalRaw.toLocaleString('id-ID')}
+                                                                                            Rp {groupTotalRaw.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                                         </span>
                                                                                     )}
-                                                                                    <span>Rp {groupTotalAfterGroupDisc.toLocaleString('id-ID')}</span>
+                                                                                    <span>Rp {groupTotalAfterGroupDisc.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                                                                 </div>
                                                                             </td>
                                                                         </tr>
@@ -840,7 +840,7 @@ export default function AdminDocumentDetail() {
                                                                         </div>
                                                                     </td>
                                                                     <td className="py-3 px-2 text-right text-gray-600">
-                                                                        Rp {row.priceGross.toLocaleString('id-ID')}
+                                                                        Rp {row.priceGross.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                     </td>
                                                                     <td className="py-3 px-2 text-center">
                                                                         {row.discount > 0 ? (
@@ -850,13 +850,13 @@ export default function AdminDocumentDetail() {
                                                                         )}
                                                                     </td>
                                                                     <td className="py-3 px-2 text-right text-gray-700">
-                                                                        Rp {row.priceNet.toLocaleString('id-ID')}
+                                                                        Rp {row.priceNet.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                     </td>
                                                                     <td className="py-3 px-2 text-center font-medium">
                                                                         {row.qty}
                                                                     </td>
                                                                     <td className="py-3 px-2 text-right font-bold text-gray-900">
-                                                                        Rp {row.total.toLocaleString('id-ID')}
+                                                                        Rp {row.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -885,7 +885,7 @@ export default function AdminDocumentDetail() {
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
                                                                     <span className="text-gray-500 font-medium">Subtotal</span>
-                                                                    <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(subtotalAfterDiscount).toLocaleString('id-ID')}</span>
+                                                                    <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(subtotalAfterDiscount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                                                 </div>
                                                             </div>
                                                         );
