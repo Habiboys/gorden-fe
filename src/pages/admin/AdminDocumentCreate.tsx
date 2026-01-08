@@ -1180,7 +1180,7 @@ export default function AdminDocumentCreate() {
                                                             <p className="font-medium">{selectedFabric.name}</p>
                                                             <p className="text-sm text-[#EB216A]">
                                                                 {selectedFabric.minPrice ? (
-                                                                    <>Mulai Rp {Number(selectedFabric.minPrice).toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m</>
+                                                                    <>Mulai Rp {Number(selectedFabric.minPrice).toLocaleString('id-ID')}/m</>
                                                                 ) : (
                                                                     <>Pilih varian</>
                                                                 )}
@@ -1280,7 +1280,7 @@ export default function AdminDocumentCreate() {
                                                                             <h3 className="font-bold text-gray-900 text-sm lg:text-lg truncate">{groupProduct?.originalName || groupProduct?.name || 'Produk Custom'}</h3>
                                                                             <p className="text-[#EB216A] font-medium text-sm lg:text-base">
                                                                                 {groupProduct?.minPrice ? (
-                                                                                    <>Mulai Rp {Number(groupProduct.minPrice).toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m²</>
+                                                                                    <>Mulai Rp {Number(groupProduct.minPrice).toLocaleString('id-ID')}/m²</>
                                                                                 ) : (
                                                                                     <>Pilih varian</>
                                                                                 )}
@@ -1335,7 +1335,7 @@ export default function AdminDocumentCreate() {
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right text-gray-600">
                                                                                                 {/* Base Price + Discount Logic if needed */}
-                                                                                                Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID')}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center">
                                                                                                 <input
@@ -1348,13 +1348,13 @@ export default function AdminDocumentCreate() {
                                                                                                 />
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right text-gray-600 font-medium bg-gray-50/50">
-                                                                                                Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID')}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center font-medium">
                                                                                                 {item.quantity}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right font-bold text-gray-900">
-                                                                                                Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {prices.total.toLocaleString('id-ID')}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center">
                                                                                                 <button
@@ -1406,11 +1406,11 @@ export default function AdminDocumentCreate() {
                                                                                         <div className="flex flex-col items-end">
                                                                                             {(groupItems[0]?.groupDiscount || 0) > 0 && (
                                                                                                 <span className="text-xs text-gray-400 line-through font-normal">
-                                                                                                    Rp {groupTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                    Rp {groupTotal.toLocaleString('id-ID')}
                                                                                                 </span>
                                                                                             )}
                                                                                             <span>
-                                                                                                Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
                                                                                             </span>
                                                                                         </div>
                                                                                     </td>
@@ -1446,11 +1446,11 @@ export default function AdminDocumentCreate() {
                                                                                     <div className="grid grid-cols-2 gap-3 mb-3">
                                                                                         <div>
                                                                                             <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga/m²</span>
-                                                                                            <div className="text-sm">Rp {prices.fabricPricePerMeter.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</div>
+                                                                                            <div className="text-sm">Rp {prices.fabricPricePerMeter.toLocaleString('id-ID')}</div>
                                                                                         </div>
                                                                                         <div>
                                                                                             <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Net</span>
-                                                                                            <div className="text-sm font-medium">Rp {discountedPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</div>
+                                                                                            <div className="text-sm font-medium">Rp {discountedPrice.toLocaleString('id-ID')}</div>
                                                                                         </div>
                                                                                     </div>
 
@@ -1478,7 +1478,7 @@ export default function AdminDocumentCreate() {
                                                                                     {/* Item Total */}
                                                                                     <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between items-center">
                                                                                         <span className="text-xs text-gray-500">Total Item</span>
-                                                                                        <span className="text-sm font-bold text-gray-900">Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                                                        <span className="text-sm font-bold text-gray-900">Rp {prices.total.toLocaleString('id-ID')}</span>
                                                                                     </div>
                                                                                 </div>
                                                                             );
@@ -1512,18 +1512,18 @@ export default function AdminDocumentCreate() {
                                                                                     <span className="text-sm text-gray-600">Total Group</span>
                                                                                     {(groupItems[0]?.groupDiscount || 0) > 0 && (
                                                                                         <span className="text-xs text-[#EB216A] font-medium">
-                                                                                            Hemat Rp {(groupTotal * ((groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                            Hemat Rp {(groupTotal * ((groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
                                                                                         </span>
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-right">
                                                                                     {(groupItems[0]?.groupDiscount || 0) > 0 && (
                                                                                         <span className="text-xs text-gray-400 line-through block">
-                                                                                            Rp {groupTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                            Rp {groupTotal.toLocaleString('id-ID')}
                                                                                         </span>
                                                                                     )}
                                                                                     <span className="text-lg font-bold text-[#EB216A]">
-                                                                                        Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
                                                                                     </span>
                                                                                 </div>
                                                                             </div>
@@ -1668,7 +1668,7 @@ export default function AdminDocumentCreate() {
                                                                                 <>
                                                                                     {/* Harga Gross */}
                                                                                     <div className="w-28 text-right text-sm text-gray-600">
-                                                                                        Rp {gross.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        Rp {gross.toLocaleString('id-ID')}
                                                                                     </div>
 
                                                                                     {/* Disc */}
@@ -1685,7 +1685,7 @@ export default function AdminDocumentCreate() {
 
                                                                                     {/* Harga Net */}
                                                                                     <div className="w-28 text-right text-sm font-medium text-gray-800">
-                                                                                        Rp {net.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        Rp {net.toLocaleString('id-ID')}
                                                                                     </div>
                                                                                 </>
                                                                             );
@@ -1700,7 +1700,7 @@ export default function AdminDocumentCreate() {
 
                                                                         {/* Total */}
                                                                         <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
-                                                                            Rp {prices.fabric.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                            Rp {prices.fabric.toLocaleString('id-ID')}
                                                                         </div>
                                                                     </div>
 
@@ -1762,7 +1762,7 @@ export default function AdminDocumentCreate() {
                                                                                     {selection ? (
                                                                                         <>
                                                                                             <div className="w-28 text-right text-sm text-gray-600">
-                                                                                                Rp {compGross.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {compGross.toLocaleString('id-ID')}
                                                                                             </div>
 
                                                                                             <div className="w-16 flex justify-center">
@@ -1786,7 +1786,7 @@ export default function AdminDocumentCreate() {
                                                                                             </div>
 
                                                                                             <div className="w-28 text-right text-sm font-medium text-gray-800">
-                                                                                                Rp {Math.round(compNetActual).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {Math.round(compNetActual).toLocaleString('id-ID')}
                                                                                             </div>
 
                                                                                             <div className="w-16 flex justify-center">
@@ -1817,7 +1817,7 @@ export default function AdminDocumentCreate() {
                                                                                             </div>
 
                                                                                             <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
-                                                                                                Rp {Math.round(rowTotal).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                Rp {Math.round(rowTotal).toLocaleString('id-ID')}
                                                                                             </div>
                                                                                         </>
                                                                                     ) : (
@@ -1876,7 +1876,7 @@ export default function AdminDocumentCreate() {
                                                                                     <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Gross</span>
                                                                                     {(() => {
                                                                                         const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
-                                                                                        return <span className="font-medium">Rp {gross.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>;
+                                                                                        return <span className="font-medium">Rp {gross.toLocaleString('id-ID')}</span>;
                                                                                     })()}
                                                                                 </div>
                                                                                 <div>
@@ -1884,7 +1884,7 @@ export default function AdminDocumentCreate() {
                                                                                     {(() => {
                                                                                         const gross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
                                                                                         const net = Number(item.selectedVariant?.price_net) || gross;
-                                                                                        return <span className="font-medium">Rp {net.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>;
+                                                                                        return <span className="font-medium">Rp {net.toLocaleString('id-ID')}</span>;
                                                                                     })()}
                                                                                 </div>
                                                                             </div>
@@ -1914,7 +1914,7 @@ export default function AdminDocumentCreate() {
                                                                                 </div>
                                                                                 <div className="flex-1 text-right">
                                                                                     <span className="text-xs text-gray-500 block">Total</span>
-                                                                                    <span className="font-bold text-[#EB216A] text-lg">Rp {prices.fabric.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                                                    <span className="font-bold text-[#EB216A] text-lg">Rp {prices.fabric.toLocaleString('id-ID')}</span>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -1970,11 +1970,11 @@ export default function AdminDocumentCreate() {
                                                                                                 <div className="grid grid-cols-2 gap-3">
                                                                                                     <div>
                                                                                                         <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Gross</span>
-                                                                                                        <span className="font-medium">Rp {(selection.product.price_gross || selection.product.price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                                                                        <span className="font-medium">Rp {(selection.product.price_gross || selection.product.price).toLocaleString('id-ID')}</span>
                                                                                                     </div>
                                                                                                     <div>
                                                                                                         <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Harga Net</span>
-                                                                                                        <span className="font-medium">Rp {(selection.product.price_net || selection.product.price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                                                                        <span className="font-medium">Rp {(selection.product.price_net || selection.product.price).toLocaleString('id-ID')}</span>
                                                                                                     </div>
                                                                                                 </div>
 
@@ -2032,7 +2032,7 @@ export default function AdminDocumentCreate() {
                                                                                                     {/* Total */}
                                                                                                     <div className="flex-1 text-right">
                                                                                                         <span className="text-xs text-gray-500 block">Total</span>
-                                                                                                        <span className="font-bold text-[#EB216A] text-lg">Rp {calculateComponentPrice(item, comp, selection).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                                                                        <span className="font-bold text-[#EB216A] text-lg">Rp {calculateComponentPrice(item, comp, selection).toLocaleString('id-ID')}</span>
                                                                                                     </div>
                                                                                                 </div>
                                                                                             </div>
@@ -2070,7 +2070,7 @@ export default function AdminDocumentCreate() {
                                                                     <div className="flex items-center gap-4">
                                                                         <span className="text-gray-500 font-medium">Subtotal</span>
                                                                         <span className="text-[#EB216A] text-xl font-bold">
-                                                                            Rp {Math.round(prices.total * (1 - (item.itemDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                            Rp {Math.round(prices.total * (1 - (item.itemDiscount || 0) / 100)).toLocaleString('id-ID')}
                                                                         </span>
                                                                     </div>
                                                                 </div>
@@ -2091,7 +2091,7 @@ export default function AdminDocumentCreate() {
                                         <div className="mt-4 p-4 bg-[#EB216A]/5 border border-[#EB216A]/20 rounded-lg">
                                             <div className="flex justify-between items-center">
                                                 <span className="font-semibold text-sm">Total Kalkulator</span>
-                                                <span className="text-lg font-bold text-[#EB216A]">Rp {calculateTotal().toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                <span className="text-lg font-bold text-[#EB216A]">Rp {calculateTotal().toLocaleString('id-ID')}</span>
                                             </div>
                                         </div>
                                     )}
@@ -2155,17 +2155,17 @@ export default function AdminDocumentCreate() {
                         <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm border border-gray-100">
                             <div className="flex justify-between text-gray-600">
                                 <span>Total Item</span>
-                                <span>Rp {calculateTotal().toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                <span>Rp {calculateTotal().toLocaleString('id-ID')}</span>
                             </div>
                             {formData.discount > 0 && (
                                 <div className="flex justify-between text-green-600">
                                     <span>Diskon ({formData.discount}%)</span>
-                                    <span>-Rp {(calculateTotal() * formData.discount / 100).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                    <span>-Rp {(calculateTotal() * formData.discount / 100).toLocaleString('id-ID')}</span>
                                 </div>
                             )}
                             <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 text-[#EB216A]">
                                 <span>Total Akhir</span>
-                                <span>Rp {(calculateTotal() * (1 - (formData.discount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                <span>Rp {(calculateTotal() * (1 - (formData.discount || 0) / 100)).toLocaleString('id-ID')}</span>
                             </div>
                         </div>
 
@@ -2286,51 +2286,30 @@ export default function AdminDocumentCreate() {
                                     }
 
                                     return true;
-                                }).slice(0, 20).map((product: any) => {
-                                    // Helper to get ranges
-                                    let wMin = null, wMax = null, hMin = null, hMax = null;
-                                    try {
-                                        let opts = product.variant_options;
-                                        if (typeof opts === 'string') opts = JSON.parse(opts);
-                                        if (Array.isArray(opts)) {
-                                            const getMinMax = (keys: string[]) => {
-                                                const opt = opts.find((o: any) => keys.includes(o.name?.toLowerCase()));
-                                                if (opt && Array.isArray(opt.values)) {
-                                                    const nums = opt.values.map((v: any) => parseFloat(String(v).replace(/[^\d.-]/g, ''))).filter((n: number) => !isNaN(n));
-                                                    if (nums.length > 0) return [Math.min(...nums), Math.max(...nums)];
-                                                }
-                                                return [null, null];
-                                            };
-                                            [wMin, wMax] = getMinMax(['lebar', 'width', 'l']);
-                                            [hMin, hMax] = getMinMax(['tinggi', 'height', 't']);
-                                        }
-                                    } catch (e) {
-                                        console.error('Error parsing variant options:', e);
-                                    }
-
-                                    return (
-                                        <div key={product.id} className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#EB216A]" onClick={() => handleSelectFabric(product)}>
-                                            <div className="flex items-start gap-3">
-                                                <img src={getProductImageUrl(product.images || product.image)} alt="" className="w-16 h-16 rounded object-cover bg-gray-100 shrink-0" />
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-medium text-gray-900 mb-1">{product.name}</p>
-                                                    <p className="text-[#EB216A] text-sm font-bold mb-2">
-                                                        {product.minPrice ? `Mulai Rp ${Number(product.minPrice).toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m` : 'Haga bervariasi'}
-                                                    </p>
-
-                                                    {/* Ranges Display */}
-                                                    {(wMin !== null || hMin !== null) && (
-                                                        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
-                                                            <p className="font-semibold text-[10px] uppercase text-gray-400 mb-1">Penambahan Semua Nilai Lebar Variasi dan Tinggi</p>
-                                                            {wMin !== null && <p className="mb-0.5">• Lebar {wMin}cm - {wMax}cm</p>}
-                                                            {hMin !== null && <p>• Tinggi {hMin}cm - {hMax}cm</p>}
-                                                        </div>
+                                }).slice(0, 20).map((product: any) => (
+                                    <div key={product.id} className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#EB216A]" onClick={() => handleSelectFabric(product)}>
+                                        <div className="flex items-center gap-3">
+                                            <img src={getProductImageUrl(product.images || product.image)} alt="" className="w-12 h-12 rounded object-cover bg-gray-100" />
+                                            <div>
+                                                <p className="font-medium">{product.name}</p>
+                                                {/* Price & Ranges */}
+                                                <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                                                    {(product.minPrice || product.price) && (
+                                                        <p className="text-[#EB216A] font-semibold">
+                                                            Mulai Rp {Math.round(product.minPrice || product.price).toLocaleString('id-ID')}
+                                                        </p>
+                                                    )}
+                                                    {product.variantMinWidth !== undefined && (
+                                                        <p>Lebar {product.variantMinWidth} s/d {product.variantMaxWidth} cm</p>
+                                                    )}
+                                                    {product.variantMinHeight !== undefined && (
+                                                        <p>Tinggi {product.variantMinHeight} s/d {product.variantMaxHeight} cm</p>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -2537,7 +2516,7 @@ export default function AdminDocumentCreate() {
                                                                     )}
                                                                     <td className="px-3 py-3 text-right whitespace-nowrap">
                                                                         <span className="font-semibold text-[#EB216A]">
-                                                                            Rp {displayPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                            Rp {displayPrice.toLocaleString('id-ID')}
                                                                         </span>
                                                                     </td>
                                                                     <td className="px-3 py-3 text-center">
@@ -2611,7 +2590,7 @@ export default function AdminDocumentCreate() {
                                                             {/* Right Info */}
                                                             <div className="flex flex-col items-end gap-2 shrink-0">
                                                                 <span className="font-bold text-[#EB216A] text-lg">
-                                                                    Rp {displayPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                    Rp {displayPrice.toLocaleString('id-ID')}
                                                                 </span>
                                                                 <Button
                                                                     size="sm"
@@ -2686,9 +2665,9 @@ export default function AdminDocumentCreate() {
                                     <p className="text-sm lg:text-base font-medium text-gray-900 break-words">{itemModalTargetProduct.originalName || itemModalTargetProduct.name}</p>
                                     <p className="text-xs lg:text-sm text-[#EB216A] font-bold">
                                         {itemModalTargetProduct.minPrice && itemModalTargetProduct.minPrice > 0
-                                            ? `Mulai Rp ${Number(itemModalTargetProduct.minPrice).toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
+                                            ? `Mulai Rp ${Number(itemModalTargetProduct.minPrice).toLocaleString('id-ID')}`
                                             : itemModalTargetProduct.price > 0
-                                                ? `Rp ${Number(itemModalTargetProduct.price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m²`
+                                                ? `Rp ${Number(itemModalTargetProduct.price).toLocaleString('id-ID')}/m²`
                                                 : 'Lihat Varian'}
                                     </p>
                                     {itemModalTargetProduct.selectedVariant && (
