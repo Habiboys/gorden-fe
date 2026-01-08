@@ -38,6 +38,21 @@ import { categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploa
 import { exportToCSV } from '../../utils/exportHelper';
 import { getProductImagesArray, getProductImageUrl, safelyParseImages } from '../../utils/imageHelper';
 
+/**
+ * Generate SKU from product name
+ * Rules: lowercase, no special chars, spaces to dashes
+ */
+const generateSkuFromName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
 // Detail Modal Component with variants display
 function DetailModalContent({ product, onClose }: { product: any; onClose: () => void }) {
   const [variants, setVariants] = useState<any[]>([]);
@@ -479,10 +494,13 @@ export default function AdminProducts() {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.sku || !formData.category) {
-      toast.error('Nama, SKU, dan Kategori harus diisi!');
+    if (!formData.name || !formData.category) {
+      toast.error('Nama dan Kategori harus diisi!');
       return;
     }
+
+    // Auto-generate SKU if empty
+    const finalSku = formData.sku || generateSkuFromName(formData.name);
 
     setSaving(true);
     try {
@@ -499,7 +517,7 @@ export default function AdminProducts() {
 
       const productData: any = {
         name: formData.name,
-        sku: formData.sku,
+        sku: finalSku,
         category_id: selectedCategory.id,
         subcategory_id: selectedSubcategory?.id || null,
         stock: formData.stock,
@@ -950,17 +968,23 @@ export default function AdminProducts() {
                       <Label>Nama Produk *</Label>
                       <Input
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        onChange={(e) => {
+                          const newName = e.target.value;
+                          const newSku = generateSkuFromName(newName);
+                          setFormData({ ...formData, name: newName, sku: newSku });
+                        }}
                         placeholder="Masukkan nama produk"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>SKU *</Label>
+                      <Label>SKU <span className="text-xs text-gray-500 font-normal">(otomatis)</span></Label>
                       <Input
                         value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                        placeholder="Contoh: GRD-4000-BLK"
+                        readOnly
+                        className="bg-gray-50 cursor-not-allowed"
+                        placeholder="Akan terisi otomatis"
                       />
+                      <p className="text-xs text-gray-500">SKU dibuat otomatis dari nama produk</p>
                     </div>
                   </div>
 

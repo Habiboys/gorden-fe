@@ -20,6 +20,26 @@ import UnifiedVariantManager from './UnifiedVariantManager';
 
 const MAX_IMAGES = 4;
 
+/**
+ * Generate SKU from product name
+ * Rules:
+ * - Lowercase only
+ * - No special/unique characters (only alphanumeric)
+ * - Spaces replaced with dashes
+ * - Multiple dashes reduced to single
+ * - Trim leading/trailing dashes
+ */
+const generateSkuFromName = (name: string): string => {
+    return name
+        .toLowerCase() // Convert to lowercase
+        .normalize('NFD') // Normalize unicode characters
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters, keep alphanumeric, spaces, and dashes
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .replace(/-+/g, '-') // Replace multiple dashes with single dash
+        .replace(/^-|-$/g, ''); // Trim leading/trailing dashes
+};
+
 export default function AdminProductForm() {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -209,15 +229,17 @@ export default function AdminProductForm() {
     };
 
     const handleSave = async () => {
-        if (!formData.name || !formData.sku || !formData.category) {
-            toast.error('Nama, SKU, dan Kategori harus diisi!');
+        if (!formData.name || !formData.category) {
+            toast.error('Nama dan Kategori harus diisi!');
             return;
         }
+        // Auto-generate SKU if empty (ensures SKU is always set)
+        const finalSku = formData.sku || generateSkuFromName(formData.name);
         setSaving(true);
         try {
             const productData = {
                 name: formData.name,
-                sku: formData.sku,
+                sku: finalSku,
                 category_id: parseInt(formData.category),
                 subcategory_id: formData.subcategory ? parseInt(formData.subcategory) : null,
                 stock: formData.stock,
@@ -305,17 +327,23 @@ export default function AdminProductForm() {
                             <Label>Nama Produk *</Label>
                             <Input
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={(e) => {
+                                    const newName = e.target.value;
+                                    const newSku = generateSkuFromName(newName);
+                                    setFormData({ ...formData, name: newName, sku: newSku });
+                                }}
                                 placeholder="Masukkan nama produk"
                             />
                         </div>
                         <div>
-                            <Label>SKU *</Label>
+                            <Label>SKU <span className="text-xs text-gray-500 font-normal">(otomatis dari nama)</span></Label>
                             <Input
                                 value={formData.sku}
-                                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                                placeholder="GRD-4000-BLK"
+                                readOnly
+                                className="bg-gray-50 cursor-not-allowed"
+                                placeholder="Akan terisi otomatis"
                             />
+                            <p className="text-xs text-gray-500 mt-1">SKU dibuat otomatis dari nama produk</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

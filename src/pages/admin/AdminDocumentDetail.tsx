@@ -683,86 +683,101 @@ export default function AdminDocumentDetail() {
                                 // Item Block View (Curtain / Table Style like AdminDocumentCreate)
                                 <div className="space-y-6 mt-6">
                                     {rawItems.map((item, itemIdx) => {
-                                        const prices = calculateItemPriceRich(item);
+                                        // Find matching window for this item which has pre-calculated values
+                                        const matchingWindow = windows.find(w => w.id === item.id);
 
-                                        // Collect all rows: Fabric + Components
+                                        // Collect all rows: Use windows.items if available, else fallback to raw calculation
                                         const allRows: { type: string; name: string; variant?: string; priceGross: number; discount: number; priceNet: number; qty: number; total: number; image?: string }[] = [];
 
-                                        // ===== FABRIC ROW =====
-                                        // Use direct variant prices like AdminDocumentCreate
-                                        const fabricGross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
-                                        const fabricNet = Number(item.selectedVariant?.price_net) || fabricGross;
-                                        const fabricDiscount = item.fabricDiscount || (fabricGross > 0 ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100) : 0);
-                                        const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
-                                        const effectiveQty = variantMultiplier * item.quantity;
-                                        const fabricTotal = prices.fabric || (fabricNet * effectiveQty);
-
-                                        // Clean variant name
-                                        let cleanVariantName = '-';
-                                        if (item.selectedVariant) {
-                                            try {
-                                                const attrs = typeof item.selectedVariant.attributes === 'string'
-                                                    ? JSON.parse(item.selectedVariant.attributes)
-                                                    : item.selectedVariant.attributes;
-                                                if (attrs && Object.keys(attrs).length > 0) {
-                                                    cleanVariantName = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                } else if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                    cleanVariantName = item.selectedVariant.name;
-                                                }
-                                            } catch (e) {
-                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                    cleanVariantName = item.selectedVariant.name;
-                                                }
-                                            }
-                                        }
-
-                                        const fabricRow = {
-                                            type: item.product?.name || item.productName || 'Gorden',
-                                            name: `${item.product?.name || item.productName || 'Gorden Custom'} (${cleanVariantName})`,
-                                            variant: cleanVariantName,
-                                            priceGross: Math.round(fabricGross),
-                                            discount: fabricDiscount,
-                                            priceNet: Math.round(fabricNet),
-                                            qty: effectiveQty,
-                                            total: Math.round(fabricTotal),
-                                            image: item.product?.image || item.product?.images?.[0]
-                                        };
-                                        allRows.push(fabricRow);
-
-
-                                        // Add Component Rows
-                                        if (item.packageType === 'gorden-lengkap' && item.components) {
-                                            // Handle both array and object formats
-                                            const componentsList = Array.isArray(item.components)
-                                                ? item.components
-                                                : Object.values(item.components);
-
-                                            componentsList.forEach((comp: any) => {
-                                                // Use saved price fields from CalculatorPage
-                                                // CalculatorPage saves: productPriceGross, productPriceNet, componentTotal
-                                                const compGross = Number(comp.productPriceGross) || Number(comp.productPrice) || Number(comp.product?.price_gross) || Number(comp.product?.price) || 0;
-                                                const compNet = Number(comp.productPriceNet) || Number(comp.product?.price_net) || compGross;
-
-                                                // Calculate effective discount from price difference, or use stored discount
-                                                const effectiveCompDiscount = comp.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
-
-                                                const compQty = comp.qty || 1;
-                                                const compTotal = comp.componentTotal || (compNet * compQty);
-                                                const compName = comp.productName || comp.product?.name || comp.name || 'Komponen';
-                                                const compLabel = comp.label || 'Komponen';
-                                                const compImage = comp.productImage || comp.product?.image || comp.productImages?.[0] || comp.product?.images?.[0];
+                                        if (matchingWindow && matchingWindow.items && matchingWindow.items.length > 0) {
+                                            // ===== USE PRE-CALCULATED WINDOWS.ITEMS =====
+                                            matchingWindow.items.forEach((wItem: any, idx: number) => {
+                                                let displayName = wItem.name || '-';
+                                                displayName = displayName.replace(/^Pilih\s+[^:]+:\s*/i, '');
+                                                displayName = displayName.replace(/undefined/g, '-');
 
                                                 allRows.push({
-                                                    type: compLabel,
-                                                    name: compName,
-                                                    priceGross: Math.round(compGross),
-                                                    discount: effectiveCompDiscount,
-                                                    priceNet: Math.round(compNet),
-                                                    qty: compQty,
-                                                    total: Math.round(compTotal),
-                                                    image: compImage
+                                                    type: idx === 0 ? (item.product?.name || 'Gorden') : 'Komponen',
+                                                    name: displayName,
+                                                    priceGross: Math.round(wItem.price_gross || wItem.price || 0),
+                                                    discount: wItem.discount || 0,
+                                                    priceNet: Math.round(wItem.price_net || wItem.price || 0),
+                                                    qty: wItem.quantity || 1,
+                                                    total: Math.round(wItem.totalPrice || 0), // Use pre-calculated totalPrice
+                                                    image: idx === 0 ? (item.product?.image || item.product?.images?.[0]) : undefined
                                                 });
                                             });
+                                        } else {
+                                            // ===== FALLBACK: Calculate from raw_items =====
+                                            const prices = calculateItemPriceRich(item);
+
+                                            // FABRIC ROW
+                                            const fabricGross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                            const fabricNet = Number(item.selectedVariant?.price_net) || fabricGross;
+                                            const fabricDiscount = item.fabricDiscount || (fabricGross > 0 ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100) : 0);
+                                            const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+                                            const effectiveQty = variantMultiplier * item.quantity;
+                                            const fabricTotal = prices.fabric || (fabricNet * effectiveQty);
+
+                                            // Clean variant name
+                                            let cleanVariantName = '-';
+                                            if (item.selectedVariant) {
+                                                try {
+                                                    const attrs = typeof item.selectedVariant.attributes === 'string'
+                                                        ? JSON.parse(item.selectedVariant.attributes)
+                                                        : item.selectedVariant.attributes;
+                                                    if (attrs && Object.keys(attrs).length > 0) {
+                                                        cleanVariantName = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                    } else if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                        cleanVariantName = item.selectedVariant.name;
+                                                    }
+                                                } catch (e) {
+                                                    if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                        cleanVariantName = item.selectedVariant.name;
+                                                    }
+                                                }
+                                            }
+
+                                            allRows.push({
+                                                type: item.product?.name || item.productName || 'Gorden',
+                                                name: `${item.product?.name || item.productName || 'Gorden Custom'} (${cleanVariantName})`,
+                                                variant: cleanVariantName,
+                                                priceGross: Math.round(fabricGross),
+                                                discount: fabricDiscount,
+                                                priceNet: Math.round(fabricNet),
+                                                qty: effectiveQty,
+                                                total: Math.round(fabricTotal),
+                                                image: item.product?.image || item.product?.images?.[0]
+                                            });
+
+                                            // Add Component Rows
+                                            if (item.packageType === 'gorden-lengkap' && item.components) {
+                                                const componentsList = Array.isArray(item.components)
+                                                    ? item.components
+                                                    : Object.values(item.components);
+
+                                                componentsList.forEach((comp: any) => {
+                                                    const compGross = Number(comp.productPriceGross) || Number(comp.productPrice) || Number(comp.product?.price_gross) || Number(comp.product?.price) || 0;
+                                                    const compNet = Number(comp.productPriceNet) || Number(comp.product?.price_net) || compGross;
+                                                    const effectiveCompDiscount = comp.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
+                                                    const compQty = comp.qty || 1;
+                                                    const compTotal = comp.componentTotal || (compNet * compQty);
+                                                    const compName = comp.productName || comp.product?.name || comp.name || 'Komponen';
+                                                    const compLabel = comp.label || 'Komponen';
+                                                    const compImage = comp.productImage || comp.product?.image || comp.productImages?.[0] || comp.product?.images?.[0];
+
+                                                    allRows.push({
+                                                        type: compLabel,
+                                                        name: compName,
+                                                        priceGross: Math.round(compGross),
+                                                        discount: effectiveCompDiscount,
+                                                        priceNet: Math.round(compNet),
+                                                        qty: compQty,
+                                                        total: Math.round(compTotal),
+                                                        image: compImage
+                                                    });
+                                                });
+                                            }
                                         }
 
                                         return (
