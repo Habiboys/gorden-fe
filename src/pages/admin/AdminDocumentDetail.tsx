@@ -760,11 +760,17 @@ export default function AdminDocumentDetail() {
                                                     const compGross = Number(comp.productPriceGross) || Number(comp.productPrice) || Number(comp.product?.price_gross) || Number(comp.product?.price) || 0;
                                                     const compNet = Number(comp.productPriceNet) || Number(comp.product?.price_net) || compGross;
                                                     const effectiveCompDiscount = comp.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
-                                                    // If displayQty is missing (legacy data), calculate it: selection.qty * item.quantity (window count)
-                                                    // This assumes components in a package always scale with the number of windows
-                                                    const compQty = comp.displayQty || ((comp.qty || 1) * item.quantity);
-                                                    const compTotal = comp.componentTotal || (compNet * compQty);
+                                                    // Heuristic: If displayQty is present but looks unscaled (equal to raw qty) for items that usually scale, force multiply
+                                                    // This fixes issues where saved data has incorrect displayQty (1 instead of 3)
                                                     const compName = comp.productName || comp.product?.name || comp.name || 'Komponen';
+                                                    const likelyShouldScale = ['rel', 'tassel', 'hook', 'vitrase', 'gorden', 'kain', 'rail'].some(k => compName.toLowerCase().includes(k));
+                                                    const rawQty = comp.qty || 1;
+                                                    const isSuspiciousUnscaled = comp.displayQty && comp.displayQty === rawQty && item.quantity > 1;
+
+                                                    const compQty = (!comp.displayQty || (likelyShouldScale && isSuspiciousUnscaled))
+                                                        ? rawQty * item.quantity
+                                                        : comp.displayQty;
+                                                    const compTotal = comp.componentTotal || (compNet * compQty);
                                                     const compLabel = comp.label || 'Komponen';
                                                     const compImage = comp.productImage || comp.product?.image || comp.productImages?.[0] || comp.product?.images?.[0];
 
