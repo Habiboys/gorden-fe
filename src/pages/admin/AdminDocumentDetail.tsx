@@ -760,7 +760,7 @@ export default function AdminDocumentDetail() {
                                                     const compGross = Number(comp.productPriceGross) || Number(comp.productPrice) || Number(comp.product?.price_gross) || Number(comp.product?.price) || 0;
                                                     const compNet = Number(comp.productPriceNet) || Number(comp.product?.price_net) || compGross;
                                                     const effectiveCompDiscount = comp.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
-                                                    const compQty = comp.qty || 1;
+                                                    const compQty = comp.displayQty || comp.qty || 1;  // Use displayQty for multiplied qty
                                                     const compTotal = comp.componentTotal || (compNet * compQty);
                                                     const compName = comp.productName || comp.product?.name || comp.name || 'Komponen';
                                                     const compLabel = comp.label || 'Komponen';
@@ -817,7 +817,7 @@ export default function AdminDocumentDetail() {
                                                                         <div className="flex items-center gap-3">
                                                                             {row.image && (
                                                                                 <img
-                                                                                    src={row.image.startsWith('http') ? row.image : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${row.image}`}
+                                                                                    src={getProductImageUrl(row.image)}
                                                                                     className="w-10 h-10 rounded object-cover border"
                                                                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                                                                 />
