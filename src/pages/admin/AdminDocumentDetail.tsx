@@ -263,9 +263,9 @@ export default function AdminDocumentDetail() {
         const isBlind = calculatorSchema.slug?.toLowerCase().includes('blind') || calculatorSchema.has_item_type === false;
 
         if (isBlind) {
-            // BLIND FLOW: Simple Price × Qty (no area, no multiplier)
-            fabricPriceBeforeDiscount = fabricPricePerMeter * item.quantity;
-            fabricMeters = 0;
+            // BLIND FLOW: Price × Area (m²) × Qty
+            fabricMeters = widthM * heightM; // Area in m²
+            fabricPriceBeforeDiscount = fabricPricePerMeter * fabricMeters * item.quantity;
         } else if (variantMultiplier > 1) {
             // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
             fabricPriceBeforeDiscount = fabricPricePerMeter * variantMultiplier * item.quantity;

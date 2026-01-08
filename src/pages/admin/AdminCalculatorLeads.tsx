@@ -1206,7 +1206,7 @@ export default function AdminCalculatorLeads() {
                                 {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Gorden Saja'}
                               </h4>
                               <p className="text-xs text-gray-500">
-                                {item.dimensions?.width || item.width}cm × {item.dimensions?.height || item.height}cm • {item.panels || 2} Panel
+                                {item.dimensions?.width || item.width}cm × {item.dimensions?.height || item.height}cm • Jumlah: {item.quantity || 1}
                               </p>
                             </div>
                           </div>
