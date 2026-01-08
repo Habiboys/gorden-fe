@@ -680,178 +680,186 @@ export default function AdminDocumentDetail() {
                                     );
                                 })()
                             ) : (
-                                // Item Block View (Curtain / Legacy Style)
+                                // Item Block View (Curtain / Table Style like AdminDocumentCreate)
                                 <div className="space-y-6 mt-6">
-                                    {rawItems.map((item) => {
+                                    {rawItems.map((item, itemIdx) => {
                                         const prices = calculateItemPriceRich(item);
-                                        // Calculate Unit Prices for display
-                                        // Use logic from Create Page:
-                                        // Fabric
-                                        const fabricNet = prices.fabric;
-                                        const unitNet = fabricNet / item.quantity;
+
+                                        // Collect all rows: Fabric + Components
+                                        const allRows: { type: string; name: string; variant?: string; priceGross: number; discount: number; priceNet: number; qty: number; total: number; image?: string }[] = [];
+
+                                        // ===== FABRIC ROW =====
+                                        // Use direct variant prices like AdminDocumentCreate
+                                        const fabricGross = Number(item.selectedVariant?.price_gross) || Number(item.selectedVariant?.price) || Number(item.product?.price) || 0;
+                                        const fabricNet = Number(item.selectedVariant?.price_net) || fabricGross;
+                                        const fabricDiscount = item.fabricDiscount || (fabricGross > 0 ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100) : 0);
+                                        const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+                                        const effectiveQty = variantMultiplier * item.quantity;
+                                        const fabricTotal = prices.fabric || (fabricNet * effectiveQty);
+
+                                        // Clean variant name
+                                        let cleanVariantName = '-';
+                                        if (item.selectedVariant) {
+                                            try {
+                                                const attrs = typeof item.selectedVariant.attributes === 'string'
+                                                    ? JSON.parse(item.selectedVariant.attributes)
+                                                    : item.selectedVariant.attributes;
+                                                if (attrs && Object.keys(attrs).length > 0) {
+                                                    cleanVariantName = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                } else if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                    cleanVariantName = item.selectedVariant.name;
+                                                }
+                                            } catch (e) {
+                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                    cleanVariantName = item.selectedVariant.name;
+                                                }
+                                            }
+                                        }
+
+                                        const fabricRow = {
+                                            type: item.product?.name || item.productName || 'Gorden',
+                                            name: `${item.product?.name || item.productName || 'Gorden Custom'} (${cleanVariantName})`,
+                                            variant: cleanVariantName,
+                                            priceGross: Math.round(fabricGross),
+                                            discount: fabricDiscount,
+                                            priceNet: Math.round(fabricNet),
+                                            qty: effectiveQty,
+                                            total: Math.round(fabricTotal),
+                                            image: item.product?.image || item.product?.images?.[0]
+                                        };
+                                        allRows.push(fabricRow);
+
+
+                                        // Add Component Rows
+                                        if (item.packageType === 'gorden-lengkap' && item.components) {
+                                            // Handle both array and object formats
+                                            const componentsList = Array.isArray(item.components)
+                                                ? item.components
+                                                : Object.values(item.components);
+
+                                            componentsList.forEach((comp: any) => {
+                                                // Use saved price fields from CalculatorPage
+                                                // CalculatorPage saves: productPriceGross, productPriceNet, componentTotal
+                                                const compGross = Number(comp.productPriceGross) || Number(comp.productPrice) || Number(comp.product?.price_gross) || Number(comp.product?.price) || 0;
+                                                const compNet = Number(comp.productPriceNet) || Number(comp.product?.price_net) || compGross;
+
+                                                // Calculate effective discount from price difference, or use stored discount
+                                                const effectiveCompDiscount = comp.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
+
+                                                const compQty = comp.qty || 1;
+                                                const compTotal = comp.componentTotal || (compNet * compQty);
+                                                const compName = comp.productName || comp.product?.name || comp.name || 'Komponen';
+                                                const compLabel = comp.label || 'Komponen';
+                                                const compImage = comp.productImage || comp.product?.image || comp.productImages?.[0] || comp.product?.images?.[0];
+
+                                                allRows.push({
+                                                    type: compLabel,
+                                                    name: compName,
+                                                    priceGross: Math.round(compGross),
+                                                    discount: effectiveCompDiscount,
+                                                    priceNet: Math.round(compNet),
+                                                    qty: compQty,
+                                                    total: Math.round(compTotal),
+                                                    image: compImage
+                                                });
+                                            });
+                                        }
 
                                         return (
-                                            <div key={item.id} className="border rounded-xl overflow-hidden shadow-sm bg-white">
+                                            <div key={item.id} className="border rounded-lg overflow-hidden bg-white">
                                                 {/* ITEM HEADER */}
                                                 <div className="bg-gray-50 border-b px-4 py-3 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-gray-800 text-lg">
-                                                            {item.quantity} {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}
+                                                        <span className="w-8 h-8 rounded-full bg-[#EB216A] text-white flex items-center justify-center text-sm font-bold">
+                                                            {item.quantity}
                                                         </span>
-                                                        <span className="text-gray-500 mx-2">|</span>
-                                                        <span className="font-medium text-gray-700">
-                                                            Ukuran {item.width}cm x {item.height}cm
-                                                        </span>
-                                                        <span className="text-gray-500 mx-2">|</span>
-                                                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-                                                            {item.packageType === 'gorden-lengkap' ? 'Gorden Lengkap' : 'Gorden Saja'}
+                                                        <span className="font-bold text-gray-800">
+                                                            {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Kain Saja'}
                                                         </span>
                                                     </div>
+                                                    <span className="text-sm text-gray-500">
+                                                        {item.width} cm × {item.height} cm
+                                                    </span>
                                                 </div>
 
-                                                {/* COMPONENT LIST (Card Style in Detail) */}
-                                                <div className="p-4 space-y-3">
-                                                    {/* Column Headers */}
-                                                    <div className="flex items-center justify-between p-3 text-xs font-medium text-gray-500 border-b border-dashed mb-2">
-                                                        <div className="flex-1">Produk</div>
-                                                        <div className="flex items-center gap-6">
-                                                            <div className="w-24 text-right">Harga</div>
-                                                            <div className="w-16 text-center">Disc</div>
-                                                            <div className="w-16 text-center">Qty</div>
-                                                            <div className="w-28 text-right">Total</div>
-                                                        </div>
-                                                    </div>
+                                                {/* TABLE */}
+                                                <div className="p-4">
+                                                    <table className="w-full text-sm">
+                                                        <thead>
+                                                            <tr className="text-gray-500 text-xs border-b">
+                                                                <th className="py-2 px-2 text-left font-medium">Produk</th>
+                                                                <th className="py-2 px-2 text-right font-medium w-24">Harga</th>
+                                                                <th className="py-2 px-2 text-center font-medium w-16">Disc(%)</th>
+                                                                <th className="py-2 px-2 text-right font-medium w-24">Harga Net</th>
+                                                                <th className="py-2 px-2 text-center font-medium w-12">Qty</th>
+                                                                <th className="py-2 px-2 text-right font-medium w-28">Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-100">
+                                                            {allRows.map((row, rowIdx) => (
+                                                                <tr key={rowIdx} className="hover:bg-gray-50/50">
+                                                                    <td className="py-3 px-2">
+                                                                        <div className="flex items-center gap-3">
+                                                                            {row.image && (
+                                                                                <img
+                                                                                    src={row.image.startsWith('http') ? row.image : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${row.image}`}
+                                                                                    className="w-10 h-10 rounded object-cover border"
+                                                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                                                />
+                                                                            )}
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-xs text-[#EB216A] font-medium uppercase">{row.type}</span>
+                                                                                <span className="font-medium text-gray-900">{row.name}</span>
+                                                                                {row.variant && row.variant !== row.name && (
+                                                                                    <span className="text-xs text-gray-500">{row.variant}</span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-3 px-2 text-right text-gray-600">
+                                                                        Rp {row.priceGross.toLocaleString('id-ID')}
+                                                                    </td>
+                                                                    <td className="py-3 px-2 text-center">
+                                                                        {row.discount > 0 ? (
+                                                                            <span className="text-green-600 font-medium">{row.discount}</span>
+                                                                        ) : (
+                                                                            <span className="text-gray-400">-</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="py-3 px-2 text-right text-gray-700">
+                                                                        Rp {row.priceNet.toLocaleString('id-ID')}
+                                                                    </td>
+                                                                    <td className="py-3 px-2 text-center font-medium">
+                                                                        {row.qty}
+                                                                    </td>
+                                                                    <td className="py-3 px-2 text-right font-bold text-gray-900">
+                                                                        Rp {row.total.toLocaleString('id-ID')}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
 
-                                                    {/* 1. Main Fabric Row */}
-                                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
-                                                        <div className="flex items-center gap-3 flex-1">
-                                                            <div className="w-12 h-8 flex items-center justify-center bg-gray-100 rounded text-xs font-bold text-gray-500">
-                                                                ITEM
-                                                            </div>
-                                                            <span className="font-semibold text-gray-700 min-w-[120px]">
-                                                                Gorden {item.product?.name || item.productName || 'Custom'}
-                                                            </span>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
-                                                                <div className="flex flex-col leading-tight">
-                                                                    <span className="font-medium text-gray-900 line-clamp-1">
-                                                                        {(() => {
-                                                                            let displayName = item.selectedVariant?.name || item.product?.name || item.productName || 'Produk';
-                                                                            if (displayName.includes('undefined') && item.selectedVariant) {
-                                                                                // Fallback
-                                                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                                                    return item.selectedVariant.name;
-                                                                                }
-                                                                                return 'Produk Custom';
-                                                                            }
-                                                                            return displayName;
-                                                                        })()}
-                                                                    </span>
-                                                                    <span className="text-[10px] text-gray-500">
-                                                                        Varian: {(() => {
-                                                                            let variantName = item.selectedVariant?.name || item.variant || '-';
-
-                                                                            if (variantName.includes('undefined') && item.selectedVariant) {
-                                                                                // Try to find correct name
-                                                                                if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                                                    return item.selectedVariant.name;
-                                                                                }
-
-                                                                                // Try attributes
-                                                                                try {
-                                                                                    const attrs = typeof item.selectedVariant.attributes === 'string'
-                                                                                        ? JSON.parse(item.selectedVariant.attributes)
-                                                                                        : item.selectedVariant.attributes;
-
-                                                                                    if (attrs && Object.keys(attrs).length > 0) {
-                                                                                        return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                                                    }
-                                                                                } catch (e) { }
-
-                                                                                // Try dimensions
-                                                                                if (item.width && item.height) {
-                                                                                    return `${item.width}cm x ${item.height}cm`;
-                                                                                }
-                                                                            }
-                                                                            return variantName;
-                                                                        })()}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-6">
-                                                            <div className="w-24 text-right">
-                                                                <span className="text-sm font-medium text-gray-600">Rp {Math.round(unitNet).toLocaleString('id-ID')}</span>
-                                                            </div>
-                                                            <div className="w-16 flex justify-center text-sm text-gray-500">
-                                                                {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
-                                                            </div>
-                                                            <div className="w-16 text-center text-sm text-gray-700 font-medium">
-                                                                {item.quantity}
-                                                            </div>
-                                                            <div className="w-28 text-right font-bold text-gray-900">
-                                                                Rp {Math.round(fabricNet).toLocaleString('id-ID')}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 2. Components Rows */}
-                                                    {item.packageType === 'gorden-lengkap' && item.components && typeof item.components === 'object' && Object.entries(item.components).map(([compId, comp]: [string, any], idx) => {
-                                                        // comp has structure: { product: { id, name, price }, qty, discount }
-                                                        const compTotal = (comp.product?.price || 0) * (comp.qty || 1) * (1 - (comp.discount || 0) / 100);
-                                                        const compDiscount = comp.discount || 0;
-                                                        const unitPriceGross = comp.product?.price || 0;
+                                                    {/* FOOTER per Item */}
+                                                    {(() => {
+                                                        // Calculate subtotal from allRows
+                                                        const rowsTotal = allRows.reduce((sum, r) => sum + r.total, 0);
+                                                        const itemDiscount = item.itemDiscount || 0;
+                                                        const subtotalAfterDiscount = rowsTotal * (1 - itemDiscount / 100);
 
                                                         return (
-                                                            <div key={compId} className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
-                                                                <div className="flex items-center gap-3 flex-1">
-                                                                    <div className="w-12 h-8 flex items-center justify-center bg-gray-100 rounded text-xs font-bold text-gray-500">
-                                                                        #{idx + 1}
-                                                                    </div>
-                                                                    <span className="font-semibold text-gray-700 min-w-[120px]">
-                                                                        {comp.product?.name || comp.name || 'Komponen'}
-                                                                    </span>
-                                                                    <div className="flex items-center gap-2 text-sm text-gray-600 border-l pl-3 ml-2">
-                                                                        <div className="flex flex-col leading-tight">
-                                                                            <span className="font-medium text-gray-900 line-clamp-1">{comp.product?.name || comp.name || '-'}</span>
-                                                                            <span className="text-[10px] text-gray-500">Qty: {comp.qty || 1}</span>
-                                                                        </div>
-                                                                    </div>
+                                                            <div className="flex justify-between items-center pt-3 mt-3 border-t">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm text-gray-500">Diskon Item:</span>
+                                                                    <span className="text-sm font-medium">{itemDiscount}%</span>
                                                                 </div>
-
-                                                                <div className="flex items-center gap-6">
-                                                                    <div className="w-24 text-right">
-                                                                        <span className="text-sm font-medium text-gray-600">Rp {Math.round(unitPriceGross).toLocaleString('id-ID')}</span>
-                                                                    </div>
-
-                                                                    <div className="w-16 flex justify-center text-sm text-gray-500">
-                                                                        {compDiscount ? `${compDiscount}%` : '-'}
-                                                                    </div>
-
-                                                                    <div className="w-16 text-center text-sm text-gray-700 font-medium">
-                                                                        {comp.qty || '-'}
-                                                                    </div>
-
-                                                                    <div className="w-28 text-right font-bold text-gray-900">
-                                                                        Rp {Math.round(compTotal).toLocaleString('id-ID')}
-                                                                    </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    <span className="text-gray-500 font-medium">Subtotal</span>
+                                                                    <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(subtotalAfterDiscount).toLocaleString('id-ID')}</span>
                                                                 </div>
                                                             </div>
                                                         );
-                                                    })}
-
-                                                    {/* FOOTER per Item */}
-                                                    <div className="flex justify-between items-center pt-2 mt-2 border-t border-dashed">
-                                                        {item.itemDiscount > 0 ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm text-gray-500">Diskon Item: {item.itemDiscount}%</span>
-                                                            </div>
-                                                        ) : <div />}
-                                                        <div className="flex items-center gap-4">
-                                                            <span className="text-gray-500 font-medium">Subtotal</span>
-                                                            <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(prices.totalAfterItemDiscount).toLocaleString('id-ID')}</span>
-                                                        </div>
-                                                    </div>
+                                                    })()}
                                                 </div>
                                             </div>
                                         );

@@ -804,6 +804,7 @@ export default function CalculatorPageV2() {
           },
           fabric: selectedFabric ? {
             id: selectedFabric.id,
+            sku: selectedFabric.sku,
             name: selectedFabric.name,
             price: selectedFabric.price,
             image: selectedFabric.image,
@@ -820,6 +821,7 @@ export default function CalculatorPageV2() {
               // Include product info for blind flow (per-item products)
               product: item.product ? {
                 id: item.product.id,
+                sku: (item.product as any).sku,
                 name: item.product.name,
                 price: item.product.price,
                 image: item.product.image,
@@ -853,6 +855,7 @@ export default function CalculatorPageV2() {
                   componentId: compId,
                   label: comp?.label || 'Unknown',
                   productId: selection.product.id,
+                  productSku: (selection.product as any).sku,  // SKU for shorter links
                   productName: selection.product.name,
                   productImage: selection.product.image,
                   productImages: selection.product.images, // Include images for component products

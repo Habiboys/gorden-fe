@@ -9,6 +9,7 @@ import { Badge } from './ui/badge';
 
 interface ProductCardProps {
   id: string;
+  sku?: string;  // SKU for URL (shorter than UUID)
   name: string;
   price: number;
   minPrice?: number;  // From cheapest variant
@@ -28,7 +29,7 @@ interface ProductCardProps {
   is_warranty?: boolean;
 }
 
-export function ProductCard({ id, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan, is_custom, is_warranty }: ProductCardProps) {
+export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan, is_custom, is_warranty }: ProductCardProps) {
   const productImage = getProductImageUrl(images || image);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -63,7 +64,7 @@ export function ProductCard({ id, name, price, minPrice, minPriceGross, image, i
   };
 
   return (
-    <Link to={`/product/${id}`} className="group relative h-full block">
+    <Link to={`/product/${sku || id}`} className="group relative h-full block">
       {/* Card Container */}
       <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
         {/* Image Section */}

@@ -247,29 +247,19 @@ export default function AdminProductForm() {
             }
 
             // Save Variants (Bulk Create/Update logic)
-            // For simplicity, we can delete all and recreate, or purely use bulkCreate if it acts as upsert equivalent
-            // But since we have specific IDs, we should probably be careful.
-            // Current simplified approach: Just use bulkCreate with the new variants list. 
-            // Ideally backend bulkCreate handles updates if ID is present.
-            if (productId && generatedVariants.length > 0) {
-                // Filter out valid variants
+            // Backend bulkCreate deletes all existing and creates new, so call it even if empty to sync
+            if (productId) {
+                // Filter out valid variants (must have attributes)
                 const variantsToSave = generatedVariants.filter(v => Object.keys(v.attributes || {}).length > 0);
-                if (variantsToSave.length > 0) {
-                    // We might need to handle deletions? 
-                    // For now, let's assume overwriting or adding.
-                    // A robust "Sync" endpoint would be better, but we have bulkCreate.
-                    // Or we can delete all existing and create new (easiest for consistency).
-
-                    // If we are editing, maybe we should delete active variants first?
-                    // Or rely on bulkCreate implementation. 
-                    // Let's rely on bulkCreate we made earlier.
-                    await productVariantsApi.bulkCreate(productId, variantsToSave);
-                }
+                // Always call bulkCreate to sync - if variantsToSave is empty, it will delete all existing variants
+                await productVariantsApi.bulkCreate(productId, variantsToSave);
             }
 
             navigate('/admin/products');
         } catch (error: any) {
-            toast.error('Gagal menyimpan produk: ' + (error.message || 'Unknown error'));
+            // Extract error message from server response
+            const serverMessage = error.response?.data?.message || error.message || 'Unknown error';
+            toast.error(serverMessage);
         } finally {
             setSaving(false);
         }

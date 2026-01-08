@@ -597,11 +597,11 @@ export default function AdminCalculatorLeads() {
     const currentType = lead.calculatorType || calcData.calculatorType || { name: 'Gorden' };
     const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    let message = `*ESTIMASI ORDER GORDEN*\n`;
+    let message = `*ORDER GORDEN*\n`;
     message += `Tanggal: ${date}\n`;
     message += `Jenis: ${currentType.name}\n\n`;
 
-    message += `*DATA PEMESAN*\n`;
+    message += `*PELANGGAN*\n`;
     message += `Nama: ${customerName}\n`;
     message += `No. HP: ${phone}\n`;
     message += `------------------------------\n\n`;
@@ -649,30 +649,45 @@ export default function AdminCalculatorLeads() {
           message += `     ${fabricQty}x @ Rp ${formatRupiah(fabricNet)}`;
           if (fabricDisc > 0) message += ` (Disc ${fabricDisc}%)`;
           message += ` = Rp ${formatRupiah(fabricTotal)}\n`;
+
+          // Add product link under variant/kain (use SKU for shorter URL)
+          const fabricProductSku = item.product?.sku || firstItem.product?.sku || calcData.fabric?.sku;
+          if (fabricProductSku) {
+            message += `     Link: ${window.location.origin}/product/${fabricProductSku}\n`;
+          }
+          message += `\n`; // Spacing after variant
         }
 
         // Components logic handles both Array (DB) and Object (Frontend) structures
         if (item.components) {
           const comps = Array.isArray(item.components) ? item.components : Object.values(item.components);
 
-          comps.forEach((comp: any) => {
-            const label = comp.label || 'Komponen';
+          comps.forEach((comp: any, compIdx: number) => {
+            // Remove "Pilih" prefix if present, just use product name directly
             const name = comp.productName || comp.product?.name || comp.name;
             const cQty = comp.qty || comp.quantity || 1;
             const cPrice = comp.productPriceNet || comp.productPrice || comp.product?.price || 0;
             const cDisc = comp.discount || 0;
             const cTotal = comp.componentTotal || (cPrice * cQty * ((100 - cDisc) / 100));
+            const compProductId = comp.productId || comp.product?.id;
 
             if (name) {
-              message += `   - ${label}: ${name}\n`;
+              message += `   - ${name}\n`;
               message += `     ${cQty}x @ Rp ${formatRupiah(cPrice)}`;
               if (cDisc > 0) message += ` (Disc ${cDisc}%)`;
               message += ` = Rp ${formatRupiah(cTotal)}\n`;
+              // Add component product link (use SKU when available, fallback to id)
+              const compProductLink = comp.productSku || comp.product?.sku || compProductId;
+              if (compProductLink) {
+                message += `     Link: ${window.location.origin}/product/${compProductLink}\n`;
+              }
+              message += `\n`; // Spacing between components
             }
           });
         }
 
-        message += `   *Total Item: Rp ${formatRupiah(sub)}*\n\n`;
+        message += `   *Total Item: Rp ${formatRupiah(sub)}*\n`;
+        message += `\n`; // Extra spacing between items
       });
 
       message += `Subtotal Group: *Rp ${formatRupiah(groupTotal)}*\n`;
@@ -680,8 +695,9 @@ export default function AdminCalculatorLeads() {
     });
 
     const total = lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0;
-    message += `*TOTAL ESTIMASI: Rp ${formatRupiah(total)}*\n\n`;
+    message += `*TOTAL BIAYA: Rp ${formatRupiah(total)}*\n\n`;
     message += `Apakah Anda ingin melanjutkan ke proses pemesanan?`;
+
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');

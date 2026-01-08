@@ -825,7 +825,7 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => navigate(`/product/${product.id}`)}
+              onClick={() => navigate(`/product/${product.sku || product.id}`)}
             >
               <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4" />
               <span className="hidden lg:inline">Lihat Detail</span>

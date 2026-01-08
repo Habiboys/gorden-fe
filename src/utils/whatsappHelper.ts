@@ -92,11 +92,11 @@ export const generateCalculatorMessage = ({
 
     const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    let message = `*ESTIMASI ORDER GORDEN*\n`;
+    let message = `*ORDER GORDEN*\n`;
     message += `Tanggal: ${date}\n`;
     message += `Jenis: ${currentType.name}\n\n`;
 
-    message += `*DATA PEMESAN*\n`;
+    message += `*PELANGGAN*\n`;
     message += `Nama: ${customerInfo.name}\n`;
     message += `No. HP: ${customerInfo.phone}\n`;
     message += `------------------------------\n\n`;
@@ -115,8 +115,6 @@ export const generateCalculatorMessage = ({
         const groupTotal = groupItems.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
 
         message += `*PRODUK: ${product.name}*\n`;
-        message += `Link: ${baseUrl}/product/${product.id}\n`;
-        // Price per item is now variant-based, so we just show the product info
         message += `\n`;
 
         message += `*DAFTAR ITEM & UKURAN:*\n`;
@@ -135,35 +133,40 @@ export const generateCalculatorMessage = ({
                 // Show calculated price (price × multiplier)
                 const variantPrice = item.selectedVariant.price_net || item.selectedVariant.price || 0;
                 const calculatedPrice = variantPrice * variantMultiplier * item.quantity;
-                message += `   - Harga: Rp ${calculatedPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+                message += `     Harga: Rp ${calculatedPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+                // Add product link with SKU (fallback to id)
+                const productSku = product.sku || product.id;
+                message += `     Link: ${baseUrl}/product/${productSku}\n`;
+                message += `\n`; // Spacing after variant
             }
 
             // Components
             if (item.packageType === 'gorden-lengkap' && currentType.components) {
-                const activeComponents: string[] = [];
                 currentType.components.forEach((comp: any) => {
                     const selection = item.components?.[comp.id];
                     if (selection) {
-                        activeComponents.push(`${comp.label}: ${selection.product.name} (x${selection.qty})`);
+                        const compProduct = selection.product;
+                        message += `   - ${compProduct.name} (x${selection.qty})\n`;
+                        // Add component product link with SKU
+                        const compSku = compProduct.sku || compProduct.id;
+                        if (compSku) {
+                            message += `     Link: ${baseUrl}/product/${compSku}\n`;
+                        }
+                        message += `\n`; // Spacing between components
                     }
                 });
-
-                if (activeComponents.length > 0) {
-                    activeComponents.forEach(compInfo => {
-                        message += `   - ${compInfo}\n`;
-                    });
-                }
             }
 
             // Item Total
-            message += `   Total: Rp ${prices.total.toLocaleString('id-ID')}\n\n`;
+            message += `   *Total: Rp ${prices.total.toLocaleString('id-ID')}*\n`;
+            message += `\n`; // Extra spacing between items
         });
 
         message += `Subtotal Group: *Rp ${groupTotal.toLocaleString('id-ID')}*\n`;
         message += `------------------------------\n\n`;
     });
 
-    message += `*TOTAL ESTIMASI: Rp ${grandTotal.toLocaleString('id-ID')}*\n\n`;
+    message += `*TOTAL BIAYA: Rp ${grandTotal.toLocaleString('id-ID')}*\n\n`;
     message += `_Catatan: Harga diatas adalah estimasi awal. Harga final dapat menyesuaikan dengan hasil pengukuran ulang di lokasi._\n\n`;
     message += `Terima kasih telah mempercayakan kebutuhan gorden Anda kepada *Amagriya Gorden*`;
 

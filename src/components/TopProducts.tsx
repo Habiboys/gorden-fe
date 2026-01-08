@@ -95,7 +95,7 @@ export function TopProducts() {
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-3">
           {products.map((product) => (
-            <Link to={`/product/${product.id}`} key={product.id} className="group relative h-full block">
+            <Link to={`/product/${product.sku || product.id}`} key={product.id} className="group relative h-full block">
               {/* Card Container */}
               <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
                 {/* Image Section */}

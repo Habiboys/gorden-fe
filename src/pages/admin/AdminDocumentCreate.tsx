@@ -938,12 +938,19 @@ export default function AdminDocumentCreate() {
                 // Build component items for this window
                 const windowItems: any[] = [];
 
+                // Get fabric prices (gross vs net)
+                const fabricGross = item.selectedVariant?.price_gross ?? item.selectedVariant?.price ?? item.product?.price ?? selectedFabric?.price ?? 0;
+                const fabricNet = item.selectedVariant?.price_net ?? fabricGross;
+                const fabricDiscount = item.fabricDiscount || (fabricGross > 0 ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100) : 0);
+
                 // Add fabric/product as first item
                 windowItems.push({
                     id: `${item.id}-fabric`,
                     name: `${item.product?.name || selectedFabric?.name} ${item.selectedVariant?.name ? `(${item.selectedVariant.name})` : ''} (${prices.fabricMeters.toFixed(2)}m)`,
-                    price: item.selectedVariant?.price ?? item.product?.price ?? selectedFabric?.price ?? 0,
-                    discount: item.fabricDiscount || 0,
+                    price: fabricNet, // Keep for backward compatibility
+                    price_gross: fabricGross,
+                    price_net: fabricNet,
+                    discount: fabricDiscount,
                     quantity: item.quantity,
                     totalPrice: prices.fabric
                 });
@@ -954,11 +961,17 @@ export default function AdminDocumentCreate() {
                         const selection = item.components[comp.id];
                         if (selection) {
                             const compPrice = calculateComponentPrice(item, comp, selection);
+                            const compGross = selection.product?.price_gross ?? selection.product?.price ?? 0;
+                            const compNet = selection.product?.price_net ?? compGross;
+                            const compDiscount = selection.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
+
                             windowItems.push({
                                 id: `${item.id}-comp-${comp.id}`,
                                 name: `${comp.label}: ${selection.product.name}`,
-                                price: selection.product.price,
-                                discount: selection.discount || 0,
+                                price: compNet, // Keep for backward compatibility
+                                price_gross: compGross,
+                                price_net: compNet,
+                                discount: compDiscount,
                                 quantity: selection.qty,
                                 totalPrice: compPrice
                             });

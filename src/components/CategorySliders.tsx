@@ -127,6 +127,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
             >
               <ProductCard
                 id={product.id}
+                sku={product.sku}
                 name={product.name}
                 price={Number(product.minPrice) || Number(product.price)}
                 minPrice={Number(product.minPrice)}

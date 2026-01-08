@@ -480,7 +480,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                     {/* 2. Bulk Edit Bar - Pink Theme */}
                     <div className="flex flex-wrap items-end gap-3 bg-gradient-to-r from-pink-50 to-pink-100/50 p-3 rounded-lg border border-pink-200">
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-xs text-[#EB216A] font-semibold mb-1.5 block">⚡ Atur Massal</label>
+                            <label className="text-xs text-[#EB216A] font-semibold mb-1.5 block">Atur Massal</label>
                             <div className="grid grid-cols-5 gap-2">
                                 <div className="col-span-1">
                                     <Input
