@@ -992,10 +992,73 @@ export default function AdminDocumentCreate() {
                 };
             });
 
+            // Enrich items with displayQty and componentTotal for each component before saving
+            const enrichedItems = items.map(item => {
+                const enrichedComponents: any = Array.isArray(item.components) ? [] : {};
+
+                if (item.components && selectedCalcType?.components) {
+                    if (Array.isArray(item.components)) {
+                        // Handle Array structure (from CalculatorPage)
+                        (item.components as any[]).forEach((selection) => {
+                            // Try to find component definition. If selection has componentId, use it.
+                            // If selection is just the data, we might need to rely on matching product or index if synced?
+                            // Actually CalculatorPage saves componentId in the object!
+                            const compId = selection.componentId || selection.id;
+                            const comp = selectedCalcType.components.find(c => c.id === parseInt(String(compId)));
+
+                            if (comp) {
+                                const netPrice = (selection.product as any)?.price_net || selection.product?.price || 0;
+                                const displayQty = comp.price_follows_item_qty ? selection.qty * item.quantity : selection.qty;
+                                const componentTotal = netPrice * displayQty;
+
+                                (enrichedComponents as any[]).push({
+                                    ...selection,
+                                    displayQty,
+                                    componentTotal
+                                });
+                            } else {
+                                (enrichedComponents as any[]).push(selection);
+                            }
+                        });
+                    } else {
+                        // Handle Object structure (from AdminDocumentCreate local state)
+                        Object.entries(item.components).forEach(([compId, selection]) => {
+                            const comp = selectedCalcType.components.find(c => c.id === parseInt(compId));
+                            if (comp && selection) {
+                                const netPrice = (selection.product as any)?.price_net || selection.product?.price || 0;
+                                const displayQty = comp.price_follows_item_qty ? selection.qty * item.quantity : selection.qty;
+                                const componentTotal = netPrice * displayQty;
+
+                                enrichedComponents[compId] = {
+                                    ...selection,
+                                    displayQty,
+                                    componentTotal
+                                };
+                            } else {
+                                enrichedComponents[compId] = selection;
+                            }
+                        });
+                    }
+                } else {
+                    // If item.components or selectedCalcType?.components is missing,
+                    // use the original components or an empty structure based on its original type.
+                    // This ensures we don't lose existing component data if enrichment isn't possible.
+                    return {
+                        ...item,
+                        components: item.components || (Array.isArray(item.components) ? [] : {})
+                    };
+                }
+
+                return {
+                    ...item,
+                    components: enrichedComponents
+                };
+            });
+
             // Create quotation data structure
             const quotationData = {
                 windows,
-                raw_items: items, // Store raw calculator items for full fidelity reconstruction
+                raw_items: enrichedItems, // Store enriched items with displayQty and componentTotal
                 calculatorType: selectedCalcType?.name,
                 calculatorTypeSlug: selectedCalcType?.slug,
                 baseFabric: {
