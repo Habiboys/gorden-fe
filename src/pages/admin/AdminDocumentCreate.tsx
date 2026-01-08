@@ -964,6 +964,8 @@ export default function AdminDocumentCreate() {
                             const compGross = selection.product?.price_gross ?? selection.product?.price ?? 0;
                             const compNet = selection.product?.price_net ?? compGross;
                             const compDiscount = selection.discount || (compGross > 0 ? Math.round(((compGross - compNet) / compGross) * 100) : 0);
+                            // Calculate displayed qty: multiply by item.quantity if price_follows_item_qty is enabled
+                            const displayQty = comp.price_follows_item_qty ? selection.qty * item.quantity : selection.qty;
 
                             windowItems.push({
                                 id: `${item.id}-comp-${comp.id}`,
@@ -972,7 +974,7 @@ export default function AdminDocumentCreate() {
                                 price_gross: compGross,
                                 price_net: compNet,
                                 discount: compDiscount,
-                                quantity: selection.qty,
+                                quantity: displayQty, // Use calculated display qty
                                 totalPrice: compPrice
                             });
                         }

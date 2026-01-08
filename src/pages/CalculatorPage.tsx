@@ -851,6 +851,8 @@ export default function CalculatorPageV2() {
               fabricPrice: prices.fabric,
               components: Object.entries(item.components).map(([compId, selection]) => {
                 const comp = currentType.components?.find((c: any) => c.id === parseInt(compId));
+                // Calculate displayed qty: multiply by item.quantity if price_follows_item_qty is enabled
+                const displayQty = comp?.price_follows_item_qty ? selection.qty * item.quantity : selection.qty;
                 return {
                   componentId: compId,
                   label: comp?.label || 'Unknown',
@@ -862,14 +864,14 @@ export default function CalculatorPageV2() {
                   productPrice: selection.product.price,
                   productPriceGross: (selection.product as any).price_gross || selection.product.price,
                   productPriceNet: (selection.product as any).price_net || selection.product.price,
-                  qty: selection.qty,
+                  qty: displayQty,  // Use calculated display qty
                   discount: selection.discount || 0,
                   priceCalculation: comp?.price_calculation || 'per_unit',
                   // Calculate component total with discount
                   componentTotal: (() => {
                     const price = (selection.product as any).price_net || selection.product.price;
                     const disc = selection.discount || 0;
-                    return price * selection.qty * ((100 - disc) / 100);
+                    return price * displayQty * ((100 - disc) / 100);
                   })()
                 };
               }),

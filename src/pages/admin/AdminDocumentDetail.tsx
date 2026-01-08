@@ -857,16 +857,23 @@ export default function AdminDocumentDetail() {
 
                                                     {/* FOOTER per Item */}
                                                     {(() => {
-                                                        // Calculate subtotal from allRows
-                                                        const rowsTotal = allRows.reduce((sum, r) => sum + r.total, 0);
-                                                        const itemDiscount = item.itemDiscount || 0;
-                                                        const subtotalAfterDiscount = rowsTotal * (1 - itemDiscount / 100);
+                                                        // Use pre-calculated subtotal from window if available
+                                                        let subtotalAfterDiscount;
+                                                        if (matchingWindow && matchingWindow.subtotal !== undefined) {
+                                                            // Use the pre-calculated subtotal which was correctly computed during save
+                                                            subtotalAfterDiscount = matchingWindow.subtotal;
+                                                        } else {
+                                                            // Fallback: calculate from allRows (may be inaccurate for old data)
+                                                            const rowsTotal = allRows.reduce((sum, r) => sum + r.total, 0);
+                                                            const itemDiscount = item.itemDiscount || 0;
+                                                            subtotalAfterDiscount = rowsTotal * (1 - itemDiscount / 100);
+                                                        }
 
                                                         return (
                                                             <div className="flex justify-between items-center pt-3 mt-3 border-t">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-sm text-gray-500">Diskon Item:</span>
-                                                                    <span className="text-sm font-medium">{itemDiscount}%</span>
+                                                                    <span className="text-sm font-medium">{item.itemDiscount || 0}%</span>
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
                                                                     <span className="text-gray-500 font-medium">Subtotal</span>
