@@ -739,7 +739,7 @@ export default function AdminDocumentDetail() {
                                             }
 
                                             allRows.push({
-                                                type: item.product?.name || item.productName || 'Gorden',
+                                                type: 'Varian Gorden', // Changed from product name to avoid redundancy
                                                 name: `${item.product?.name || item.productName || 'Gorden Custom'} (${cleanVariantName})`,
                                                 variant: cleanVariantName,
                                                 priceGross: Math.round(fabricGross),
