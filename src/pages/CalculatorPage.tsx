@@ -851,7 +851,7 @@ export default function CalculatorPageV2() {
               fabricPrice: prices.fabric,
               components: Object.entries(item.components).map(([compId, selection]) => {
                 const comp = currentType.components?.find((c: any) => c.id === parseInt(compId));
-                // Calculate displayed qty: multiply by item.quantity if price_follows_item_qty is enabled
+                // Calculate display qty for componentTotal: multiply by item.quantity if price_follows_item_qty is enabled
                 const displayQty = comp?.price_follows_item_qty ? selection.qty * item.quantity : selection.qty;
                 return {
                   componentId: compId,
@@ -864,10 +864,11 @@ export default function CalculatorPageV2() {
                   productPrice: selection.product.price,
                   productPriceGross: (selection.product as any).price_gross || selection.product.price,
                   productPriceNet: (selection.product as any).price_net || selection.product.price,
-                  qty: displayQty,  // Use calculated display qty
+                  qty: selection.qty,  // Save raw qty - calculateComponentPrice will handle multiplication
+                  displayQty: displayQty, // Save display qty for UI rendering
                   discount: selection.discount || 0,
                   priceCalculation: comp?.price_calculation || 'per_unit',
-                  // Calculate component total with discount
+                  // Calculate component total with correct multiplied qty
                   componentTotal: (() => {
                     const price = (selection.product as any).price_net || selection.product.price;
                     const disc = selection.discount || 0;

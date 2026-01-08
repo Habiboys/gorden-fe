@@ -1290,7 +1290,7 @@ export default function AdminCalculatorLeads() {
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm text-gray-700 truncate">{comp.label}: {comp.productName}</p>
                                   <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5 flex-wrap">
-                                    <span>Qty: {comp.qty}</span>
+                                    <span>Qty: {comp.displayQty || comp.qty}</span>
                                     <span>×</span>
                                     {compGross !== compNet ? (
                                       <>

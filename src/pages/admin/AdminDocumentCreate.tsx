@@ -942,6 +942,9 @@ export default function AdminDocumentCreate() {
                 const fabricGross = item.selectedVariant?.price_gross ?? item.selectedVariant?.price ?? item.product?.price ?? selectedFabric?.price ?? 0;
                 const fabricNet = item.selectedVariant?.price_net ?? fabricGross;
                 const fabricDiscount = item.fabricDiscount || (fabricGross > 0 ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100) : 0);
+                // Calculate effective quantity including variant multiplier (sibak)
+                const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
+                const effectiveQty = variantMultiplier * item.quantity;
 
                 // Add fabric/product as first item
                 windowItems.push({
@@ -951,7 +954,7 @@ export default function AdminDocumentCreate() {
                     price_gross: fabricGross,
                     price_net: fabricNet,
                     discount: fabricDiscount,
-                    quantity: item.quantity,
+                    quantity: effectiveQty, // Use effective qty including variant multiplier
                     totalPrice: prices.fabric
                 });
 
