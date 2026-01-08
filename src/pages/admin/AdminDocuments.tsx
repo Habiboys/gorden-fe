@@ -244,7 +244,7 @@ export default function AdminDocuments() {
             <div>
               <p className="text-sm text-gray-600">Total Nilai</p>
               <p className="text-2xl text-gray-900 mt-1">
-                Rp{documents.reduce((sum, d) => sum + getDocumentTotal(d), 0).toLocaleString('id-ID')}
+                Rp{Math.round(documents.reduce((sum, d) => sum + getDocumentTotal(d), 0)).toLocaleString('id-ID')}
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
@@ -334,7 +334,7 @@ export default function AdminDocuments() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-900">Rp{getDocumentTotal(doc).toLocaleString('id-ID')}</p>
+                      <p className="text-sm text-gray-900">Rp{Math.round(getDocumentTotal(doc)).toLocaleString('id-ID')}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-600">
