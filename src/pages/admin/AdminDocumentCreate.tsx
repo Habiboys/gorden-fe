@@ -827,20 +827,17 @@ export default function AdminDocumentCreate() {
     // ================== CALCULATIONS ==================
 
     const calculateComponentPrice = (item: CalculatorItem, comp: ComponentFromDB, selection: ComponentSelection) => {
-        // Use price_gross if available (for variant products), otherwise use price
-        const basePrice = (selection.product as any)?.price_gross || selection.product.price || 0;
-        const netPrice = (selection.product as any)?.price_net || basePrice;
-
-        const effectiveDiscount = selection.discount || (basePrice > 0 ? Math.round(((basePrice - netPrice) / basePrice) * 100) : 0);
+        // Use price_net directly for accurate calculation (avoid rounding errors from discount %)
+        const netPrice = (selection.product as any)?.price_net || selection.product.price || 0;
 
         // Calculate price - simplified (per_meter/per_unit deprecated)
-        let priceBeforeDiscount = basePrice * selection.qty;
+        let totalPrice = netPrice * selection.qty;
 
         // Only multiply by item.quantity if price_follows_item_qty is enabled
         if (comp.price_follows_item_qty) {
-            priceBeforeDiscount *= item.quantity;
+            totalPrice *= item.quantity;
         }
-        return priceBeforeDiscount * (1 - effectiveDiscount / 100);  // Apply effective component discount
+        return totalPrice;
     };
 
     const calculateItemPrice = (item: CalculatorItem) => {
