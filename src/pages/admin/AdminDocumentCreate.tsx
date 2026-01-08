@@ -1730,23 +1730,30 @@ export default function AdminDocumentCreate() {
                                                                                             </div>
 
                                                                                             <div className="w-16 flex justify-center">
-                                                                                                <input
-                                                                                                    type="number"
-                                                                                                    min="1"
-                                                                                                    value={selection.qty}
-                                                                                                    className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                                    onChange={(e) => {
-                                                                                                        const newQty = parseInt(e.target.value) || 1;
-                                                                                                        setItems(items.map(i => i.id === item.id ? {
-                                                                                                            ...i,
-                                                                                                            components: {
-                                                                                                                ...i.components,
-                                                                                                                [comp.id]: { ...selection, qty: newQty }
-                                                                                                            }
-                                                                                                        } : i));
-                                                                                                    }}
-                                                                                                    title="Qty Per Window"
-                                                                                                />
+                                                                                                {/* Show read-only multiplied qty or editable input based on price_follows_item_qty */}
+                                                                                                {comp.price_follows_item_qty ? (
+                                                                                                    <span className="inline-flex items-center justify-center w-14 h-8 bg-gray-100 rounded text-sm text-gray-600" title={`${selection.qty} × ${item.quantity} jendela`}>
+                                                                                                        {selection.qty * item.quantity}
+                                                                                                    </span>
+                                                                                                ) : (
+                                                                                                    <input
+                                                                                                        type="number"
+                                                                                                        min="1"
+                                                                                                        value={selection.qty}
+                                                                                                        className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                        onChange={(e) => {
+                                                                                                            const newQty = parseInt(e.target.value) || 1;
+                                                                                                            setItems(items.map(i => i.id === item.id ? {
+                                                                                                                ...i,
+                                                                                                                components: {
+                                                                                                                    ...i.components,
+                                                                                                                    [comp.id]: { ...selection, qty: newQty }
+                                                                                                                }
+                                                                                                            } : i));
+                                                                                                        }}
+                                                                                                        title="Qty Per Window"
+                                                                                                    />
+                                                                                                )}
                                                                                             </div>
 
                                                                                             <div className="w-28 text-right text-sm font-bold text-[#EB216A]">
@@ -1937,22 +1944,29 @@ export default function AdminDocumentCreate() {
                                                                                                     {/* Qty Input */}
                                                                                                     <div className="w-20">
                                                                                                         <span className="text-[10px] text-gray-500 block uppercase tracking-wider mb-1">Qty</span>
-                                                                                                        <input
-                                                                                                            type="number"
-                                                                                                            min="1"
-                                                                                                            value={selection.qty}
-                                                                                                            className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                                            onChange={(e) => {
-                                                                                                                const newQty = parseInt(e.target.value) || 1;
-                                                                                                                setItems(items.map(i => i.id === item.id ? {
-                                                                                                                    ...i,
-                                                                                                                    components: {
-                                                                                                                        ...i.components,
-                                                                                                                        [comp.id]: { ...selection, qty: newQty }
-                                                                                                                    }
-                                                                                                                } : i));
-                                                                                                            }}
-                                                                                                        />
+                                                                                                        {/* Show read-only multiplied qty or editable input based on price_follows_item_qty */}
+                                                                                                        {comp.price_follows_item_qty ? (
+                                                                                                            <span className="inline-flex items-center justify-center w-full h-8 bg-gray-100 rounded text-sm text-gray-600" title={`${selection.qty} × ${item.quantity} jendela`}>
+                                                                                                                {selection.qty * item.quantity}
+                                                                                                            </span>
+                                                                                                        ) : (
+                                                                                                            <input
+                                                                                                                type="number"
+                                                                                                                min="1"
+                                                                                                                value={selection.qty}
+                                                                                                                className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                                onChange={(e) => {
+                                                                                                                    const newQty = parseInt(e.target.value) || 1;
+                                                                                                                    setItems(items.map(i => i.id === item.id ? {
+                                                                                                                        ...i,
+                                                                                                                        components: {
+                                                                                                                            ...i.components,
+                                                                                                                            [comp.id]: { ...selection, qty: newQty }
+                                                                                                                        }
+                                                                                                                    } : i));
+                                                                                                                }}
+                                                                                                            />
+                                                                                                        )}
                                                                                                     </div>
 
                                                                                                     {/* Total */}
