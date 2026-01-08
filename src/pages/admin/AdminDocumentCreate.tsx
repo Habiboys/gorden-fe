@@ -1186,8 +1186,8 @@ export default function AdminDocumentCreate() {
                                                                 )}
                                                             </p>
                                                             <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-                                                                <p>Lebar {selectedFabric.minWidth || 0} s/d {selectedFabric.maxWidth || '-'} cm</p>
-                                                                <p>Tinggi {selectedFabric.minHeight || 0} s/d {selectedFabric.maxHeight || '-'} cm</p>
+                                                                <p>Lebar {selectedFabric.variantMinWidth || 0} s/d {selectedFabric.variantMaxWidth || '-'} cm</p>
+                                                                <p>Tinggi {selectedFabric.variantMinHeight || 0} s/d {selectedFabric.variantMaxHeight || '-'} cm</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2581,7 +2581,7 @@ export default function AdminDocumentCreate() {
                                                             {/* Right Info */}
                                                             <div className="flex flex-col items-end gap-2 shrink-0">
                                                                 <span className="font-bold text-[#EB216A] text-lg">
-                                                                    Rp {displayPrice.toLocaleString('id-ID')}
+                                                                    Rp {displayPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                 </span>
                                                                 <Button
                                                                     size="sm"
