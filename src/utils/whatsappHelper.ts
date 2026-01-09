@@ -85,21 +85,22 @@ export const generateCalculatorMessage = ({
     items,
     grandTotal,
     baseUrl,
-    calculateItemPrice,
-    calculateComponentPrice
+    calculateItemPrice
 }: CalculatorMessageParams): string => {
     if (!customerInfo || !selectedFabric || !currentType) return '';
 
     const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    let message = `*ORDER GORDEN*\n`;
-    message += `Tanggal: ${date}\n`;
-    message += `Jenis: ${currentType.name}\n\n`;
+    let message = `*ORDER GORDEN - ${currentType.name?.toUpperCase()}*\n`;
+    message += `Tanggal: ${date}\n\n`;
 
     message += `*PELANGGAN*\n`;
     message += `Nama: ${customerInfo.name}\n`;
     message += `No. HP: ${customerInfo.phone}\n`;
     message += `------------------------------\n\n`;
+
+    // Collections for consolidated links
+    const productLinks = new Set<string>();
 
     // Group Items (Universal Grouping)
     const groups: { [key: string]: any[] } = {};
@@ -107,68 +108,95 @@ export const generateCalculatorMessage = ({
         const groupKey = item.groupId || item.product?.id || 'default';
         if (!groups[groupKey]) groups[groupKey] = [];
         groups[groupKey].push(item);
+
+        // Collect Link: Prefer Product SKU -> Product ID
+        const p = item.product || selectedFabric;
+        const sku = p.sku || p.id;
+        if (sku) {
+            // Ensure we don't double slash if baseUrl has trailing slash, though window.origin usually doesn't
+            productLinks.add(`${baseUrl}/product/${sku}`);
+        }
     });
 
     Object.values(groups).forEach((groupItems) => {
         const firstItem = groupItems[0];
         const product = firstItem.product || selectedFabric;
+        // Group Total
         const groupTotal = groupItems.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
 
         message += `*PRODUK: ${product.name}*\n`;
-        message += `\n`;
+        message += `Harga: Rp ${(product.price || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m\n\n`;
 
         message += `*DAFTAR ITEM & UKURAN:*\n`;
         groupItems.forEach((item, idx) => {
-            const prices = calculateItemPrice(item);
+            // const prices = calculateItemPrice(item);
 
-            // Item Header
-            const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
-            const effectiveQty = variantMultiplier * item.quantity;
-            message += `${idx + 1}. ${item.itemType === 'pintu' ? 'Pintu' : 'Jendela'} ${item.width}cm x ${item.height}cm\n`;
-            message += `   Jumlah: ${effectiveQty} unit\n`;
+            // Format dimensions
+            const w = item.width || 0;
+            const h = item.height || 0;
+            const qty = item.quantity || 1;
+            const type = item.itemType === 'pintu' ? 'Pintu' : 'Jendela';
 
-            // Variant (now with JSON attributes)
+            message += `${idx + 1}. ${type} ${w}cm x ${h}cm\n`;
+            message += `   Jumlah: ${qty} unit\n`;
+
+            // Variant info
             if (item.selectedVariant) {
-                message += `   - Varian: ${item.selectedVariant.name}\n`;
-                // Show calculated price (price × multiplier)
-                const variantPrice = item.selectedVariant.price_net || item.selectedVariant.price || 0;
-                const calculatedPrice = variantPrice * variantMultiplier * item.quantity;
-                message += `     Harga: Rp ${calculatedPrice.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
-                // Add product link with SKU (fallback to id)
-                const productSku = product.sku || product.id;
-                message += `     Link: ${baseUrl}/product/${productSku}\n`;
-                message += `\n`; // Spacing after variant
+                const vName = item.selectedVariant.name;
+                const vPriceNet = item.selectedVariant.price_net || item.selectedVariant.price || 0;
+                const vMultiplier = item.selectedVariant.quantity_multiplier || 1;
+                const fabricQty = qty * vMultiplier;
+                // const fabricTotal = vPriceNet * fabricQty;
+
+                message += `   - Kain: ${vName}\n`;
+                message += `     ${fabricQty}x @ Rp ${vPriceNet.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+                // message += ` = Rp ${fabricTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}\n`;
+                message += `\n`;
             }
 
-            // Components
+            // Components info
             if (item.packageType === 'gorden-lengkap' && currentType.components) {
                 currentType.components.forEach((comp: any) => {
                     const selection = item.components?.[comp.id];
                     if (selection) {
-                        const compProduct = selection.product;
-                        message += `   - ${compProduct.name} (x${selection.qty})\n`;
-                        // Add component product link with SKU
-                        const compSku = compProduct.sku || compProduct.id;
-                        if (compSku) {
-                            message += `     Link: ${baseUrl}/product/${compSku}\n`;
+                        const cProduct = selection.product;
+                        const cQty = selection.qty; // Note: displayQty logic handled in UI, here we trust selection.qty or re-calc if needed?
+                        // Actually component price func handles multiplication. 
+                        // Visual format: 
+                        message += `   + ${cProduct.name} (${cQty}x)\n`;
+
+                        // Add component link
+                        const cSku = cProduct.sku || cProduct.id;
+                        if (cSku) {
+                            productLinks.add(`${baseUrl}/product/${cSku}`);
                         }
-                        message += `\n`; // Spacing between components
                     }
                 });
             }
 
-            // Item Total
-            message += `   *Total: Rp ${prices.total.toLocaleString('id-ID')}*\n`;
-            message += `\n`; // Extra spacing between items
+            // Item Subtotal (Optional, keeping consistent with request "Total Items" or just Group Subtotal)
+            // message += `   Subtotal: Rp ${prices.total.toLocaleString('id-ID')}\n`;
+            message += `\n`;
         });
 
         message += `Subtotal Group: *Rp ${groupTotal.toLocaleString('id-ID')}*\n`;
         message += `------------------------------\n\n`;
     });
 
-    message += `*TOTAL BIAYA: Rp ${grandTotal.toLocaleString('id-ID')}*\n\n`;
-    message += `_Catatan: Harga diatas adalah estimasi awal. Harga final dapat menyesuaikan dengan hasil pengukuran ulang di lokasi._\n\n`;
-    message += `Terima kasih telah mempercayakan kebutuhan gorden Anda kepada *Amagriya Gorden*`;
+    // Grand Totals
+    message += `Total = Rp ${grandTotal.toLocaleString('id-ID')}\n`;
+    message += `*Total Biaya Rp ${grandTotal.toLocaleString('id-ID')}*\n`;
+
+    // Consolidated Links Section
+    if (productLinks.size > 0) {
+        message += `\nBerikut Produk yang digunakan\n`;
+        message += `Link\n`;
+        productLinks.forEach(link => {
+            message += `. ${link}\n`;
+        });
+    }
+
+    message += `\nTerima kasih atas kepercayaannya.`;
 
     return message;
 };

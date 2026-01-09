@@ -92,7 +92,7 @@ export default function App() {
 
                       <Route path="/" element={<><Navbar /><HomePage /><Footer /></>} />
                       <Route path="/products" element={<><Navbar /><ProductListing /><Footer /></>} />
-                      <Route path="/product/:id" element={<><Navbar /><ProductDetail /><Footer /></>} />
+                      <Route path="/product/:sku" element={<><Navbar /><ProductDetail /><Footer /></>} />
                       <Route path="/referral" element={<><Navbar /><ReferralPage /><Footer /></>} />
                       <Route path="/calculator" element={<><Navbar /><CalculatorPage /><Footer /></>} />
                       <Route path="/gallery" element={<><Navbar /><GalleryPage /><Footer /></>} />

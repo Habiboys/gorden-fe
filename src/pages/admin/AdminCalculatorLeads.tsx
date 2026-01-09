@@ -597,21 +597,36 @@ export default function AdminCalculatorLeads() {
     const currentType = lead.calculatorType || calcData.calculatorType || { name: 'Gorden' };
     const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    let message = `*ORDER GORDEN*\n`;
-    message += `Tanggal: ${date}\n`;
-    message += `Jenis: ${currentType.name}\n\n`;
+    let message = `*ORDER GORDEN - ${currentType.name?.toUpperCase()}*\n`;
+    message += `Tanggal: ${date}\n\n`;
 
     message += `*PELANGGAN*\n`;
     message += `Nama: ${customerName}\n`;
     message += `No. HP: ${phone}\n`;
     message += `------------------------------\n\n`;
 
+    // Collections for consolidated links
+    const productLinks = new Set<string>();
+
     // Group Items (Universal Grouping)
     const groups: { [key: string]: any[] } = {};
     items.forEach((item: any) => {
+      // Logic from convertToQuotation used here implicitly by reading existing structure
       const groupKey = item.groupId || item.product?.id || 'default';
       if (!groups[groupKey]) groups[groupKey] = [];
       groups[groupKey].push(item);
+
+      // Collect Link: Prefer Product SKU -> Product ID
+      const p = item.product || {};
+      const sku = p.sku || calcData.fabric?.sku;
+      const id = p.id || calcData.fabric?.id; // fallback
+
+      // We prefer SKU link
+      if (sku) {
+        productLinks.add(`https://gorden-fe.vercel.app/product/${sku}`);
+      } else if (id && !p.sku) {
+        productLinks.add(`https://gorden-fe.vercel.app/product/${id}`);
+      }
     });
 
     Object.values(groups).forEach((groupItems) => {
@@ -619,6 +634,7 @@ export default function AdminCalculatorLeads() {
       const productName = firstItem.product?.name || firstItem.fabricName || calcData.fabric?.name || 'Produk';
       const productPrice = firstItem.product?.price || firstItem.fabricPricePerMeter || calcData.fabric?.price || 0;
 
+      // Calculate Group Total properly
       const groupTotal = groupItems.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
 
       message += `*PRODUK: ${productName}*\n`;
@@ -629,7 +645,6 @@ export default function AdminCalculatorLeads() {
         const w = item.width || item.dimensions?.width || 0;
         const h = item.height || item.dimensions?.height || 0;
         const qty = item.quantity || 1;
-        const sub = item.subtotal || 0;
         const type = item.itemType === 'pintu' ? 'Pintu' : 'Jendela';
 
         message += `${idx + 1}. ${type} ${w}cm x ${h}cm\n`;
@@ -637,66 +652,62 @@ export default function AdminCalculatorLeads() {
 
         // Variant / Fabric with price details
         if (item.selectedVariant) {
-          const fabricQty = qty * (item.selectedVariant.quantity_multiplier || 1);
-          const fabricGross = item.selectedVariant.price_gross || item.fabricPricePerMeter || 0;
-          const fabricNet = item.selectedVariant.price_net || item.selectedVariant.price || fabricGross;
-          const fabricDisc = fabricGross > 0 && fabricNet < fabricGross
-            ? Math.round(((fabricGross - fabricNet) / fabricGross) * 100)
-            : 0;
-          const fabricTotal = item.fabricPrice || (fabricNet * fabricQty);
+          // const fabricQty = qty * (item.selectedVariant.quantity_multiplier || 1);
+          // const fabricNet = item.selectedVariant.price_net || item.selectedVariant.price || 0;
 
           message += `   - Kain: ${item.selectedVariant.name}\n`;
-          message += `     ${fabricQty}x @ Rp ${formatRupiah(fabricNet)}`;
-          if (fabricDisc > 0) message += ` (Disc ${fabricDisc}%)`;
-          message += ` = Rp ${formatRupiah(fabricTotal)}\n`;
-
-          // Add product link under variant/kain (use SKU for shorter URL)
-          const fabricProductSku = item.product?.sku || firstItem.product?.sku || calcData.fabric?.sku;
-          if (fabricProductSku) {
-            message += `     Link: ${window.location.origin}/product/${fabricProductSku}\n`;
-          }
-          message += `\n`; // Spacing after variant
+          // Per user request or previous implementation, we can show details or keep valid.
+          // keeping it minimal but informative
         }
 
-        // Components logic handles both Array (DB) and Object (Frontend) structures
+        // Components logic 
         if (item.components) {
           const comps = Array.isArray(item.components) ? item.components : Object.values(item.components);
-
-          comps.forEach((comp: any, compIdx: number) => {
-            // Remove "Pilih" prefix if present, just use product name directly
+          comps.forEach((comp: any) => {
             const name = comp.productName || comp.product?.name || comp.name;
             const cQty = comp.qty || comp.quantity || 1;
-            const cPrice = comp.productPriceNet || comp.productPrice || comp.product?.price || 0;
-            const cDisc = comp.discount || 0;
-            const cTotal = comp.componentTotal || (cPrice * cQty * ((100 - cDisc) / 100));
-            const compProductId = comp.productId || comp.product?.id;
+            // Add to links if component has SKU
+            const cSku = comp.productSku || comp.product?.sku;
+            if (cSku) {
+              productLinks.add(`https://gorden-fe.vercel.app/product/${cSku}`);
+            }
 
             if (name) {
-              message += `   - ${name}\n`;
-              message += `     ${cQty}x @ Rp ${formatRupiah(cPrice)}`;
-              if (cDisc > 0) message += ` (Disc ${cDisc}%)`;
-              message += ` = Rp ${formatRupiah(cTotal)}\n`;
-              // Add component product link (use SKU when available, fallback to id)
-              const compProductLink = comp.productSku || comp.product?.sku || compProductId;
-              if (compProductLink) {
-                message += `     Link: ${window.location.origin}/product/${compProductLink}\n`;
-              }
-              message += `\n`; // Spacing between components
+              message += `   + ${name} (${cQty}x)\n`;
             }
           });
         }
-
-        message += `   *Total Item: Rp ${formatRupiah(sub)}*\n`;
-        message += `\n`; // Extra spacing between items
+        message += `\n`;
       });
-
-      message += `Subtotal Group: *Rp ${formatRupiah(groupTotal)}*\n`;
+      message += `Total Group: Rp ${formatRupiah(groupTotal)}\n`;
       message += `------------------------------\n\n`;
     });
 
+    // Grand Totals
     const total = lead.grandTotal || lead.estimatedPrice || lead.estimated_price || 0;
-    message += `*TOTAL BIAYA: Rp ${formatRupiah(total)}*\n\n`;
-    message += `Apakah Anda ingin melanjutkan ke proses pemesanan?`;
+    const discount = 0; // If available, show it
+
+    // Format requested:
+    // Total = ...
+    // Total Biaya ... (Bold)
+
+    message += `Total = Rp ${formatRupiah(total)}\n`;
+    if (discount > 0) {
+      message += `Diskon = Rp ${formatRupiah(discount)}\n`;
+    }
+
+    message += `*Total Biaya Rp ${formatRupiah(total)}*\n`;
+
+    // Consolidated Links Section
+    if (productLinks.size > 0) {
+      message += `\nBerikut Produk yang digunakan\n`;
+      message += `Link\n`;
+      productLinks.forEach(link => {
+        message += `. ${link}\n`;
+      });
+    }
+
+    message += `\nTerima kasih atas kepercayaannya.`;
 
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;

@@ -395,8 +395,44 @@ export default function AdminDocumentDetail() {
             return;
         }
         const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-        const pdfUrl = `${apiBaseUrl} /documents/${id}/pdf`;
-        const message = `Halo kak,\n\nBerikut adalah dokumen ${doc?.type === 'INVOICE' ? 'Invoice' : 'Penawaran'} Anda:\n\n*No. Dokumen:* ${doc?.document_number}\n*Nama:* ${formData.customerName}\n*Total:* Rp ${calculateGrandTotal().toLocaleString('id-ID')}\n\n*Link Dokumen PDF:*\n${pdfUrl}\n\nTerima kasih telah mempercayakan kebutuhan gorden Anda kepada Amagriya Gorden.`;
+        const pdfUrl = `${apiBaseUrl}/documents/${id}/pdf`;
+
+        let message = `Halo kak,\n\nBerikut adalah dokumen ${doc?.type === 'INVOICE' ? 'Invoice' : 'Penawaran'} Anda:\n\n*No. Dokumen:* ${doc?.document_number}\n*Nama:* ${formData.customerName}\n*Total:* Rp ${calculateGrandTotal().toLocaleString('id-ID')}\n\n*Link Dokumen PDF:*\n${pdfUrl}\n\n`;
+
+        // Consolidated Links
+        const productLinks = new Set<string>();
+        const appBaseUrl = window.location.origin;
+
+        rawItems.forEach((item: any) => {
+            // Main product
+            const p = item.product || baseFabric;
+            if (p) {
+                const sku = p.sku || p.id;
+                if (sku) productLinks.add(`${appBaseUrl}/product/${sku}`);
+            }
+            // Components
+            if (item.components) {
+                Object.values(item.components).forEach((selection: any) => {
+                    const cp = selection.product;
+                    if (cp) {
+                        const sku = cp.sku || cp.id;
+                        if (sku) productLinks.add(`${appBaseUrl}/product/${sku}`);
+                    }
+                });
+            }
+        });
+
+        if (productLinks.size > 0) {
+            message += `*Produk yang digunakan:*\n`;
+            message += `Link\n`;
+            productLinks.forEach(link => {
+                message += `. ${link}\n`;
+            });
+            message += `\n`;
+        }
+
+        message += `Terima kasih telah mempercayakan kebutuhan gorden Anda kepada Amagriya Gorden.`;
+
         const encodedMessage = encodeURIComponent(message);
         const whatsappNumber = formData.customerPhone?.replace(/^0/, '62').replace(/[^0-9]/g, '') || '';
         const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;

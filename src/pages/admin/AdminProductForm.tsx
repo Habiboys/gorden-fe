@@ -1,4 +1,4 @@
-import { ArrowLeft, Upload, X } from 'lucide-react';
+import { ArrowLeft, Bold, Image as ImageIcon, Italic, List, ListOrdered, Loader2, Underline, Upload, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -44,6 +44,151 @@ export default function AdminProductForm() {
     const navigate = useNavigate();
     const { id } = useParams();
     const isEditMode = !!id;
+
+    // Rich Text Editor State
+    const informationEditorRef = useRef<HTMLDivElement>(null);
+    const contentImageInputRef = useRef<HTMLInputElement>(null);
+    const savedSelection = useRef<Range | null>(null);
+    const editorInitialized = useRef(false);
+    const [uploadingContentImage, setUploadingContentImage] = useState(false);
+
+    // Image size modal state
+    const [showImageSizeModal, setShowImageSizeModal] = useState(false);
+    const [pendingImageUrl, setPendingImageUrl] = useState('');
+    const [imageSize, setImageSize] = useState('full');
+    const [customWidth, setCustomWidth] = useState('');
+
+    // Rich text editor helper functions
+    const saveEditorSelection = () => {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            savedSelection.current = selection.getRangeAt(0).cloneRange();
+        }
+    };
+
+    const restoreEditorSelection = () => {
+        if (savedSelection.current && informationEditorRef.current) {
+            informationEditorRef.current.focus();
+            const selection = window.getSelection();
+            if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(savedSelection.current);
+            }
+        }
+    };
+
+    const execEditorCommand = (command: string, value?: string) => {
+        if (informationEditorRef.current) {
+            informationEditorRef.current.focus();
+        }
+        restoreEditorSelection();
+        let finalValue = value;
+        if (command === 'formatBlock' && value && !value.startsWith('<')) {
+            finalValue = `<${value}>`;
+        }
+        document.execCommand(command, false, finalValue);
+        updateInformationContent();
+    };
+
+    const updateInformationContent = () => {
+        if (informationEditorRef.current) {
+            setFormData(prev => ({ ...prev, information: informationEditorRef.current!.innerHTML }));
+        }
+    };
+
+    const insertLink = () => {
+        if (informationEditorRef.current) {
+            informationEditorRef.current.focus();
+        }
+        restoreEditorSelection();
+        const url = prompt('Masukkan URL:');
+        if (url) {
+            document.execCommand('createLink', false, url);
+            updateInformationContent();
+        }
+    };
+
+    // Insert image with selected size
+    const insertImageWithSize = () => {
+        if (!pendingImageUrl || !informationEditorRef.current) return;
+
+        const img = document.createElement('img');
+        img.src = pendingImageUrl;
+        img.alt = 'Image';
+
+        let inlineStyle = '';
+        switch (imageSize) {
+            case 'small':
+                inlineStyle = 'width: 25%; max-width: 200px;';
+                break;
+            case 'medium':
+                inlineStyle = 'width: 50%; max-width: 400px;';
+                break;
+            case 'full':
+                inlineStyle = 'width: 100%;';
+                break;
+            case 'custom':
+                if (customWidth) {
+                    inlineStyle = `width: ${customWidth}px; max-width: 100%;`;
+                }
+                break;
+        }
+
+        img.className = 'h-auto rounded-lg my-4';
+        img.style.cssText = inlineStyle + ' height: auto; display: block;';
+
+        informationEditorRef.current.focus();
+        try {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                if (informationEditorRef.current.contains(range.commonAncestorContainer)) {
+                    range.deleteContents();
+                    range.insertNode(img);
+                    range.setStartAfter(img);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                } else {
+                    informationEditorRef.current.appendChild(document.createElement('br'));
+                    informationEditorRef.current.appendChild(img);
+                }
+            } else {
+                informationEditorRef.current.appendChild(document.createElement('br'));
+                informationEditorRef.current.appendChild(img);
+            }
+        } catch {
+            informationEditorRef.current.appendChild(document.createElement('br'));
+            informationEditorRef.current.appendChild(img);
+        }
+
+        updateInformationContent();
+        setShowImageSizeModal(false);
+        setPendingImageUrl('');
+        toast.success('Gambar ditambahkan');
+    };
+
+    const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setUploadingContentImage(true);
+            const response = await uploadApi.uploadFile(file);
+            if (response.success) {
+                // Show size selection dialog
+                setPendingImageUrl(response.data.url);
+                setImageSize('full');
+                setCustomWidth('');
+                setShowImageSizeModal(true);
+            }
+        } catch (error: any) {
+            toast.error('Gagal upload gambar: ' + error.message);
+        } finally {
+            setUploadingContentImage(false);
+            if (e.target) e.target.value = '';
+        }
+    };
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -96,6 +241,14 @@ export default function AdminProductForm() {
     useEffect(() => {
         if (isEditMode && id) loadProduct(id);
     }, [id, isEditMode]);
+
+    // Initialize editor content only once after data loads (prevents cursor jump)
+    useEffect(() => {
+        if (informationEditorRef.current && formData.information && !editorInitialized.current) {
+            informationEditorRef.current.innerHTML = formData.information;
+            editorInitialized.current = true;
+        }
+    }, [formData.information]);
 
     const loadProduct = async (productId: string) => {
         setLoading(true);
@@ -336,14 +489,13 @@ export default function AdminProductForm() {
                             />
                         </div>
                         <div>
-                            <Label>SKU <span className="text-xs text-gray-500 font-normal">(otomatis dari nama)</span></Label>
+                            <Label>SKU <span className="text-xs text-gray-500 font-normal">(bisa diedit)</span></Label>
                             <Input
                                 value={formData.sku}
-                                readOnly
-                                className="bg-gray-50 cursor-not-allowed"
-                                placeholder="Akan terisi otomatis"
+                                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                                placeholder="SKU Produk"
                             />
-                            <p className="text-xs text-gray-500 mt-1">SKU dibuat otomatis dari nama produk</p>
+                            <p className="text-xs text-gray-500 mt-1">SKU dibuat otomatis dari nama, tapi bisa diubah manual</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -512,13 +664,206 @@ export default function AdminProductForm() {
                     </div>
                     <div>
                         <Label>Deskripsi Lengkap</Label>
-                        <Textarea
-                            value={formData.information}
-                            onChange={(e) => setFormData({ ...formData, information: e.target.value })}
-                            rows={6}
-                            placeholder="Informasi detail produk..."
-                        />
+
+                        {/* Rich Text Editor */}
+                        <div className="border border-gray-300 rounded-lg overflow-hidden mt-1">
+                            {/* Toolbar */}
+                            <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50">
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); execEditorCommand('bold'); }}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Bold (Ctrl+B)"
+                                >
+                                    <Bold className="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); execEditorCommand('italic'); }}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Italic (Ctrl+I)"
+                                >
+                                    <Italic className="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); execEditorCommand('underline'); }}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Underline (Ctrl+U)"
+                                >
+                                    <Underline className="w-4 h-4" />
+                                </button>
+
+                                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                                {/* Heading Select */}
+                                <select
+                                    onMouseDown={saveEditorSelection}
+                                    onChange={(e) => {
+                                        restoreEditorSelection();
+                                        const value = e.target.value;
+                                        if (value) {
+                                            execEditorCommand('formatBlock', value);
+                                        }
+                                    }}
+                                    defaultValue=""
+                                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none"
+                                    title="Format"
+                                >
+                                    <option value="" disabled>Format</option>
+                                    <option value="p">Paragraph</option>
+                                    <option value="h2">Heading 2</option>
+                                    <option value="h3">Heading 3</option>
+                                    <option value="h4">Heading 4</option>
+                                </select>
+
+                                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); execEditorCommand('insertUnorderedList'); }}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Bullet List"
+                                >
+                                    <List className="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); execEditorCommand('insertOrderedList'); }}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Numbered List"
+                                >
+                                    <ListOrdered className="w-4 h-4" />
+                                </button>
+
+                                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={insertLink}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Insert Link"
+                                >
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => contentImageInputRef.current?.click()}
+                                    disabled={uploadingContentImage}
+                                    className="p-2 hover:bg-white rounded transition-colors"
+                                    title="Insert Image"
+                                >
+                                    {uploadingContentImage ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <ImageIcon className="w-4 h-4" />
+                                    )}
+                                </button>
+                                <input
+                                    ref={contentImageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleContentImageUpload}
+                                    className="hidden"
+                                />
+                            </div>
+
+                            {/* Editor Styles */}
+                            <style>{`
+                                .product-editor h2 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; }
+                                .product-editor h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.25em; margin-bottom: 0.5em; line-height: 1.4; }
+                                .product-editor h4 { font-size: 1.125rem; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; }
+                                .product-editor p { margin-bottom: 1em; line-height: 1.6; }
+                                .product-editor ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+                                .product-editor ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; }
+                                .product-editor blockquote { border-left: 4px solid #EB216A; padding-left: 1em; margin: 1em 0; font-style: italic; background-color: #FFF5F7; padding-top: 0.5em; padding-bottom: 0.5em; border-radius: 0 0.5em 0.5em 0; }
+                                .product-editor a { color: #EB216A; text-decoration: underline; }
+                                .product-editor img { max-width: 100%; height: auto; border-radius: 0.5em; margin: 1em 0; }
+                                .product-editor strong { font-weight: 700; }
+                                .product-editor em { font-style: italic; }
+                            `}</style>
+
+                            {/* ContentEditable Editor - NO dangerouslySetInnerHTML to prevent cursor jump */}
+                            <div
+                                ref={informationEditorRef}
+                                contentEditable
+                                suppressContentEditableWarning
+                                onInput={updateInformationContent}
+                                onMouseUp={saveEditorSelection}
+                                onKeyUp={saveEditorSelection}
+                                className="product-editor min-h-[200px] p-4 focus:outline-none bg-white text-gray-700"
+                            />
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-1">
+                            Gunakan toolbar untuk format teks, heading, link, dan menambah gambar.
+                        </p>
                     </div>
+
+                    {/* Image Size Modal */}
+                    {showImageSizeModal && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+                                <h3 className="text-lg font-semibold mb-4">Ukuran Gambar</h3>
+                                <div className="space-y-3">
+                                    {[
+                                        { value: 'small', label: 'Kecil (25%)', desc: 'Maks 200px' },
+                                        { value: 'medium', label: 'Sedang (50%)', desc: 'Maks 400px' },
+                                        { value: 'full', label: 'Penuh (100%)', desc: 'Lebar penuh' },
+                                        { value: 'custom', label: 'Custom', desc: 'Atur sendiri' },
+                                    ].map((opt) => (
+                                        <label key={opt.value} className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                            <input
+                                                type="radio"
+                                                name="imageSize"
+                                                value={opt.value}
+                                                checked={imageSize === opt.value}
+                                                onChange={(e) => setImageSize(e.target.value)}
+                                                className="w-4 h-4 text-pink-600"
+                                            />
+                                            <div>
+                                                <div className="font-medium">{opt.label}</div>
+                                                <div className="text-xs text-gray-500">{opt.desc}</div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                    {imageSize === 'custom' && (
+                                        <div className="flex items-center gap-2 ml-7">
+                                            <input
+                                                type="number"
+                                                value={customWidth}
+                                                onChange={(e) => setCustomWidth(e.target.value)}
+                                                placeholder="Lebar (px)"
+                                                className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                                            />
+                                            <span className="text-sm text-gray-500">px</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowImageSizeModal(false); setPendingImageUrl(''); }}
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={insertImageWithSize}
+                                        className="flex-1 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700"
+                                    >
+                                        Sisipkan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Card>
 

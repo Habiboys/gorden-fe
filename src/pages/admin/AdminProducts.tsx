@@ -2,8 +2,10 @@ import {
   Copy,
   Download,
   Edit,
+  ExternalLink,
   Eye,
   FileSpreadsheet,
+  Info,
   MoreVertical,
   Plus,
   Search,
@@ -210,6 +212,99 @@ export default function AdminProducts() {
     satuan: '',
     quantity_multiplier: 1,
   });
+
+  // Rich Text Editor state for product information
+  const informationEditorRef = useRef<HTMLDivElement>(null);
+  const contentImageInputRef = useRef<HTMLInputElement>(null);
+  const savedSelection = useRef<Range | null>(null);
+  const [uploadingContentImage, setUploadingContentImage] = useState(false);
+  const editorInitialized = useRef(false);
+
+  // Rich text editor helper functions
+  const saveEditorSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedSelection.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const restoreEditorSelection = () => {
+    if (savedSelection.current && informationEditorRef.current) {
+      informationEditorRef.current.focus();
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelection.current);
+      }
+    }
+  };
+
+  const execEditorCommand = (command: string, value?: string) => {
+    if (informationEditorRef.current) {
+      informationEditorRef.current.focus();
+    }
+    restoreEditorSelection();
+    let finalValue = value;
+    if (command === 'formatBlock' && value && !value.startsWith('<')) {
+      finalValue = `<${value}>`;
+    }
+    document.execCommand(command, false, finalValue);
+    updateInformationContent();
+  };
+
+  const updateInformationContent = () => {
+    if (informationEditorRef.current) {
+      setFormData(prev => ({ ...prev, information: informationEditorRef.current!.innerHTML }));
+    }
+  };
+
+  const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingContentImage(true);
+      const response = await uploadApi.uploadFile(file);
+      if (response.success) {
+        // Insert image at cursor
+        if (informationEditorRef.current) {
+          informationEditorRef.current.focus();
+          restoreEditorSelection();
+          const img = document.createElement('img');
+          img.src = response.data.url;
+          img.alt = 'Image';
+          img.className = 'w-full h-auto rounded-lg my-2';
+          img.style.cssText = 'max-width: 100%; height: auto;';
+
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (informationEditorRef.current.contains(range.commonAncestorContainer)) {
+              range.deleteContents();
+              range.insertNode(img);
+              range.setStartAfter(img);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            } else {
+              informationEditorRef.current.appendChild(document.createElement('br'));
+              informationEditorRef.current.appendChild(img);
+            }
+          } else {
+            informationEditorRef.current.appendChild(document.createElement('br'));
+            informationEditorRef.current.appendChild(img);
+          }
+          updateInformationContent();
+          toast.success('Gambar berhasil ditambah');
+        }
+      }
+    } catch (error: any) {
+      toast.error('Gagal upload gambar: ' + error.message);
+    } finally {
+      setUploadingContentImage(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   // Import Modal state
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -760,7 +855,7 @@ export default function AdminProducts() {
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Produk</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">SKU</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Kategori</th>
-                <th className="text-left px-6 py-4 text-sm text-gray-600">Varian</th>
+                {/* <th className="text-left px-6 py-4 text-sm text-gray-600">Varian</th> */}
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Stok</th>
                 <th className="text-left px-6 py-4 text-sm text-gray-600">Status</th>
                 <th className="text-right px-6 py-4 text-sm text-gray-600">Aksi</th>
@@ -811,11 +906,11 @@ export default function AdminProducts() {
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-700">{product.Category?.name || '-'}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">
                       <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                         Lihat Detail
                       </span>
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-700">{product.stock || 0}</span>
                     </td>
@@ -836,6 +931,10 @@ export default function AdminProducts() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => window.open(`/product/${product.sku}`, '_blank')}>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Lihat Live
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateProduct(product.id)}>
                             <Copy className="w-4 h-4 mr-2" />
                             Duplikat
@@ -977,7 +1076,15 @@ export default function AdminProducts() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>SKU <span className="text-xs text-gray-500 font-normal">(otomatis)</span></Label>
+                      <Label className="flex items-center gap-2">
+                        SKU <span className="text-xs text-gray-500 font-normal">(otomatis)</span>
+                        <div className="group relative">
+                          <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            Harus lowercase, tanpa spasi, dan karakter unik.
+                          </div>
+                        </div>
+                      </Label>
                       <Input
                         value={formData.sku}
                         readOnly

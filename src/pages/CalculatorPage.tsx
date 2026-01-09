@@ -148,6 +148,9 @@ export default function CalculatorPageV2() {
   const [tempSelectedProduct, setTempSelectedProduct] = useState<ProductOption | null>(null);
   const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
 
+  // Persistence state
+  const [isRestored, setIsRestored] = useState(false);
+
   // Modals
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isComponentModalOpen, setIsComponentModalOpen] = useState(false);
@@ -173,7 +176,41 @@ export default function CalculatorPageV2() {
       setCustomerInfo(JSON.parse(saved));
       setIsCustomerDialogOpen(false);
     }
+
+    // Attempt to load draft BUT only apply if we have data loaded or parallel
+    // Actually, we can load customer info immediately. Items/Type validation might need wait.
+    const draftJson = localStorage.getItem('amagriya_calculator_draft');
+    if (draftJson) {
+      try {
+        const draft = JSON.parse(draftJson);
+        if (draft.customerInfo) {
+          setCustomerInfo(draft.customerInfo);
+          setIsCustomerDialogOpen(false);
+        }
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
+    }
   }, []);
+
+  // Save draft on change
+  useEffect(() => {
+    // Only save if we have meaningful data to avoid wiping draft on initial empty render
+    // logic: if items are empty but we had a draft, we shouldn't wipe it immediately unless user cleared it.
+    // simpler approach: just save what is current.
+    // Caution: on mount, state is empty. We must ensure we don't overwrite draft with empty state before loading it.
+    // We can use a reference 'isLoaded' or check if loading is false.
+
+    if (loading || !isRestored) return;
+
+    const draft = {
+      customerInfo,
+      items,
+      selectedTypeSlug,
+      selectedFabric
+    };
+    localStorage.setItem('amagriya_calculator_draft', JSON.stringify(draft));
+  }, [customerInfo, items, selectedTypeSlug, selectedFabric, loading]);
 
   // Load data on mount
   useEffect(() => {
@@ -205,6 +242,42 @@ export default function CalculatorPageV2() {
     loadData();
   }, []);
 
+  // Restore Draft Data (Items, Fabric, Type) after loading is done
+  useEffect(() => {
+    if (!loading && fabricProducts.length > 0 && calculatorTypes.length > 0 && !isRestored) {
+      const draftJson = localStorage.getItem('amagriya_calculator_draft');
+      if (draftJson) {
+        try {
+          const draft = JSON.parse(draftJson);
+
+          // Restore Type
+          if (draft.selectedTypeSlug) {
+            // Verify if slug exists
+            const exists = calculatorTypes.some(t => t.slug === draft.selectedTypeSlug);
+            if (exists) setSelectedTypeSlug(draft.selectedTypeSlug);
+          }
+
+          // Restore Fabric
+          if (draft.selectedFabric) {
+            // Ideally find the fresh object from fabricProducts to ensure up-to-date price
+            // fallback to draft object if not found (or just use draft object as is)
+            const found = fabricProducts.find(p => p.id === draft.selectedFabric.id);
+            if (found) setSelectedFabric(found);
+            else setSelectedFabric(draft.selectedFabric);
+          }
+
+          // Restore Items
+          if (draft.items && Array.isArray(draft.items)) {
+            setItems(draft.items);
+          }
+        } catch (e) {
+          console.error("Error restoring draft", e);
+        }
+      }
+      setIsRestored(true);
+    }
+  }, [loading, fabricProducts, calculatorTypes, isRestored]);
+
   // Load component products when type changes
   useEffect(() => {
     const loadComponentProducts = async () => {
@@ -219,6 +292,7 @@ export default function CalculatorPageV2() {
           if (res.success && res.data) {
             results[comp.subcategory_id] = res.data.map((p: any) => ({
               id: p.id.toString(),
+              sku: p.sku,
               name: p.name,
               price: p.price,
               description: p.description,
@@ -242,7 +316,7 @@ export default function CalculatorPageV2() {
 
   // Update selected fabric when type changes if current one is invalid
   useEffect(() => {
-    if (!currentType) return;
+    if (!currentType || !isRestored) return;
 
     // Check if current selected fabric matches the new type's category
     const isCompatible = (() => {
@@ -264,7 +338,7 @@ export default function CalculatorPageV2() {
         setSelectedFabric(null); // Clear if no compatible product found
       }
     }
-  }, [selectedTypeSlug, calculatorTypes, fabricProducts, selectedFabric]);
+  }, [selectedTypeSlug, calculatorTypes, fabricProducts, selectedFabric, isRestored]);
 
   // Get current calculator type
   const currentType = calculatorTypes.find(t => t.slug === selectedTypeSlug);

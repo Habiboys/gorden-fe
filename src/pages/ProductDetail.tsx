@@ -26,7 +26,7 @@ import { getProductImageUrl } from '../utils/imageHelper';
 import { safeJSONParse } from '../utils/jsonHelper';
 
 export default function ProductDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { sku } = useParams<{ sku: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<any>(null);
@@ -94,12 +94,39 @@ export default function ProductDetail() {
   const subtotal = selectedPrice * quantity;
 
   useEffect(() => {
+    const fetchVariants = async (productUuid: string) => {
+      try {
+        console.log('🔍 Fetching variants for product UUID:', productUuid);
+        const response = await productVariantsApi.getByProduct(productUuid);
+        console.log('📦 Variants API response:', response);
+        const variantData = response.data || [];
+        console.log('✅ Variant data count:', variantData.length);
+        setVariants(variantData);
+
+        // Initialize selections if variants exist and have attributes
+        if (variantData.length > 0) {
+          const first = variantData[0];
+          if (first.attributes) {
+            // IMPORTANT: Parse the attributes as they come as a string from DB
+            const parsedAttrs = safeJSONParse(first.attributes, {}) as Record<string, any>;
+            setSelectedAttributes(parsedAttrs);
+            setSelectedVariant(first);
+          } else {
+            // Fallback for old way
+            setSelectedVariant(first);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error fetching variants:', error);
+      }
+    };
+
     const fetchProduct = async () => {
-      if (!id) return;
+      if (!sku) return;
 
       try {
-        console.log('🔄 Fetching product:', id);
-        const response = await productsApi.getById(id);
+        console.log('🔄 Fetching product:', sku);
+        const response = await productsApi.getById(sku);
         console.log('✅ Product fetched:', response);
 
         // Transform backend data to match frontend expectations
@@ -134,6 +161,12 @@ export default function ProductDetail() {
             'Tim kami akan menghubungi Anda untuk konfirmasi detail pesanan.'
           ]
         });
+
+        // Fetch variants USING PRODUCT UUID (not URL param which could be SKU)
+        if (productData.id) {
+          console.log('🔗 Using product UUID for variants:', productData.id);
+          fetchVariants(productData.id);
+        }
       } catch (error: any) {
         console.error('❌ Error fetching product:', error);
         alert('Error loading product: ' + error.message);
@@ -141,39 +174,15 @@ export default function ProductDetail() {
       }
     };
 
-    const fetchVariants = async () => {
-      if (!id) return;
-      try {
-        const response = await productVariantsApi.getByProduct(id);
-        const variantData = response.data || [];
-        setVariants(variantData);
-
-        // Initialize selections if variants exist and have attributes
-        if (variantData.length > 0) {
-          const first = variantData[0];
-          if (first.attributes) {
-            // IMPORTANT: Parse the attributes as they come as a string from DB
-            const parsedAttrs = safeJSONParse(first.attributes, {}) as Record<string, any>;
-            setSelectedAttributes(parsedAttrs);
-            setSelectedVariant(first);
-          } else {
-            // Fallback for old way
-            setSelectedVariant(first);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching variants:', error);
-      }
-    };
-
     const fetchRelatedProducts = async () => {
-      if (!id) return;
+      if (!sku) return;
 
       try {
         console.log('🔄 Fetching related products...');
-        const response = await productsApi.getAll({ limit: 25 });
+        const response = await productsApi.getAll({ limit: 4 });
         console.log('✅ Related products fetched:', response);
-        setRelatedProducts(response.data || []);
+        const related = (response.data || []).filter((p: any) => p.sku !== sku && p.id !== sku).slice(0, 4);
+        setRelatedProducts(related);
       } catch (error) {
         console.error('❌ Error fetching related products:', error);
       } finally {
@@ -182,9 +191,8 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
-    fetchVariants();
     fetchRelatedProducts();
-  }, [id, navigate]);
+  }, [sku, navigate]);
 
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
@@ -225,7 +233,7 @@ export default function ProductDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8">
           {/* Left Column - Gallery (7 cols) */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 lg:sticky lg:top-24 self-start">
             <ProductGallery images={product.images} productName={product.name} />
           </div>
 
@@ -366,7 +374,7 @@ export default function ProductDetail() {
                         return (
                           <div key={key} className="mb-4">
                             <p className="text-sm font-semibold text-gray-900 mb-2">{key}</p>
-                            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(70px, auto))' }}>
+                            <div className="grid gap-2 overflow-y-auto max-h-[240px] pr-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(70px, auto))' }}>
                               {availableValues.map((val: any) => {
                                 const isSelected = selectedAttributes[key] === val;
                                 return (
@@ -610,16 +618,44 @@ export default function ProductDetail() {
 
             <TabsContent value="info" className="mt-6">
               <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8 space-y-6">
-                {/* Description */}
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Deskripsi Produk</h3>
-                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {product.information || product.description || 'Deskripsi produk belum tersedia.'}
+                {/* Short Description */}
+                {product.description && (
+                  <div>
+                    <p className="text-gray-700 leading-relaxed">{product.description}</p>
                   </div>
-                </div>
+                )}
 
-                <Separator />
+                {/* Long Description (Rich Text) */}
+                {product.information && (
+                  <div>
+                    {/* Rich Text Styles */}
+                    <style>{`
+                      .product-info-content h2 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; color: #111827; }
+                      .product-info-content h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.25em; margin-bottom: 0.5em; line-height: 1.4; color: #111827; }
+                      .product-info-content h4 { font-size: 1.125rem; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; color: #111827; }
+                      .product-info-content p { margin-bottom: 1em; line-height: 1.7; color: #374151; }
+                      .product-info-content ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.5em; color: #374151; }
+                      .product-info-content ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.5em; color: #374151; }
+                      .product-info-content li { margin-bottom: 0.25em; line-height: 1.6; }
+                      .product-info-content blockquote { border-left: 4px solid #EB216A; padding-left: 1em; margin: 1em 0; font-style: italic; background-color: #FFF5F7; padding-top: 0.5em; padding-bottom: 0.5em; border-radius: 0 0.5em 0.5em 0; color: #374151; }
+                      .product-info-content a { color: #EB216A; text-decoration: underline; }
+                      .product-info-content a:hover { color: #C41857; }
+                      .product-info-content img { max-width: 100%; height: auto; border-radius: 0.5em; margin: 1em 0; }
+                      .product-info-content strong { font-weight: 700; }
+                      .product-info-content em { font-style: italic; }
+                      .product-info-content u { text-decoration: underline; }
+                    `}</style>
+                    <div
+                      className="product-info-content text-gray-700 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: product.information }}
+                    />
+                  </div>
+                )}
 
+                {/* Fallback if no descriptions */}
+                {!product.description && !product.information && (
+                  <p className="text-gray-500">Deskripsi produk belum tersedia.</p>
+                )}
 
                 {/* Separator only if dimensions exist */}
                 {(product.min_width || product.max_width || product.min_length || product.max_length) && <Separator />}
