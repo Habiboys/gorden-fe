@@ -618,6 +618,7 @@ export default function ProductDetail() {
 
             <TabsContent value="info" className="mt-6">
               <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8 space-y-6">
+                <h3 className="text-xl font-bold text-gray-900">Deskripsi Produk</h3>
                 {/* Short Description */}
                 {product.description && (
                   <div>

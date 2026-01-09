@@ -623,43 +623,45 @@ export default function AdminDocumentDetail() {
                                                                             return (
                                                                                 <tr key={item.id} className="hover:bg-gray-50/50">
                                                                                     <td className="py-3 px-3 relative">
-                                                                                        <p className="font-medium text-gray-900">
-                                                                                            {(() => {
-                                                                                                // Name Fix Logic
-                                                                                                let displayName = item.name;
+                                                                                        <div className="font-medium text-gray-900">
+                                                                                            {item.product?.name || item.name?.split('(')[0]?.trim() || '-'}
+                                                                                        </div>
+                                                                                        {(() => {
+                                                                                            if (!item.selectedVariant) return null;
 
-                                                                                                // If name is missing or broken (contains 'undefined'), try to reconstruct
-                                                                                                if (!displayName || displayName.includes('undefined')) {
-                                                                                                    if (item.selectedVariant) {
-                                                                                                        // Try variant name first
-                                                                                                        if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                                                                            return `${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} (${item.selectedVariant.name})`;
-                                                                                                        }
+                                                                                            let variantName = '';
+                                                                                            if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
+                                                                                                variantName = item.selectedVariant.name;
+                                                                                            } else {
+                                                                                                try {
+                                                                                                    const attrs = typeof item.selectedVariant.attributes === 'string'
+                                                                                                        ? JSON.parse(item.selectedVariant.attributes)
+                                                                                                        : item.selectedVariant.attributes;
 
-                                                                                                        // Fallback: Parse Attributes
-                                                                                                        try {
-                                                                                                            const attrs = typeof item.selectedVariant.attributes === 'string'
-                                                                                                                ? JSON.parse(item.selectedVariant.attributes)
-                                                                                                                : item.selectedVariant.attributes;
-
-                                                                                                            if (attrs && Object.keys(attrs).length > 0) {
-                                                                                                                // Format: "Warna: Gold, Motif: Bunga"
-                                                                                                                const attrString = Object.entries(attrs)
-                                                                                                                    .map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                                                                                return `${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} (${attrString})`;
-                                                                                                            }
-                                                                                                        } catch (e) { }
+                                                                                                    if (attrs && Object.keys(attrs).length > 0) {
+                                                                                                        variantName = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
                                                                                                     }
+                                                                                                } catch (e) { }
+                                                                                            }
 
-                                                                                                    // Last Resort: Dimensions
-                                                                                                    if (item.width && item.height) {
-                                                                                                        return `${item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} (${item.width}cm x ${item.height}cm)`;
-                                                                                                    }
-                                                                                                }
+                                                                                            if (!variantName && item.width && item.height) {
+                                                                                                variantName = `${item.width}cm x ${item.height}cm`;
+                                                                                            }
 
-                                                                                                return displayName || '-';
-                                                                                            })()}
-                                                                                        </p>
+                                                                                            if (variantName) {
+                                                                                                return (
+                                                                                                    <div className="text-xs text-gray-500 mt-0.5">
+                                                                                                        Varian: {variantName}
+                                                                                                    </div>
+                                                                                                );
+                                                                                            }
+                                                                                            return null;
+                                                                                        })()}
+                                                                                        {item.itemType && (
+                                                                                            <div className="text-xs text-gray-400 mt-0.5 capitalize">
+                                                                                                Tipe: {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-center">
                                                                                         {item.width} x {item.height}
@@ -732,9 +734,21 @@ export default function AdminDocumentDetail() {
                                                 displayName = displayName.replace(/^Pilih\s+[^:]+:\s*/i, '');
                                                 displayName = displayName.replace(/undefined/g, '-');
 
+                                                // Remove Product Name from Variant Name to avoid duplication
+                                                const pName = item.product?.name || '';
+                                                if (pName && displayName.toLowerCase().startsWith(pName.toLowerCase())) {
+                                                    displayName = displayName.substring(pName.length).trim();
+                                                    // Remove leading chars ( ) - :
+                                                    displayName = displayName.replace(/^[\(\)\s\-:]+/, '');
+                                                    // Remove trailing ) if we removed the opening (
+                                                    if (displayName.endsWith(')')) {
+                                                        displayName = displayName.slice(0, -1);
+                                                    }
+                                                }
+
                                                 allRows.push({
-                                                    type: idx === 0 ? (item.product?.name || 'Gorden') : 'Komponen',
-                                                    name: displayName,
+                                                    type: idx === 0 ? 'Varian Gorden' : 'Komponen',
+                                                    name: displayName || wItem.name, // Fallback if clean results in empty
                                                     priceGross: Math.round(wItem.price_gross || wItem.price || 0),
                                                     discount: wItem.discount || 0,
                                                     priceNet: Math.round(wItem.price_net || wItem.price || 0),

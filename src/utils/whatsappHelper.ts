@@ -196,7 +196,7 @@ export const generateCalculatorMessage = ({
         });
     }
 
-    message += `\nTerima kasih atas kepercayaannya.`;
+    message += `\nTerima kasih telah mempercayakan kebutuhan Gorden | Blind Anda kepada Amagriya`;
 
     return message;
 };
