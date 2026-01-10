@@ -7,10 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { categoriesApi, productsApi, subcategoriesApi } from '../utils/api';
 
 export default function ProductListing() {
-  const [sortBy, setSortBy] = useState('popular');
+  const [sortBy, setSortBy] = useState('random'); // Default to random
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+
+  // Special filters
+  const [filterCustom, setFilterCustom] = useState(false);
+  const [filterWarranty, setFilterWarranty] = useState(false);
+  const [filterNewArrival, setFilterNewArrival] = useState(false);
+  const [filterBestSeller, setFilterBestSeller] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -94,7 +100,7 @@ export default function ProductListing() {
     return subcategories.filter(sub => String(sub.category_id) === String(categoryId));
   };
 
-  // Filter products based on search, category, and subcategory
+  // Filter products based on search, category, subcategory, and special filters
   const filteredProducts = products.filter(product => {
     const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -105,12 +111,20 @@ export default function ProductListing() {
     const matchesSubcategory = !selectedSubcategory ||
       String(product.subcategory_id) === String(selectedSubcategory);
 
-    return matchesSearch && matchesCategory && matchesSubcategory;
+    // Special filters (only filter if checkbox checked)
+    const matchesCustom = !filterCustom || product.is_custom;
+    const matchesWarranty = !filterWarranty || product.is_warranty;
+    const matchesNewArrival = !filterNewArrival || product.newArrival;
+    const matchesBestSeller = !filterBestSeller || product.bestSeller;
+
+    return matchesSearch && matchesCategory && matchesSubcategory && matchesCustom && matchesWarranty && matchesNewArrival && matchesBestSeller;
   });
 
   // Sort products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
+      case 'random':
+        return Math.random() - 0.5; // Randomize order
       case 'newest':
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       case 'price-low':
@@ -119,6 +133,8 @@ export default function ProductListing() {
         return (b.minPrice || 0) - (a.minPrice || 0);
       case 'name':
         return (a.name || '').localeCompare(b.name || '');
+      case 'bestseller':
+        return (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0);
       default:
         return 0;
     }
@@ -237,6 +253,54 @@ export default function ProductListing() {
         </div>
       </div>
 
+      {/* Special Filters */}
+      <div className="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-[#EB216A]" />
+            Filter Khusus
+          </h3>
+        </div>
+        <div className="p-3 space-y-2">
+          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterCustom}
+              onChange={(e) => setFilterCustom(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+            />
+            <span className="text-sm text-gray-700">Bisa Custom</span>
+          </label>
+          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterWarranty}
+              onChange={(e) => setFilterWarranty(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+            />
+            <span className="text-sm text-gray-700">Garansi 1 Tahun</span>
+          </label>
+          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterNewArrival}
+              onChange={(e) => setFilterNewArrival(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+            />
+            <span className="text-sm text-gray-700">Produk Terbaru</span>
+          </label>
+          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterBestSeller}
+              onChange={(e) => setFilterBestSeller(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+            />
+            <span className="text-sm text-gray-700">Terlaris</span>
+          </label>
+        </div>
+      </div>
+
       {/* Active Filters */}
       {(selectedCategory || selectedSubcategory || searchQuery) && (
         <div className="mt-4 bg-white rounded-xl border border-gray-100 shadow-sm p-4">
@@ -313,7 +377,8 @@ export default function ProductListing() {
                   <SelectValue placeholder="Urutkan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="popular">Terpopuler</SelectItem>
+                  <SelectItem value="random">Acak</SelectItem>
+                  <SelectItem value="bestseller">Terlaris</SelectItem>
                   <SelectItem value="newest">Terbaru</SelectItem>
                   <SelectItem value="price-low">Termurah</SelectItem>
                   <SelectItem value="price-high">Termahal</SelectItem>
