@@ -162,6 +162,7 @@ export function TopProducts() {
                         addToCart({
                           id: product.id,
                           name: product.name,
+                          sku: product.sku,
                           price: Number(product.price),
                           image: getProductImageUrl(product.images)
                         });

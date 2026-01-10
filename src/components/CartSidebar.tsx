@@ -133,7 +133,12 @@ export function CartSidebar() {
                         </div>
                         <Button
                             className="w-full bg-green-500 hover:bg-green-600 text-white py-6 text-lg rounded-xl"
-                            onClick={() => chatAdminFromCart(getItemCount(), `Rp ${getTotal().toLocaleString('id-ID')}`)}
+                            onClick={() => chatAdminFromCart(items.map(item => ({
+                                name: item.name,
+                                sku: item.sku,
+                                quantity: item.quantity,
+                                price: item.price
+                            })))}
                         >
                             <MessageCircle className="w-5 h-5 mr-2" />
                             Chat Admin

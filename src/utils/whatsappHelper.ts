@@ -6,9 +6,20 @@ export const ADMIN_WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || '62
 
 // Template pesan
 export const whatsappTemplates = {
-    // Pesan dari CartSidebar
-    cartInquiry: (itemCount: number, total: string) =>
-        `Halo kak, saya ingin bertanya tentang pesanan saya dengan ${itemCount} item senilai ${total}`,
+    // Pesan dari CartSidebar - dengan detail produk
+    cartInquiry: (items: { name: string; sku?: string; quantity: number; price: number }[]) => {
+        const baseUrl = window.location.origin;
+        let message = `Halo Kak,\nsaya ingin bertanya tentang produk berikut:\n\n`;
+        items.forEach((item, idx) => {
+            message += `${idx + 1}. ${item.name}\n`;
+            if (item.sku) {
+                message += `   Link: ${baseUrl}/product/${item.sku}\n`;
+            }
+            message += `   Qty: ${item.quantity}\n`;
+            message += `   Harga: Rp ${item.price.toLocaleString('id-ID')}\n\n`;
+        });
+        return message.trim();
+    },
 
     // Pesan dari ProfilePage (dengan detail produk)
     orderFromProfile: (userName: string, productList: string, total: string) =>
@@ -41,8 +52,8 @@ export const openWhatsAppChat = (message: string, customNumber?: string): void =
 };
 
 // Helper functions untuk penggunaan langsung
-export const chatAdminFromCart = (itemCount: number, total: string): void => {
-    const message = whatsappTemplates.cartInquiry(itemCount, total);
+export const chatAdminFromCart = (items: { name: string; sku?: string; quantity: number; price: number }[]): void => {
+    const message = whatsappTemplates.cartInquiry(items);
     openWhatsAppChat(message);
 };
 

@@ -72,6 +72,7 @@ export default function ProductDetail() {
     addToCart({
       id: product.id,
       name: product.name,
+      sku: product.sku,
       price: selectedPrice,
       image: getProductImageUrl(product.images || product.image),
       packageType: variantInfo,

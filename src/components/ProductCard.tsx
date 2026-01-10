@@ -51,6 +51,7 @@ export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, ima
     addToCart({
       id,
       name,
+      sku,
       price: Number(minPrice),
       image: productImage,
     });
