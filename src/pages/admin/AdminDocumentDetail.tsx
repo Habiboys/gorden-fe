@@ -396,12 +396,52 @@ export default function AdminDocumentDetail() {
         }
         const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
         const pdfUrl = `${apiBaseUrl}/documents/${id}/pdf`;
+        const appBaseUrl = window.location.origin;
 
-        let message = `Halo kak,\n\nBerikut adalah dokumen ${doc?.type === 'INVOICE' ? 'Invoice' : 'Penawaran'} Anda:\n\n*No. Dokumen:* ${doc?.document_number}\n*Nama:* ${formData.customerName}\n*Total:* Rp ${calculateGrandTotal().toLocaleString('id-ID')}\n\n*Link Dokumen PDF:*\n${pdfUrl}\n\n`;
+        // Get product info
+        const firstItem = rawItems[0];
+        const mainProduct = firstItem?.product || baseFabric;
+        const productName = mainProduct?.name || 'Produk';
+
+        // Check if blinds category for variant display
+        const quotationDataParsed = typeof doc?.quotation_data === 'string' ? JSON.parse(doc.quotation_data) : doc?.quotation_data;
+        const isBlindCategory = quotationDataParsed?.calculatorTypeSlug?.includes('blind');
+        let variantInfo = '';
+        if (isBlindCategory && firstItem?.selectedVariant?.attributes) {
+            try {
+                const attrs = typeof firstItem.selectedVariant.attributes === 'string'
+                    ? JSON.parse(firstItem.selectedVariant.attributes)
+                    : firstItem.selectedVariant.attributes;
+                if (attrs && Object.keys(attrs).length > 0) {
+                    variantInfo = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                }
+            } catch (e) { }
+        }
+
+        // Calculate subtotal and discount from document data
+        const grandTotal = calculateGrandTotal();
+        const discountPercent = parseFloat(String(formData.discount)) || 0;
+        const discountAmt = parseFloat(String(doc?.discount_amount)) || 0;
+        const subtotal = grandTotal + discountAmt; // Subtotal = Total + Discount Amount
+
+        // Build message
+        let message = `Halo kak,\n\nBerikut adalah dokumen ${doc?.type === 'INVOICE' ? 'Invoice' : 'Penawaran'} Anda:\n\n`;
+        message += `*No. Dokumen:* ${doc?.document_number}\n`;
+        message += `*Nama:* ${formData.customerName}\n`;
+        message += `*Produk:* ${productName}\n`;
+        if (variantInfo) {
+            message += `${variantInfo}\n`;
+        }
+        message += `\n`;
+        message += `*Subtotal:* Rp ${subtotal.toLocaleString('id-ID')}\n`;
+        if (discountAmt > 0) {
+            message += `*Diskon ${discountPercent}%:* -Rp ${discountAmt.toLocaleString('id-ID')}\n`;
+        }
+        message += `*Total:* Rp ${grandTotal.toLocaleString('id-ID')}\n\n`;
+        message += `*Link Dokumen PDF:*\n${pdfUrl}\n\n`;
 
         // Consolidated Links
         const productLinks = new Set<string>();
-        const appBaseUrl = window.location.origin;
 
         rawItems.forEach((item: any) => {
             // Main product
@@ -423,15 +463,14 @@ export default function AdminDocumentDetail() {
         });
 
         if (productLinks.size > 0) {
-            message += `*Produk yang digunakan:*\n`;
-            message += `Link\n`;
+            message += `*Produk yang digunakan:*\nLink\n`;
             productLinks.forEach(link => {
                 message += `. ${link}\n`;
             });
             message += `\n`;
         }
 
-        message += `Terima kasih telah mempercayakan kebutuhan gorden Anda kepada Amagriya Gorden.`;
+        message += `Terima kasih telah mempercayakan kebutuhan gorden Anda kepada Amagriya Gorden | Blinds`;
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappNumber = formData.customerPhone?.replace(/^0/, '62').replace(/[^0-9]/g, '') || '';
@@ -731,29 +770,35 @@ export default function AdminDocumentDetail() {
                                             // ===== USE PRE-CALCULATED WINDOWS.ITEMS =====
                                             matchingWindow.items.forEach((wItem: any, idx: number) => {
                                                 let displayName = wItem.name || '-';
-                                                displayName = displayName.replace(/^Pilih\s+[^:]+:\s*/i, '');
-                                                displayName = displayName.replace(/undefined/g, '-');
 
-                                                // Remove Product Name from Variant Name to avoid duplication
-                                                const pName = item.product?.name || '';
-                                                if (pName && displayName.toLowerCase().startsWith(pName.toLowerCase())) {
-                                                    displayName = displayName.substring(pName.length).trim();
-                                                    // Remove leading chars ( ) - :
-                                                    displayName = displayName.replace(/^[\(\)\s\-:]+/, '');
-                                                    // Remove trailing ) if we removed the opening (
-                                                    if (displayName.endsWith(')')) {
-                                                        displayName = displayName.slice(0, -1);
+                                                // For first item (Gorden), always use product name + variant attributes
+                                                if (idx === 0 && item.product?.name) {
+                                                    let variantAttrs = '';
+                                                    if (item.selectedVariant?.attributes) {
+                                                        try {
+                                                            const attrs = typeof item.selectedVariant.attributes === 'string'
+                                                                ? JSON.parse(item.selectedVariant.attributes)
+                                                                : item.selectedVariant.attributes;
+                                                            if (attrs && Object.keys(attrs).length > 0) {
+                                                                variantAttrs = ' (' + Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ') + ')';
+                                                            }
+                                                        } catch (e) { }
                                                     }
+                                                    displayName = `${item.product.name}${variantAttrs}`;
+                                                } else {
+                                                    // For components, clean up the name
+                                                    displayName = displayName.replace(/^Pilih\s+[^:]+:\s*/i, '');
+                                                    displayName = displayName.replace(/undefined/g, '-');
                                                 }
 
                                                 allRows.push({
                                                     type: idx === 0 ? 'Varian Gorden' : 'Komponen',
-                                                    name: displayName || wItem.name, // Fallback if clean results in empty
+                                                    name: displayName || wItem.name,
                                                     priceGross: Math.round(wItem.price_gross || wItem.price || 0),
                                                     discount: wItem.discount || 0,
                                                     priceNet: Math.round(wItem.price_net || wItem.price || 0),
                                                     qty: wItem.quantity || 1,
-                                                    total: Math.round(wItem.totalPrice || 0), // Use pre-calculated totalPrice
+                                                    total: Math.round(wItem.totalPrice || 0),
                                                     image: idx === 0 ? (item.product?.image || item.product?.images?.[0]) : undefined
                                                 });
                                             });
