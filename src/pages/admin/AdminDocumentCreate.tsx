@@ -102,6 +102,16 @@ interface CalculatorItem {
     };
 }
 
+// ================== HELPER FUNCTIONS ==================
+/**
+ * Format number as Rupiah currency (no decimals)
+ * @param amount - The amount to format
+ * @returns Formatted string like "1.234.567"
+ */
+const formatRupiah = (amount: number | null | undefined): string => {
+    return Math.round(amount || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+};
+
 // ================== COMPONENT ==================
 
 export default function AdminDocumentCreate() {
@@ -1339,7 +1349,7 @@ export default function AdminDocumentCreate() {
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right text-gray-600">
                                                                                                 {/* Base Price + Discount Logic if needed */}
-                                                                                                Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID')}
+                                                                                                Rp {formatRupiah(prices.fabricPricePerMeter ?? 0)}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center">
                                                                                                 <input
@@ -1352,13 +1362,13 @@ export default function AdminDocumentCreate() {
                                                                                                 />
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right text-gray-600 font-medium bg-gray-50/50">
-                                                                                                Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                                Rp {formatRupiah(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100))}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center font-medium">
                                                                                                 {item.quantity}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right font-bold text-gray-900">
-                                                                                                Rp {prices.total.toLocaleString('id-ID')}
+                                                                                                Rp {formatRupiah(prices.total)}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center">
                                                                                                 <button
@@ -1516,18 +1526,18 @@ export default function AdminDocumentCreate() {
                                                                                     <span className="text-sm text-gray-600">Total Group</span>
                                                                                     {(groupItems[0]?.groupDiscount || 0) > 0 && (
                                                                                         <span className="text-xs text-[#EB216A] font-medium">
-                                                                                            Hemat Rp {(groupTotal * ((groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                            Hemat Rp {formatRupiah(groupTotal * ((groupItems[0]?.groupDiscount || 0) / 100))}
                                                                                         </span>
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-right">
                                                                                     {(groupItems[0]?.groupDiscount || 0) > 0 && (
                                                                                         <span className="text-xs text-gray-400 line-through block">
-                                                                                            Rp {groupTotal.toLocaleString('id-ID')}
+                                                                                            Rp {formatRupiah(groupTotal)}
                                                                                         </span>
                                                                                     )}
                                                                                     <span className="text-lg font-bold text-[#EB216A]">
-                                                                                        Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                        Rp {formatRupiah(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100))}
                                                                                     </span>
                                                                                 </div>
                                                                             </div>
@@ -2095,7 +2105,7 @@ export default function AdminDocumentCreate() {
                                         <div className="mt-4 p-4 bg-[#EB216A]/5 border border-[#EB216A]/20 rounded-lg">
                                             <div className="flex justify-between items-center">
                                                 <span className="font-semibold text-sm">Total Kalkulator</span>
-                                                <span className="text-lg font-bold text-[#EB216A]">Rp {calculateTotal().toLocaleString('id-ID')}</span>
+                                                <span className="text-lg font-bold text-[#EB216A]">Rp {formatRupiah(calculateTotal())}</span>
                                             </div>
                                         </div>
                                     )}
@@ -2159,17 +2169,17 @@ export default function AdminDocumentCreate() {
                         <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm border border-gray-100">
                             <div className="flex justify-between text-gray-600">
                                 <span>Total Item</span>
-                                <span>Rp {calculateTotal().toLocaleString('id-ID')}</span>
+                                <span>Rp {formatRupiah(calculateTotal())}</span>
                             </div>
                             {formData.discount > 0 && (
                                 <div className="flex justify-between text-green-600">
                                     <span>Diskon ({formData.discount}%)</span>
-                                    <span>-Rp {(calculateTotal() * formData.discount / 100).toLocaleString('id-ID')}</span>
+                                    <span>-Rp {formatRupiah(calculateTotal() * formData.discount / 100)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 text-[#EB216A]">
                                 <span>Total Akhir</span>
-                                <span>Rp {(calculateTotal() * (1 - (formData.discount || 0) / 100)).toLocaleString('id-ID')}</span>
+                                <span>Rp {formatRupiah(calculateTotal() * (1 - (formData.discount || 0) / 100))}</span>
                             </div>
                         </div>
 
@@ -2640,7 +2650,7 @@ export default function AdminDocumentCreate() {
                     </div>
                 )
             }
-            {/* Add/Edit Item Modal */} 
+            {/* Add/Edit Item Modal */}
             <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
                 <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto overflow-x-hidden">
                     <DialogHeader>
