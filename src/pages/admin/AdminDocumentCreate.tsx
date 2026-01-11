@@ -331,6 +331,7 @@ export default function AdminDocumentCreate() {
         setHeight('');
         setQuantity('1');
         setItemName('');
+        setEditingItemId(null); // Ensure we are NOT in edit mode
 
         if (product) {
             setItemModalTargetProduct(product);
@@ -2328,7 +2329,15 @@ export default function AdminDocumentCreate() {
                                             <img src={getProductImageUrl(product.images || product.image)} alt="" className="w-12 h-12 rounded object-cover bg-gray-100" />
                                             <div>
                                                 <p className="font-medium">{product.name}</p>
-                                                {/* Price removed as per request - handled by variants */}
+                                                {!isBlindType() && (
+                                                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                                                        {product.minPrice > 0 && (
+                                                            <p className="font-medium text-[#EB216A]">Mulai Rp {Number(product.minPrice).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+                                                        )}
+                                                        <p className="text-xs">Lebar {product.variantMinWidth || 0} s/d {product.variantMaxWidth || '-'} cm</p>
+                                                        <p className="text-xs">Tinggi {product.variantMinHeight || 0} s/d {product.variantMaxHeight || '-'} cm</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -2488,7 +2497,7 @@ export default function AdminDocumentCreate() {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-100">
-                                                        {sorted.map((v: any) => {
+                                                        {sorted.map((v: any, index: number) => {
                                                             const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
                                                             const priceNet = Number(v.price_net) || 0;
                                                             const priceGross = Number(v.price_gross) || 0;
@@ -2497,7 +2506,7 @@ export default function AdminDocumentCreate() {
                                                             return (
                                                                 <tr
                                                                     key={v.id}
-                                                                    className="hover:bg-pink-50 cursor-pointer transition-colors"
+                                                                    className={`cursor-pointer transition-colors hover:bg-pink-100 border-b border-gray-100 ${index % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}
                                                                     onClick={() => handleSelectVariant(v)}
                                                                 >
                                                                     {columnKeys.map(key => {

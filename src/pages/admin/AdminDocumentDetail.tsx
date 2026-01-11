@@ -459,7 +459,7 @@ export default function AdminDocumentDetail() {
         message += `*No. Dokumen:* ${doc?.document_number}\n`;
         message += `*Nama:* ${formData.customerName}\n`;
         message += `*Produk:* ${productName}\n`;
-        if (variantInfo) {
+        if (isBlindCategory && variantInfo) {
             message += `*Variasi:* ${variantInfo}\n`;
         }
         message += `\n`;
