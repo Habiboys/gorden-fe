@@ -2503,10 +2503,48 @@ export default function AdminDocumentCreate() {
                                                             const priceGross = Number(v.price_gross) || 0;
                                                             const displayPrice = priceNet || priceGross;
 
+                                                            // Styling Logic
+                                                            let rowBgClass = '';
+                                                            const hasGelombangCol = columnKeys.includes('Gelombang') || columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()));
+
+                                                            if (hasGelombangCol) {
+                                                                // Extract Gelombang Value
+                                                                let gelombangVal = 0;
+                                                                if (columnKeys.includes('Gelombang')) {
+                                                                    const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                                    gelombangVal = lebar !== 999999 ? Math.round(lebar / 10) : 0;
+                                                                } else {
+                                                                    gelombangVal = getNum(attrs, ['gelombang', 'gel']);
+                                                                }
+
+                                                                // Assign Color based on Gelombang Value (Cycle through pastel colors)
+                                                                // Use a hash or modulo to pick color. 
+                                                                // Colors: Pink, Blue, Green, Yellow, Purple (Light variants)
+                                                                const colors = [
+                                                                    'bg-red-50 hover:bg-red-100',
+                                                                    'bg-blue-50 hover:bg-blue-100',
+                                                                    'bg-green-50 hover:bg-green-100',
+                                                                    'bg-yellow-50 hover:bg-yellow-100',
+                                                                    'bg-purple-50 hover:bg-purple-100'
+                                                                ];
+
+                                                                // If gelombangVal is valid, pick color. Else fallback.
+                                                                if (gelombangVal > 0 && gelombangVal !== 999999) {
+                                                                    // offset to align 4 -> index 0, 5 -> index 1 etc if possible, or just modulo
+                                                                    const colorIndex = (gelombangVal) % colors.length;
+                                                                    rowBgClass = colors[colorIndex];
+                                                                } else {
+                                                                    rowBgClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                                                                }
+                                                            } else {
+                                                                // Zebra Striping for Non-Gelombang (Components, Blind, etc)
+                                                                rowBgClass = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                                                            }
+
                                                             return (
                                                                 <tr
                                                                     key={v.id}
-                                                                    className={`cursor-pointer transition-colors hover:bg-pink-100 border-b border-gray-100 ${index % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}
+                                                                    className={`${rowBgClass} cursor-pointer transition-colors border-b border-gray-100`}
                                                                     onClick={() => handleSelectVariant(v)}
                                                                 >
                                                                     {columnKeys.map(key => {
@@ -2515,7 +2553,7 @@ export default function AdminDocumentCreate() {
                                                                             const lebar = getNum(attrs, ['lebar', 'width', 'l']);
                                                                             const val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
                                                                             return (
-                                                                                <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
+                                                                                <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap font-medium">
                                                                                     {val}
                                                                                 </td>
                                                                             );
@@ -2572,16 +2610,47 @@ export default function AdminDocumentCreate() {
 
                                             {/* MOBILE: Card View */}
                                             <div className="lg:hidden space-y-3">
-                                                {sorted.map((v: any) => {
+                                                {sorted.map((v: any, index: number) => {
                                                     const attrs = safeJSONParse(v.attributes, {}) as Record<string, any>;
                                                     const priceNet = Number(v.price_net) || 0;
                                                     const priceGross = Number(v.price_gross) || 0;
                                                     const displayPrice = priceNet || priceGross;
 
+                                                    // Styling Logic (Duplicated for Mobile to ensure same logic)
+                                                    let rowBgClass = '';
+                                                    const hasGelombangCol = columnKeys.includes('Gelombang') || columnKeys.some(k => ['gelombang', 'gel'].includes(k.toLowerCase()));
+
+                                                    if (hasGelombangCol) {
+                                                        let gelombangVal = 0;
+                                                        if (columnKeys.includes('Gelombang')) {
+                                                            const lebar = getNum(attrs, ['lebar', 'width', 'l']);
+                                                            gelombangVal = lebar !== 999999 ? Math.round(lebar / 10) : 0;
+                                                        } else {
+                                                            gelombangVal = getNum(attrs, ['gelombang', 'gel']);
+                                                        }
+
+                                                        const colors = [
+                                                            'bg-red-50 border-red-100',
+                                                            'bg-blue-50 border-blue-100',
+                                                            'bg-green-50 border-green-100',
+                                                            'bg-yellow-50 border-yellow-100',
+                                                            'bg-purple-50 border-purple-100'
+                                                        ];
+
+                                                        if (gelombangVal > 0 && gelombangVal !== 999999) {
+                                                            const colorIndex = (gelombangVal) % colors.length;
+                                                            rowBgClass = colors[colorIndex];
+                                                        } else {
+                                                            rowBgClass = index % 2 === 0 ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200';
+                                                        }
+                                                    } else {
+                                                        rowBgClass = index % 2 === 0 ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200';
+                                                    }
+
                                                     return (
                                                         <div
                                                             key={v.id}
-                                                            className="border border-gray-200 rounded-xl p-4 hover:border-[#EB216A] hover:bg-pink-50 cursor-pointer transition-all flex items-center justify-between gap-4"
+                                                            className={`border rounded-xl p-4 cursor-pointer transition-all flex items-center justify-between gap-4 ${rowBgClass}`}
                                                             onClick={() => handleSelectVariant(v)}
                                                         >
                                                             {/* Left Info */}
