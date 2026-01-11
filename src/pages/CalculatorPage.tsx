@@ -224,7 +224,22 @@ export default function CalculatorPageV2() {
 
         if (typesRes.success && typesRes.data?.length > 0) {
           setCalculatorTypes(typesRes.data);
-          setSelectedTypeSlug(typesRes.data[0].slug);
+
+          // Check draft first to prevent overwriting with default
+          const draftJson = localStorage.getItem('amagriya_calculator_draft');
+          let hasDraftSlug = false;
+          if (draftJson) {
+            try {
+              const d = JSON.parse(draftJson);
+              if (d.selectedTypeSlug && typesRes.data.some((t: any) => t.slug === d.selectedTypeSlug)) {
+                hasDraftSlug = true;
+              }
+            } catch (e) { }
+          }
+
+          if (!hasDraftSlug) {
+            setSelectedTypeSlug(typesRes.data[0].slug);
+          }
         }
 
         if (productsRes.success && productsRes.data?.length > 0) {
@@ -1333,7 +1348,7 @@ export default function CalculatorPageV2() {
                                         </div>
                                         <div>
                                           <span className="text-gray-500 text-xs block mb-0.5">Harga</span>
-                                          <span className="font-medium text-gray-900">Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}</span>
+                                          <span className="font-medium text-gray-900">Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                         </div>
                                         <div>
                                           <span className="text-gray-500 text-xs block mb-0.5">Qty</span>
@@ -1343,7 +1358,7 @@ export default function CalculatorPageV2() {
 
                                       <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
                                         <span className="text-gray-600 font-medium text-sm">Total</span>
-                                        <span className="text-lg font-bold text-[#EB216A]">Rp {prices.total.toLocaleString('id-ID')}</span>
+                                        <span className="text-lg font-bold text-[#EB216A]">Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -1352,7 +1367,7 @@ export default function CalculatorPageV2() {
 
                               <div className="flex justify-between items-center py-6 mt-4 px-4 bg-gray-50/80 rounded-xl border border-gray-100 border-dashed">
                                 <span className="font-bold text-gray-900 text-lg">Subtotal Group</span>
-                                <span className="font-bold text-[#EB216A] text-xl">Rp {groupTotal.toLocaleString('id-ID')}</span>
+                                <span className="font-bold text-[#EB216A] text-xl">Rp {groupTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                               </div>
                             </div>
 
@@ -1383,11 +1398,11 @@ export default function CalculatorPageV2() {
                                         <td className="py-3 px-4 text-center">{item.height}</td>
                                         <td className="py-3 px-4 text-center">{vol.toFixed(2)}</td>
                                         <td className="py-3 px-4 text-right text-gray-500">
-                                          Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
+                                          Rp {((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </td>
                                         <td className="py-3 px-4 text-center">{item.quantity}</td>
                                         <td className="py-3 px-4 text-right font-medium text-gray-900">
-                                          Rp {prices.total.toLocaleString('id-ID')}
+                                          Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </td>
                                         <td className="py-3 px-4 text-center">
                                           <button
@@ -1405,7 +1420,7 @@ export default function CalculatorPageV2() {
                                   <tr>
                                     <td colSpan={6} className="py-3 px-4 text-right">Subtotal Group</td>
                                     <td className="py-3 px-4 text-right text-[#EB216A]">
-                                      Rp {groupTotal.toLocaleString('id-ID')}
+                                      Rp {groupTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                     </td>
                                     <td></td>
                                   </tr>
@@ -1552,7 +1567,7 @@ export default function CalculatorPageV2() {
                                             </div>
                                           </td>
                                           <td className="px-3 py-2.5 text-right text-gray-600">
-                                            Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}
+                                            Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                           </td>
                                           <td className="px-3 py-2.5 text-center w-20">
                                             <span className="inline-flex items-center justify-center w-14 h-7 bg-gray-100 rounded text-sm text-gray-600">
@@ -1560,12 +1575,13 @@ export default function CalculatorPageV2() {
                                             </span>
                                           </td>
                                           <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
-                                            Rp{prices.fabric.toLocaleString('id-ID')}
+                                            Rp{prices.fabric.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                           </td>
                                         </tr>
 
                                         {/* Component Rows */}
                                         {currentType?.components
+                                          ?.sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
                                           ?.filter(comp => {
                                             if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
                                             if (comp.hide_on_door && item.itemType === 'pintu') {
@@ -1644,7 +1660,7 @@ export default function CalculatorPageV2() {
                                                   </div>
                                                 </td>
                                                 <td className="px-3 py-2.5 text-right text-gray-600">
-                                                  {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : 'Rp.0'}
+                                                  {selection ? `Rp${selection.product.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}` : 'Rp.0'}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center w-20">
                                                   {selection ? (
@@ -1681,7 +1697,7 @@ export default function CalculatorPageV2() {
                                                   )}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
-                                                  Rp{compPrice.toLocaleString('id-ID')}
+                                                  Rp{compPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                 </td>
                                               </tr>
                                             );
@@ -1758,7 +1774,7 @@ export default function CalculatorPageV2() {
                                         <div className="mt-3 grid grid-cols-3 gap-2 items-center text-sm border-t border-gray-100 pt-3">
                                           <div>
                                             <span className="text-xs text-gray-500 block">Harga</span>
-                                            <span className="font-medium">Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID')}</span>
+                                            <span className="font-medium">Rp{((prices as any).fabricPricePerMeter || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                           </div>
                                           <div className="flex justify-center">
                                             <span className="inline-flex items-center justify-center w-12 h-8 bg-gray-100 rounded text-gray-600 font-medium">
@@ -1767,7 +1783,7 @@ export default function CalculatorPageV2() {
                                           </div>
                                           <div className="text-right">
                                             <span className="text-xs text-gray-500 block">Total</span>
-                                            <span className="font-bold text-[#EB216A]">Rp{prices.fabric.toLocaleString('id-ID')}</span>
+                                            <span className="font-bold text-[#EB216A]">Rp{prices.fabric.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                           </div>
                                         </div>
                                       </div>
@@ -1841,7 +1857,7 @@ export default function CalculatorPageV2() {
                                                 <div>
                                                   <span className="text-xs text-gray-500 block">Harga</span>
                                                   <span className="font-medium">
-                                                    {selection ? `Rp${selection.product.price.toLocaleString('id-ID')}` : '-'}
+                                                    {selection ? `Rp${selection.product.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}` : '-'}
                                                   </span>
                                                 </div>
                                                 <div className="flex justify-center">
@@ -1878,7 +1894,7 @@ export default function CalculatorPageV2() {
                                                 </div>
                                                 <div className="text-right">
                                                   <span className="text-xs text-gray-500 block">Total</span>
-                                                  <span className="font-bold text-[#EB216A]">Rp{compPrice.toLocaleString('id-ID')}</span>
+                                                  <span className="font-bold text-[#EB216A]">Rp{compPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                                 </div>
                                               </div>
                                             </div>
@@ -1893,7 +1909,7 @@ export default function CalculatorPageV2() {
                               <div className="flex justify-between items-center pt-3">
                                 <p className="text-gray-600 font-medium">Subtotal</p>
                                 <p className="text-xl font-bold text-[#EB216A]">
-                                  Rp {prices.total.toLocaleString('id-ID')}
+                                  Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                 </p>
                               </div>
                             </div>
@@ -1915,7 +1931,7 @@ export default function CalculatorPageV2() {
                       <p className="text-xs text-gray-500">Untuk {items.length} item ({items.reduce((s, i) => s + i.quantity, 0)} unit)</p>
                     </div>
                     <p className="text-xl sm:text-2xl font-bold">
-                      Rp {grandTotal.toLocaleString('id-ID')}
+                      Rp {grandTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                 </div>
@@ -1960,9 +1976,9 @@ export default function CalculatorPageV2() {
                   <p className="text-sm lg:text-base font-medium text-gray-900 break-words">{tempSelectedProduct.name}</p>
                   <p className="text-xs lg:text-sm text-[#EB216A] font-bold">
                     {tempSelectedProduct.minPrice && tempSelectedProduct.minPrice > 0
-                      ? `Mulai Rp ${tempSelectedProduct.minPrice.toLocaleString('id-ID')}`
+                      ? `Mulai Rp ${tempSelectedProduct.minPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
                       : tempSelectedProduct.price > 0
-                        ? `Rp ${tempSelectedProduct.price.toLocaleString('id-ID')}/m²`
+                        ? `Rp ${tempSelectedProduct.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m²`
                         : 'Lihat Varian'}
                   </p>
                   {tempSelectedProduct.selectedVariantName && (
@@ -2193,9 +2209,9 @@ export default function CalculatorPageV2() {
                     <h4 className="font-medium text-gray-900 text-sm truncate">{product.name}</h4>
                     <p className="text-[#EB216A] font-bold">
                       {product.minPrice && product.minPrice > 0
-                        ? `Mulai Rp ${product.minPrice.toLocaleString('id-ID')}`
+                        ? `Mulai Rp ${product.minPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
                         : product.price > 0
-                          ? `Rp ${product.price.toLocaleString('id-ID')}/m`
+                          ? `Rp ${product.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m`
                           : 'Lihat Varian'}
                     </p>
                   </div>

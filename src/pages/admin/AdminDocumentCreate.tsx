@@ -109,7 +109,7 @@ interface CalculatorItem {
  * @returns Formatted string like "1.234.567"
  */
 const formatRupiah = (amount: number | null | undefined): string => {
-    return Math.round(amount || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+    return (amount || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
 };
 
 // ================== COMPONENT ==================
@@ -179,9 +179,9 @@ export default function AdminDocumentCreate() {
         customerEmail: '',
         customerAddress: '',
         referralCode: '',
-        discount: 20,
+        discount: 0,
         validUntil: getDefaultValidUntil(),
-        paymentTerms: '',
+        paymentTerms: 'Bank BRI 0256 0106 3614 506 A.n Abdul Latif',
         notes: ''
     });
 
@@ -441,6 +441,9 @@ export default function AdminDocumentCreate() {
 
         // CASE: New Item Selection
         if (isBlindType()) {
+            // CRITICAL: Reset targetGroupId when selecting NEW product (not adding to existing group)
+            setTargetGroupId(null);
+
             // Check for variants FIRST
             try {
                 const variantsRes = await productVariantsApi.getByProduct(product.id);
@@ -524,9 +527,18 @@ export default function AdminDocumentCreate() {
             : (isBlindType() ? Date.now().toString() + '-group' : undefined);
 
         // Determine Variant for Blind items (Group Level Consistency)
+        // Determine Variant & Group Discount
         let itemSelectedVariant = undefined;
         let itemFabricDiscount = 0;
         let itemGroupDiscount = 0;
+
+        // Group Discount Inheritance (For ALL types with grouping, e.g. Smokering & Blind)
+        if (targetGroupId) {
+            const existingGroupItem = items.find(i => i.groupId === targetGroupId);
+            if (existingGroupItem) {
+                itemGroupDiscount = existingGroupItem.groupDiscount || 0;
+            }
+        }
 
         if (isBlindType()) {
             if (targetGroupId) {
@@ -535,7 +547,7 @@ export default function AdminDocumentCreate() {
                 if (existingGroupItem?.selectedVariant) {
                     itemSelectedVariant = existingGroupItem.selectedVariant;
                     itemFabricDiscount = existingGroupItem.fabricDiscount || 0;
-                    itemGroupDiscount = existingGroupItem.groupDiscount || 0; // Inherit group discount
+                    // itemGroupDiscount handled above
                 }
             } else if (tempGroupVariant) {
                 // New Group -> Use Temp Variant selected in previous step
@@ -557,7 +569,7 @@ export default function AdminDocumentCreate() {
             panels: isBlindType() ? 0 : calculatePanels(itemWidth, selectedCalcType?.fabric_multiplier || 2.4, selectedFabric?.maxWidth || 280),
             quantity: parseFloat(quantity),
             fabricDiscount: isBlindType() ? itemFabricDiscount : 0,
-            groupDiscount: isBlindType() ? itemGroupDiscount : 0,
+            groupDiscount: itemGroupDiscount, // Use inherited variable directly
             selectedVariant: itemSelectedVariant, // Assign pre-selected variant
             components: isBlindType() ? {} : initializeComponents() // Initialize components for standard flow
         };
@@ -692,7 +704,8 @@ export default function AdminDocumentCreate() {
         // Case 1: Selecting variant for specific item (Edit or Late Select)
         if (variantItemId) {
             const newMultiplier = Number(variant.quantity_multiplier) || 1;
-            setItems(items.map(item => {
+            // Use functional update to ensure we have latest items state (fixes race condition with new items)
+            setItems(prevItems => prevItems.map(item => {
                 if (item.id === variantItemId) {
                     // Sync components that should multiply with variant
                     const updatedComponents = { ...item.components };
@@ -852,14 +865,16 @@ export default function AdminDocumentCreate() {
 
     const calculateItemPrice = (item: CalculatorItem) => {
         const product = item.product || selectedFabric; // PRIORITIZE ITEM PRODUCT
-        if (!product || !selectedCalcType) return { fabricPricePerMeter: 0, fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0, totalAfterGroupDiscount: 0 };
+        if (!product || !selectedCalcType) return { fabricPricePerMeter: 0, fabricPricePerMeterNet: 0, fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0, totalAfterGroupDiscount: 0 };
 
         const widthM = item.width / 100;
         const heightM = item.height / 100;
 
-        // Use variant price (which is set to GROSS in handleSelectVariant), fallback to 0
-        const variantPrice = item.selectedVariant ? (item.selectedVariant.price || 0) : 0;
-        const fabricPricePerMeter = variantPrice;
+        // Use variant prices: GROSS for display, NET for calculation
+        const variantPriceGross = item.selectedVariant ? (item.selectedVariant.price_gross || item.selectedVariant.price || 0) : 0;
+        const variantPriceNet = item.selectedVariant ? (item.selectedVariant.price_net || variantPriceGross) : 0;
+        const fabricPricePerMeter = variantPriceGross; // For display (Harga Satuan)
+        const fabricPricePerMeterNet = variantPriceNet; // For calculation (Harga Net)
         const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
 
         // Check if this is Blind flow (simpler pricing)
@@ -873,24 +888,28 @@ export default function AdminDocumentCreate() {
 
         let fabricMeters = 0;
         let fabricPriceBeforeDiscount = 0;
+        let fabricPrice = 0; // This is NET price (from database)
 
         if (isBlind) {
             // BLIND FLOW: Price × Volume × Qty (volume = width × height in meters)
             const volumeM2 = widthM * heightM;
             fabricPriceBeforeDiscount = fabricPricePerMeter * volumeM2 * item.quantity;
+            fabricPrice = fabricPricePerMeterNet * volumeM2 * item.quantity; // Use NET price
             fabricMeters = volumeM2; // Display volume for blind
         } else if (hasSibakAttribute || variantMultiplier > 1) {
             // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
-            // (Sibak 1 = multiplier 1, still uses this formula instead of area)
             fabricPriceBeforeDiscount = fabricPricePerMeter * variantMultiplier * item.quantity;
+            fabricPrice = fabricPricePerMeterNet * variantMultiplier * item.quantity; // Use NET price
             fabricMeters = 0; // Not calculated by area when using multiplier
         } else {
             // GORDEN FLOW standard: Area Calculation (for products without Sibak variant)
             fabricMeters = widthM * (selectedCalcType.fabric_multiplier || 2.4) * heightM;
             fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+            fabricPrice = fabricMeters * fabricPricePerMeterNet * item.quantity; // Use NET price
         }
 
-        const fabricPrice = fabricPriceBeforeDiscount * (1 - (item.fabricDiscount || 0) / 100);  // Apply fabric discount
+        // NOTE: fabricDiscount is now for DISPLAY ONLY, not for calculation
+        // fabricPrice already uses price_net from database
 
         let componentsPrice = 0;
         if (item.packageType === 'gorden-lengkap' && selectedCalcType.components) {
@@ -906,8 +925,10 @@ export default function AdminDocumentCreate() {
         const totalAfterItemDiscount = subtotal * (1 - (item.itemDiscount || 0) / 100);  // Apply item discount
         const totalAfterGroupDiscount = totalAfterItemDiscount * (1 - (item.groupDiscount || 0) / 100); // Apply group discount
 
+        // NO ROUNDING HERE - rounding only at final display
         return {
             fabricPricePerMeter,
+            fabricPricePerMeterNet,
             variantMultiplier,
             fabric: fabricPrice,
             fabricBeforeDiscount: fabricPriceBeforeDiscount,
@@ -1205,8 +1226,8 @@ export default function AdminDocumentCreate() {
                                                     <p className="text-gray-400">Belum dipilih...</p>
                                                 )}
                                             </div>
-                                            <Button variant="outline" size="sm" onClick={() => setShowFabricPicker(true)}>
-                                                <Search className="w-4 h-4 mr-2" /> Pilih
+                                            <Button variant="outline" size="sm" onClick={() => setShowFabricPicker(true)} className="h-auto px-6">
+                                                <Search className="w-4 h-4 mr-2" /> {selectedFabric ? 'Ganti' : 'Pilih'}
                                             </Button>
                                         </div>
                                     </div>
@@ -1362,7 +1383,7 @@ export default function AdminDocumentCreate() {
                                                                                                 />
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-right text-gray-600 font-medium bg-gray-50/50">
-                                                                                                Rp {formatRupiah(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100))}
+                                                                                                Rp {formatRupiah(prices.fabricPricePerMeterNet ?? prices.fabricPricePerMeter)}
                                                                                             </td>
                                                                                             <td className="py-3 px-3 text-center font-medium">
                                                                                                 {item.quantity}
@@ -1420,11 +1441,11 @@ export default function AdminDocumentCreate() {
                                                                                         <div className="flex flex-col items-end">
                                                                                             {(groupItems[0]?.groupDiscount || 0) > 0 && (
                                                                                                 <span className="text-xs text-gray-400 line-through font-normal">
-                                                                                                    Rp {groupTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                                    Rp {formatRupiah(groupTotal)}
                                                                                                 </span>
                                                                                             )}
                                                                                             <span>
-                                                                                                Rp {(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100)).toLocaleString('id-ID')}
+                                                                                                Rp {formatRupiah(groupTotal * (1 - (groupItems[0]?.groupDiscount || 0) / 100))}
                                                                                             </span>
                                                                                         </div>
                                                                                     </td>
@@ -1720,6 +1741,7 @@ export default function AdminDocumentCreate() {
 
                                                                     {/* 2. Components Rows */}
                                                                     {selectedCalcType?.components
+                                                                        ?.sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
                                                                         ?.filter(comp => {
                                                                             if (item.packageType === 'gorden-saja') return false; // Hide components for Gorden Saja
                                                                             if (comp.hide_on_door && item.itemType === 'pintu') {

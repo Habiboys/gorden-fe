@@ -323,7 +323,7 @@ export default function AdminDocumentDetail() {
     const calculateGrandTotal = () => {
         const subtotal = calculateTotal();
         const discountAmount = subtotal * (formData.discount / 100);
-        return subtotal - discountAmount;
+        return Math.ceil(subtotal - discountAmount);
     };
 
     // ================== DATE FORMATTING ==================
@@ -403,19 +403,25 @@ export default function AdminDocumentDetail() {
         const mainProduct = firstItem?.product || baseFabric;
         const productName = mainProduct?.name || 'Produk';
 
-        // Check if blinds category for variant display
+        // Check if blinds or has variant
         const quotationDataParsed = typeof doc?.quotation_data === 'string' ? JSON.parse(doc.quotation_data) : doc?.quotation_data;
         const isBlindCategory = quotationDataParsed?.calculatorTypeSlug?.includes('blind');
+
         let variantInfo = '';
-        if (isBlindCategory && firstItem?.selectedVariant?.attributes) {
+        if (firstItem?.selectedVariant) {
             try {
                 const attrs = typeof firstItem.selectedVariant.attributes === 'string'
                     ? JSON.parse(firstItem.selectedVariant.attributes)
-                    : firstItem.selectedVariant.attributes;
+                    : (firstItem.selectedVariant.attributes || {});
+
                 if (attrs && Object.keys(attrs).length > 0) {
                     variantInfo = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                } else if (firstItem.selectedVariant.name) {
+                    variantInfo = firstItem.selectedVariant.name;
                 }
-            } catch (e) { }
+            } catch (e) {
+                if (firstItem.selectedVariant.name) variantInfo = firstItem.selectedVariant.name;
+            }
         }
 
         // Calculate subtotal and discount from document data
@@ -430,7 +436,7 @@ export default function AdminDocumentDetail() {
         message += `*Nama:* ${formData.customerName}\n`;
         message += `*Produk:* ${productName}\n`;
         if (variantInfo) {
-            message += `${variantInfo}\n`;
+            message += `*Variasi:* ${variantInfo}\n`;
         }
         message += `\n`;
         message += `*Subtotal:* Rp ${subtotal.toLocaleString('id-ID')}\n`;
@@ -624,6 +630,28 @@ export default function AdminDocumentDetail() {
                                                 const groupTotalRaw = items.reduce((sum, item) => sum + calculateItemPriceRich(item).total, 0);
                                                 const groupTotalAfterGroupDisc = groupTotalRaw * (1 - groupDiscount / 100);
 
+                                                // Calculate Price Range from Net Prices
+                                                const netPrices = items.map(i => i.selectedVariant?.price_net || i.selectedVariant?.price || 0).filter(p => p > 0);
+                                                const minPrice = netPrices.length ? Math.min(...netPrices) : 0;
+                                                const maxPrice = netPrices.length ? Math.max(...netPrices) : 0;
+                                                const priceDisplay = minPrice === maxPrice
+                                                    ? `Rp ${minPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
+                                                    : `Rp ${minPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })} - Rp ${maxPrice.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+
+                                                // Extract Variant Info
+                                                let variantInfo = '';
+                                                try {
+                                                    const attrs = typeof firstItem.selectedVariant?.attributes === 'string'
+                                                        ? JSON.parse(firstItem.selectedVariant.attributes)
+                                                        : firstItem.selectedVariant?.attributes;
+                                                    if (attrs && Object.keys(attrs).length > 0) {
+                                                        variantInfo = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
+                                                    }
+                                                } catch (e) { }
+                                                if (!variantInfo && firstItem.selectedVariant?.name && !firstItem.selectedVariant.name.includes('undefined')) {
+                                                    variantInfo = firstItem.selectedVariant.name;
+                                                }
+
                                                 return (
                                                     <div key={groupId} className="bg-white border rounded-xl shadow-sm overflow-hidden mb-6">
                                                         {/* Product Header */}
@@ -635,7 +663,10 @@ export default function AdminDocumentDetail() {
                                                                 />
                                                                 <div>
                                                                     <h3 className="font-bold text-lg text-gray-900">{groupProduct?.name || 'Produk Custom'}</h3>
-                                                                    <p className="text-[#EB216A] font-medium">Rp {(groupProduct?.price ?? 0).toLocaleString('id-ID')}/m</p>
+                                                                    {variantInfo && (
+                                                                        <p className="text-sm text-gray-500 mt-1">{variantInfo}</p>
+                                                                    )}
+                                                                    <p className="text-[#EB216A] font-medium mt-1">{priceDisplay}/m</p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -663,44 +694,8 @@ export default function AdminDocumentDetail() {
                                                                                 <tr key={item.id} className="hover:bg-gray-50/50">
                                                                                     <td className="py-3 px-3 relative">
                                                                                         <div className="font-medium text-gray-900">
-                                                                                            {item.product?.name || item.name?.split('(')[0]?.trim() || '-'}
+                                                                                            {item.name?.split('(')[0]?.trim() || item.product?.name || '-'}
                                                                                         </div>
-                                                                                        {(() => {
-                                                                                            if (!item.selectedVariant) return null;
-
-                                                                                            let variantName = '';
-                                                                                            if (item.selectedVariant.name && !item.selectedVariant.name.includes('undefined')) {
-                                                                                                variantName = item.selectedVariant.name;
-                                                                                            } else {
-                                                                                                try {
-                                                                                                    const attrs = typeof item.selectedVariant.attributes === 'string'
-                                                                                                        ? JSON.parse(item.selectedVariant.attributes)
-                                                                                                        : item.selectedVariant.attributes;
-
-                                                                                                    if (attrs && Object.keys(attrs).length > 0) {
-                                                                                                        variantName = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                                                                    }
-                                                                                                } catch (e) { }
-                                                                                            }
-
-                                                                                            if (!variantName && item.width && item.height) {
-                                                                                                variantName = `${item.width}cm x ${item.height}cm`;
-                                                                                            }
-
-                                                                                            if (variantName) {
-                                                                                                return (
-                                                                                                    <div className="text-xs text-gray-500 mt-0.5">
-                                                                                                        Varian: {variantName}
-                                                                                                    </div>
-                                                                                                );
-                                                                                            }
-                                                                                            return null;
-                                                                                        })()}
-                                                                                        {item.itemType && (
-                                                                                            <div className="text-xs text-gray-400 mt-0.5 capitalize">
-                                                                                                Tipe: {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'}
-                                                                                            </div>
-                                                                                        )}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-center">
                                                                                         {item.width} x {item.height}
@@ -759,7 +754,7 @@ export default function AdminDocumentDetail() {
                             ) : (
                                 // Item Block View (Curtain / Table Style like AdminDocumentCreate)
                                 <div className="space-y-6 mt-6">
-                                    {rawItems.map((item, itemIdx) => {
+                                    {rawItems.map((item) => {
                                         // Find matching window for this item which has pre-calculated values
                                         const matchingWindow = windows.find(w => w.id === item.id);
 
@@ -794,11 +789,11 @@ export default function AdminDocumentDetail() {
                                                 allRows.push({
                                                     type: idx === 0 ? 'Varian Gorden' : 'Komponen',
                                                     name: displayName || wItem.name,
-                                                    priceGross: Math.round(wItem.price_gross || wItem.price || 0),
+                                                    priceGross: wItem.price_gross || wItem.price || 0,
                                                     discount: wItem.discount || 0,
-                                                    priceNet: Math.round(wItem.price_net || wItem.price || 0),
+                                                    priceNet: wItem.price_net || wItem.price || 0,
                                                     qty: wItem.quantity || 1,
-                                                    total: Math.round(wItem.totalPrice || 0),
+                                                    total: wItem.totalPrice || 0,
                                                     image: idx === 0 ? (item.product?.image || item.product?.images?.[0]) : undefined
                                                 });
                                             });
@@ -837,11 +832,11 @@ export default function AdminDocumentDetail() {
                                                 type: 'Varian Gorden', // Changed from product name to avoid redundancy
                                                 name: `${item.product?.name || item.productName || 'Gorden Custom'} (${cleanVariantName})`,
                                                 variant: cleanVariantName,
-                                                priceGross: Math.round(fabricGross),
+                                                priceGross: fabricGross,
                                                 discount: fabricDiscount,
-                                                priceNet: Math.round(fabricNet),
+                                                priceNet: fabricNet,
                                                 qty: effectiveQty,
-                                                total: Math.round(fabricTotal),
+                                                total: fabricTotal,
                                                 image: item.product?.image || item.product?.images?.[0]
                                             });
 
@@ -872,11 +867,11 @@ export default function AdminDocumentDetail() {
                                                     allRows.push({
                                                         type: compLabel,
                                                         name: compName,
-                                                        priceGross: Math.round(compGross),
+                                                        priceGross: compGross,
                                                         discount: effectiveCompDiscount,
-                                                        priceNet: Math.round(compNet),
+                                                        priceNet: compNet,
                                                         qty: compQty,
-                                                        total: Math.round(compTotal),
+                                                        total: compTotal,
                                                         image: compImage
                                                     });
                                                 });
@@ -980,7 +975,7 @@ export default function AdminDocumentDetail() {
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
                                                                     <span className="text-gray-500 font-medium">Subtotal</span>
-                                                                    <span className="text-[#EB216A] text-xl font-bold">Rp {Math.round(subtotalAfterDiscount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
+                                                                    <span className="text-[#EB216A] text-xl font-bold">Rp {subtotalAfterDiscount.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                                                 </div>
                                                             </div>
                                                         );
@@ -1017,21 +1012,21 @@ export default function AdminDocumentDetail() {
                                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                                                 {item.discount > 0 ? (
                                                                     <>
-                                                                        <span>Rp {Number(item.price).toLocaleString('id-ID')} × {item.quantity}</span>
+                                                                        <span>Rp {Number(item.price).toLocaleString('id-ID', { maximumFractionDigits: 0 })} × {item.quantity}</span>
                                                                         <span className="text-green-600 font-medium">Disc {item.discount}%</span>
                                                                     </>
                                                                 ) : (
-                                                                    <span>Rp {Number(item.price).toLocaleString('id-ID')} × {item.quantity}</span>
+                                                                    <span>Rp {Number(item.price).toLocaleString('id-ID', { maximumFractionDigits: 0 })} × {item.quantity}</span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
                                                             {item.discount > 0 && (
                                                                 <span className="text-xs text-gray-400 line-through block">
-                                                                    Rp {(Number(item.price) * item.quantity).toLocaleString('id-ID')}
+                                                                    Rp {(Number(item.price) * item.quantity).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                 </span>
                                                             )}
-                                                            <span className="font-semibold">Rp {calculateItemTotal(item).toLocaleString('id-ID')}</span>
+                                                            <span className="font-semibold">Rp {calculateItemTotal(item).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1039,7 +1034,7 @@ export default function AdminDocumentDetail() {
                                                 {/* Window Subtotal */}
                                                 <div className="flex justify-between items-center pt-2">
                                                     <span className="font-medium">Subtotal</span>
-                                                    <span className="text-lg font-bold text-[#EB216A]">Rp {calculateWindowTotal(window).toLocaleString('id-ID')}</span>
+                                                    <span className="text-lg font-bold text-[#EB216A]">Rp {calculateWindowTotal(window).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1053,17 +1048,17 @@ export default function AdminDocumentDetail() {
                         <div className="mt-6 p-4 bg-gray-50 rounded-lg space-y-2">
                             <div className="flex justify-between">
                                 <span>Subtotal</span>
-                                <span className="font-medium">Rp {calculateTotal().toLocaleString('id-ID')}</span>
+                                <span className="font-medium">Rp {calculateTotal().toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             {formData.discount > 0 && (
                                 <div className="flex justify-between text-green-600">
                                     <span>Diskon ({formData.discount}%)</span>
-                                    <span>- Rp {(calculateTotal() * formData.discount / 100).toLocaleString('id-ID')}</span>
+                                    <span>- Rp {(calculateTotal() * formData.discount / 100).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-xl font-bold pt-2 border-t">
                                 <span>Total</span>
-                                <span className="text-[#EB216A]">Rp {calculateGrandTotal().toLocaleString('id-ID')}</span>
+                                <span className="text-[#EB216A]">Rp {calculateGrandTotal().toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                         </div>
                     </div>

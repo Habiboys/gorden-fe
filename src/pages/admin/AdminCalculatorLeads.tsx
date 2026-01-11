@@ -225,7 +225,7 @@ const statusConfig = {
 const formatRupiah = (value: any): string => {
   const num = typeof value === 'string' ? parseFloat(value) : Number(value);
   if (isNaN(num)) return '0';
-  return Math.round(num).toLocaleString('id-ID');
+  return num.toLocaleString('id-ID', { maximumFractionDigits: 0 });
 };
 
 export default function AdminCalculatorLeads() {
@@ -479,7 +479,7 @@ export default function AdminCalculatorLeads() {
         componentsObj[comp.componentId] = {
           product: {
             id: comp.productId,
-            name: comp.productName,
+            name: comp.productName || comp.product?.name,
             price: comp.productPrice,
             price_gross: comp.productPriceGross || comp.productPrice,
             price_net: comp.productPriceNet || comp.productPrice,
@@ -494,14 +494,18 @@ export default function AdminCalculatorLeads() {
       // Determine product first to use ID for grouping
       const product = item.product ? {
         ...item.product,
+        // Ensure name is clean product name without appended variant info
+        name: item.product.originalName || item.product.name.split(/[|(\n]/)[0].trim(),
         image: item.product.image,
-        images: item.product.images
+        images: item.product.images,
+        minPrice: item.product.minPrice || item.fabricPricePerMeter || item.productPrice || 0
       } : {
         id: fabric.id,
-        name: item.fabricName || fabric.name,
+        name: (item.fabricName || fabric.name || '').split(/[|(\n]/)[0].trim(),
         price: item.fabricPricePerMeter || fabric.price,
         image: fabric.image,
-        images: fabric.images
+        images: fabric.images,
+        minPrice: fabric.price || 0
       };
 
       // Preserve original groupId from lead data
@@ -522,7 +526,18 @@ export default function AdminCalculatorLeads() {
         height: item.dimensions?.height || item.height || 0,
         panels: item.dimensions?.panels || item.panels || 2,
         quantity: item.quantity || 1,
-        fabricDiscount: item.fabricDiscount || 0,
+
+        fabricDiscount: item.fabricDiscount || (() => {
+          // Auto-calculate discount if missing but price difference exists
+          // Check various possible locations for gross price in lead data
+          const gross = item.fabricPricePerMeterGross || item.productPriceGross || item.selectedVariant?.price_gross || 0;
+          const net = item.fabricPricePerMeter || item.productPrice || item.selectedVariant?.price_net || item.selectedVariant?.price || 0;
+
+          if (gross > 0 && net < gross) {
+            return Math.round(((gross - net) / gross) * 100);
+          }
+          return 0;
+        })(),
         itemDiscount: item.itemDiscount || 0,
         // Transform: array to object
         components: componentsObj,
@@ -1190,7 +1205,7 @@ export default function AdminCalculatorLeads() {
                                       {subItem.dimensions?.width}cm x {subItem.dimensions?.height}cm
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                      {subItem.fabricMeters?.toFixed(2) || ((subItem.dimensions?.width * subItem.dimensions?.height) / 10000).toFixed(2)}
+                                      {subItem.fabricMeters && subItem.fabricMeters > 0 ? subItem.fabricMeters.toFixed(2) : ((subItem.dimensions?.width * subItem.dimensions?.height) / 10000).toFixed(2)}
                                     </td>
                                     <td className="px-4 py-3 text-right font-medium">
                                       Rp {formatRupiah(subItem.subtotal || 0)}

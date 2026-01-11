@@ -305,6 +305,27 @@ export default function AdminCalculatorTypes() {
             return;
         }
 
+        if (!componentForm.display_order) {
+            toast.error('Urutan Tampil harus diisi!');
+            return;
+        }
+
+        const newOrder = parseInt(componentForm.display_order);
+        const currentType = calculatorTypes.find(t => t.id === currentTypeId);
+
+        if (currentType) {
+            const isDuplicate = currentType.components.some(comp => {
+                // If editing, skip self
+                if (editingComponent && comp.id === editingComponent.id) return false;
+                return comp.display_order === newOrder;
+            });
+
+            if (isDuplicate) {
+                toast.error(`Urutan Tampil ${newOrder} sudah digunakan oleh komponen lain di kalkulator ini!`);
+                return;
+            }
+        }
+
         setSaving(true);
         try {
             const data = {
