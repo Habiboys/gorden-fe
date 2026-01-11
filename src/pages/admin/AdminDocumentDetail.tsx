@@ -226,37 +226,48 @@ export default function AdminDocumentDetail() {
 
     const calculateComponentPrice = (item: any, comp: any, selection: any) => {
         const widthM = item.width / 100;
+
+        // Use price_net if available for accurate calculation
+        const priceGross = selection.product.price;
+        const priceNet = (selection.product as any)?.price_net ?? priceGross;
+
         const basePrice = (() => {
             switch (comp.price_calculation) {
                 case 'per_meter':
-                    return Math.max(1, widthM) * selection.product.price * item.quantity;
+                    // We calculate basePrice based on Net Price
+                    return Math.max(1, widthM) * priceNet * item.quantity;
                 case 'per_unit':
-                    return selection.product.price * item.quantity;
+                    return priceNet * item.quantity;
                 case 'per_10_per_meter':
-                    return Math.ceil(widthM * 10) * selection.product.price * item.quantity;
+                    return Math.ceil(widthM * 10) * priceNet * item.quantity;
                 default:
                     return 0;
             }
         })();
-        const priceBeforeDiscount = basePrice * selection.qty;
+
+        const totalPrice = basePrice * selection.qty;
         // Apply variant multiplier if component is configured to follow it
         const variantMultiplier = (comp.multiply_with_variant && selection.variantMultiplier)
             ? selection.variantMultiplier
             : 1;
-        return priceBeforeDiscount * variantMultiplier * (1 - (selection.discount || 0) / 100);
+
+        return totalPrice * variantMultiplier;
     };
 
     const calculateItemPriceRich = (item: any) => {
         const product = item.product || baseFabric;
-        if (!product || !calculatorSchema) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0, fabricPricePerMeter: 0 };
+        if (!product || !calculatorSchema) return { fabric: 0, fabricMeters: 0, components: 0, total: 0, totalAfterItemDiscount: 0, fabricPricePerMeter: 0, fabricPricePerMeterNet: 0 };
 
         const widthM = item.width / 100;
         const heightM = item.height / 100;
 
         const fabricPricePerMeter = item.selectedVariant?.price ?? product.price;
+        const fabricPricePerMeterNet = item.selectedVariant?.price_net ?? fabricPricePerMeter;
+
         const variantMultiplier = item.selectedVariant?.quantity_multiplier || 1;
 
         let fabricPriceBeforeDiscount = 0;
+        let fabricPriceRawNet = 0;
         let fabricMeters = 0;
 
         // Check if this is Blind flow (simpler pricing)
@@ -266,17 +277,29 @@ export default function AdminDocumentDetail() {
             // BLIND FLOW: Price × Area (m²) × Qty
             fabricMeters = widthM * heightM; // Area in m²
             fabricPriceBeforeDiscount = fabricPricePerMeter * fabricMeters * item.quantity;
+            fabricPriceRawNet = fabricPricePerMeterNet * fabricMeters * item.quantity;
         } else if (variantMultiplier > 1) {
             // GORDEN FLOW with Multiplier: Price × Multiplier × Qty
             fabricPriceBeforeDiscount = fabricPricePerMeter * variantMultiplier * item.quantity;
+            fabricPriceRawNet = fabricPricePerMeterNet * variantMultiplier * item.quantity;
             fabricMeters = 0;
         } else {
             // GORDEN FLOW standard: Area Calculation
             fabricMeters = widthM * (calculatorSchema.fabric_multiplier || 2.4) * heightM;
             fabricPriceBeforeDiscount = fabricMeters * fabricPricePerMeter * item.quantity;
+            fabricPriceRawNet = fabricMeters * fabricPricePerMeterNet * item.quantity;
         }
 
-        const fabricPrice = fabricPriceBeforeDiscount * (1 - (item.fabricDiscount || 0) / 100);
+        // Use Net Price directly for final price (Fabric Total)
+        // If price_net is missing/equal to gross but we have a forced discount, apply it? 
+        // AdminDocumentCreate uses price_net strictly. We assume saved data has correct price_net.
+        // Fallback: If fabricPriceRawNet equals fabricPriceBeforeDiscount (meaning no net price was saved)
+        // AND there is a discount, then apply it. But usually price_net tracks this.
+        let fabricPrice = fabricPriceRawNet;
+
+        if (fabricPriceRawNet === fabricPriceBeforeDiscount && item.fabricDiscount) {
+            fabricPrice = fabricPriceBeforeDiscount * (1 - item.fabricDiscount / 100);
+        }
 
         let componentsPrice = 0;
         if (item.packageType === 'gorden-lengkap' && calculatorSchema.components) {
@@ -298,6 +321,7 @@ export default function AdminDocumentDetail() {
             fabricBeforeDiscount: fabricPriceBeforeDiscount,
             fabricMeters,
             fabricPricePerMeter,
+            fabricPricePerMeterNet, // Added field
             components: componentsPrice,
             total: subtotal,
             totalAfterItemDiscount
@@ -710,7 +734,7 @@ export default function AdminDocumentDetail() {
                                                                                         {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-right text-gray-700 bg-gray-50/50">
-                                                                                        Rp {(prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        Rp {(prices.fabricPricePerMeterNet || (prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100))).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                                                     </td>
                                                                                     <td className="py-3 px-3 text-center font-medium">
                                                                                         {item.quantity}
