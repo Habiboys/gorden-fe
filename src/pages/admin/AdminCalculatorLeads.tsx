@@ -418,8 +418,8 @@ export default function AdminCalculatorLeads() {
         toast.success('Draft Penawaran berhasil dibuat!');
         // Update lead status
         await calculatorLeadsApi.updateStatus(lead.id, 'quoted');
-        // Navigate to Edit Page
-        navigate(`/admin/documents/edit/${response.data.id}`);
+        // Navigate to Edit Page with isNewDraft flag
+        navigate(`/admin/documents/edit/${response.data.id}?isNewDraft=true`);
       } else {
         throw new Error(response.message || 'Gagal membuat dokumen');
       }

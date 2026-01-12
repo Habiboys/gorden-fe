@@ -8,8 +8,8 @@ import {
     Trash2,
     X
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import {
@@ -22,6 +22,7 @@ import {
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import { useRouterBlocker } from '../../hooks/useRouterBlocker';
 import { calculatorTypesApi, documentsApi, productsApi, productVariantsApi } from '../../utils/api';
 import { getProductImageUrl } from '../../utils/imageHelper';
 import { safeJSONParse } from '../../utils/jsonHelper';
@@ -102,6 +103,16 @@ interface CalculatorItem {
     };
 }
 
+interface DocumentForm {
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    customerAddress: string;
+    validUntil: string;
+    paymentTerms: string;
+    notes: string;
+}
+
 // ================== HELPER FUNCTIONS ==================
 /**
  * Format number as Rupiah currency (no decimals)
@@ -173,33 +184,64 @@ export default function AdminDocumentCreate() {
         date.setDate(date.getDate() + 14);
         return date.toISOString().split('T')[0];
     };
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<DocumentForm>({
         customerName: '',
         customerPhone: '',
         customerEmail: '',
         customerAddress: '',
-        referralCode: '',
-        discount: 0,
         validUntil: getDefaultValidUntil(),
         paymentTerms: 'Bank BRI 0256 0106 3614 506 A.n Abdul Latif',
         notes: ''
     });
 
+    const [searchParams] = useSearchParams();
+    const isNewDraftParam = searchParams.get('isNewDraft') === 'true';
+    const [isNewDraftState, setIsNewDraftState] = useState(isNewDraftParam);
+
+    // ================== ACTIONS ==================
+    const handleCleanupDraft = useCallback(async () => {
+        if (id && isNewDraftState) {
+            try {
+                // Delete the draft if user exits without saving
+                await documentsApi.delete(id);
+                toast.info('Draft kosong telah dihapus.');
+            } catch (error) {
+                console.error('Failed to cleanup draft:', error);
+            }
+        }
+    }, [id, isNewDraftState]);
+
     // ================== LOAD DATA ==================
-    // Unsaved Changes Guard
+    // Unsaved Changes Guard (Browser Refresh/Close)
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            // Warn if there are items or customer name is filled (implies work in progress)
             if (items.length > 0 || formData.customerName) {
                 e.preventDefault();
-                e.returnValue = ''; // Standard for Chrome/modern browsers
-                return ''; // Legacy
+                e.returnValue = '';
+                return '';
             }
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [items.length, formData.customerName]);
+
+    // Unsaved Changes Guard (In-App Navigation)
+    const isDirty = items.length > 0 || !!formData.customerName;
+    const blockerMessage = isNewDraftState
+        ? "Dokumen ini baru dibuat. Jika Anda keluar tanpa menyimpan, dokumen ini akan DIHAPUS PERMANEN. Lanjutkan?"
+        : "Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman ini?";
+
+    useRouterBlocker(
+        blockerMessage,
+        isDirty || isNewDraftState,
+        isNewDraftState ? handleCleanupDraft : undefined
+    );
+
+    useEffect(() => {
+        if (isNewDraftParam) {
+            setIsNewDraftState(true);
+        }
+    }, [isNewDraftParam]);
 
     useEffect(() => {
         loadCalculatorTypes();
@@ -231,8 +273,8 @@ export default function AdminDocumentCreate() {
                     customerPhone: doc.customer_phone || '',
                     customerEmail: doc.customer_email || '',
                     customerAddress: doc.address || doc.customer_address || '',
-                    referralCode: doc.referral_code || '',
-                    discount: parsedData.discount || doc.discount_percentage || 0, // Load global discount
+                    // referralCode: doc.referral_code || '', // Removed from formData
+                    // discount: parsedData.discount || doc.discount_percentage || 0, // Removed from formData
                     validUntil: doc.valid_until ? doc.valid_until.split('T')[0] : getDefaultValidUntil(),
                     paymentTerms: parsedData.paymentTerms || doc.payment_terms || '',
                     notes: parsedData.notes || doc.notes || ''
@@ -398,7 +440,6 @@ export default function AdminDocumentCreate() {
             setTargetGroupId(groupId); // Set target group to add to
             // groupDiscount is handled in handleAddItem by looking up targetGroupId if we don't pass it explicitly?
             // Actually handleAddItem creates new item. We should ideally pass it or set it.
-            // But handleAddItem only reads from form state (width, height, etc).
             // We need to ensure the NEW item gets the GROUP discount.
             // We can do this by setting a temp state or finding group in handleAddItem.
         }
@@ -525,7 +566,7 @@ export default function AdminDocumentCreate() {
                         height: itemHeight,
                         quantity: parseFloat(quantity),
                         itemType: selectedCalcType?.has_item_type ? itemType : 'jendela',
-                        packageType: selectedCalcType?.has_package_type ? packageType : 'gorden-saja',
+                        packageType: selectedCalcType?.has_package_type ? packageType : 'gorden-lengkap',
                         name: itemName || undefined,
                         panels: newPanels,
                         // Retain other properties
@@ -638,7 +679,7 @@ export default function AdminDocumentCreate() {
 
     // Remove item
     const handleRemoveItem = (id: string) => {
-        setItems(items.filter(i => i.id !== id));
+        setItems(items.filter(i => i.id === id));
     };
 
     // Select variant for item
@@ -1120,7 +1161,7 @@ export default function AdminDocumentCreate() {
                     price: selectedFabric?.price,
                     image: selectedFabric?.images?.[0] || selectedFabric?.image // Store image for reconstruction
                 },
-                discount: formData.discount, // Persist Global Discount Percentage
+                // discount: formData.discount, // Persist Global Discount Percentage - Removed from formData
                 paymentTerms: formData.paymentTerms || 'Bank BRI 0763 0100 1160 564 a.n ABDUL RAHIM',
                 notes: formData.notes || ''
             };
@@ -1131,11 +1172,11 @@ export default function AdminDocumentCreate() {
                 customer_phone: formData.customerPhone,
                 customer_email: formData.customerEmail || null,
                 address: formData.customerAddress || null,  // Backend uses 'address' not 'customer_address'
-                referral_code: formData.referralCode || null,
-                discount_amount: calculateTotal() * (formData.discount || 0) / 100,  // Discount amount in rupiah
+                // referral_code: formData.referralCode || null, // Removed from formData
+                discount_amount: 0, // Global discount is now handled per item/group, not a single global percentage
                 valid_until: formData.validUntil || null,
                 data: quotationData,  // This is the quotation/invoice data
-                total_amount: calculateTotal() * (1 - (formData.discount || 0) / 100)  // Backend uses 'total_amount'
+                total_amount: calculateTotal() // Backend uses 'total_amount'
             };
 
             if (selectedFabric) { // Only valid for Global Fabric flow, for Blinds we might not have a base baseFabric but items have products
@@ -1155,9 +1196,11 @@ export default function AdminDocumentCreate() {
 
             if (response.success) {
                 toast.success(id ? 'Dokumen berhasil diperbarui' : 'Dokumen berhasil dibuat');
+                // Reset dirty state
+                setIsNewDraftState(false); // No longer a new draft after save
                 navigate('/admin/documents');
             } else {
-                toast.error(id ? 'Gagal memperbarui dokumen' : 'Gagal membuat dokumen');
+                toast.error(response.message || 'Gagal menyimpan dokumen');
             }
         } catch (error: any) {
             console.error('Error creating document:', error);
