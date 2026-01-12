@@ -186,6 +186,21 @@ export default function AdminDocumentCreate() {
     });
 
     // ================== LOAD DATA ==================
+    // Unsaved Changes Guard
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // Warn if there are items or customer name is filled (implies work in progress)
+            if (items.length > 0 || formData.customerName) {
+                e.preventDefault();
+                e.returnValue = ''; // Standard for Chrome/modern browsers
+                return ''; // Legacy
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [items.length, formData.customerName]);
+
     useEffect(() => {
         loadCalculatorTypes();
         loadFabricProducts();
@@ -1152,38 +1167,13 @@ export default function AdminDocumentCreate() {
         }
     };
 
-    // ================== UNSAVED CHANGES PROTECTION ==================
-    const isDirty = items.length > 0;
-
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isDirty) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isDirty]);
-
-    const handleBack = () => {
-        if (isDirty) {
-            if (confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin keluar? Data akan hilang.')) {
-                navigate('/admin/documents');
-            }
-        } else {
-            navigate('/admin/documents');
-        }
-    };
-
     // ================== RENDER ==================
 
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={handleBack}>
+                <Button variant="ghost" size="icon" onClick={() => navigate('/admin/documents')}>
                     <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <div>
@@ -2054,7 +2044,11 @@ export default function AdminDocumentCreate() {
                                                                                                             type="number"
                                                                                                             min="0"
                                                                                                             max="100"
-                                                                                                            value={selection.discount || 0}
+                                                                                                            value={selection.discount || (() => {
+                                                                                                                const g = (selection.product.price_gross || selection.product.price || 0);
+                                                                                                                const n = (selection.product.price_net || selection.product.price || 0);
+                                                                                                                return g > 0 ? Math.round(((g - n) / g) * 100) : 0;
+                                                                                                            })()}
                                                                                                             className="w-full h-8 px-2 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
                                                                                                             onChange={(e) => {
                                                                                                                 const newDisc = parseInt(e.target.value) || 0;
