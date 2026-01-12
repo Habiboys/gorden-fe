@@ -687,7 +687,7 @@ export default function AdminDocumentCreate() {
 
     // Remove item
     const handleRemoveItem = (id: string) => {
-        setItems(items.filter(i => i.id === id));
+        setItems(items.filter(i => i.id !== id));
     };
 
     // Select variant for item
