@@ -130,12 +130,22 @@ function filterRel4Sizes(variants: any[], input: DimensionInput): any[] {
  * Total: 16 kombinasi per produk
  */
 function filterVitraseKombinasi(variants: any[], input: DimensionInput): any[] {
-    const allowedWidths = [
-        input.width + 20,
-        input.width + 40,
-        input.width + 60,
-        input.width + 80
-    ];
+    // 1. Map variants to include parsed dimensions and filter by width >= input
+    const validVariants = variants.map(v => {
+        const attrs = parseAttributes(v.attributes);
+        const w = getNumericAttr(attrs, ['Lebar', 'lebar', 'Width', 'width', 'L']);
+        const h = getNumericAttr(attrs, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);
+        return { v, w, h };
+    }).filter(item => item.w !== null && item.w >= input.width);
+
+    // 2. Identify the next 4 unique width levels (sorted)
+    const uniqueWidths = Array.from(new Set(validVariants.map(i => i.w!)))
+        .sort((a, b) => a - b)
+        .slice(0, 4);
+
+    // 3. Define allowed heights (keep strict steps for now as per previous logic, or maybe should also be dynamic?)
+    // User complaint was specifically about "nilai ganjil" (odd input) on width causing no show.
+    // Existing height logic allows exact match + 3 steps up.
     const allowedHeights = [
         input.height,
         input.height + 10,
@@ -143,25 +153,16 @@ function filterVitraseKombinasi(variants: any[], input: DimensionInput): any[] {
         input.height + 30
     ];
 
-    return variants.filter(v => {
-        const attrs = parseAttributes(v.attributes);
+    return validVariants.filter(item => {
+        // Must match one of the 4 selected widths
+        const widthMatch = uniqueWidths.includes(item.w!);
 
-        const lebar = getNumericAttr(attrs, ['Lebar', 'lebar', 'Width', 'width', 'L']);
-        const tinggi = getNumericAttr(attrs, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);
+        // Height check: if variant has height, it must match one of the allowed heights
+        // If variant has NO height attribute (null), we assume it's valid (generic variant)
+        const heightMatch = item.h === null || allowedHeights.includes(item.h!);
 
-        let lebarMatch = true;
-        let tinggiMatch = true;
-
-        if (lebar !== null) {
-            lebarMatch = allowedWidths.includes(lebar);
-        }
-
-        if (tinggi !== null) {
-            tinggiMatch = allowedHeights.includes(tinggi);
-        }
-
-        return lebarMatch && tinggiMatch;
-    });
+        return widthMatch && heightMatch;
+    }).map(item => item.v);
 }
 
 /**

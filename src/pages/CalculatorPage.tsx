@@ -508,6 +508,12 @@ export default function CalculatorPageV2() {
             variants = filterVariantsByRule(variants, dimensions, 'gorden-smokering');
           }
 
+          const isVitrase = currentType?.slug?.toLowerCase().includes('vitrase');
+          if (isVitrase) {
+            const dimensions = { width: itemWidth, height: itemHeight };
+            variants = filterVariantsByRule(variants, dimensions, 'vitrase-kombinasi');
+          }
+
           // If no matching variants after filter, show all variants
           const variantsToShow = variants.length > 0 ? variants : (variantsRes.data || []);
 
@@ -1231,9 +1237,13 @@ export default function CalculatorPageV2() {
               </div>
               <Button
                 onClick={() => {
+                  /* Clear potentially lingering editing state from component picker */
+                  setEditingItemId(null);
                   if (isBlindFlow) {
                     setIsProductModalOpen(true); // Open Product Picker for Blinds
                   } else {
+                    // For Curtain, reset form to ensure clean slate (and clear editingItemId)
+                    resetForm();
                     setIsAddItemModalOpen(true); // Open Dimensions for Curtain
                   }
                 }}
@@ -1252,9 +1262,11 @@ export default function CalculatorPageV2() {
                 <p className="text-gray-500 mb-6">Tambahkan item untuk mulai menghitung estimasi biaya</p>
                 <Button
                   onClick={() => {
+                    setEditingItemId(null);
                     if (isBlindFlow) {
                       setIsProductModalOpen(true);
                     } else {
+                      resetForm();
                       setIsAddItemModalOpen(true);
                     }
                   }}

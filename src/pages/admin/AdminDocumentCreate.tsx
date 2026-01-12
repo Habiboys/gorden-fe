@@ -599,6 +599,12 @@ export default function AdminDocumentCreate() {
                         variants = filterVariantsByRule(variants, dimensions, 'gorden-smokering');
                     }
 
+                    const isVitrase = selectedCalcType?.slug?.toLowerCase().includes('vitrase');
+                    if (isVitrase) {
+                        const dimensions = { width: itemWidth, height: itemHeight };
+                        variants = filterVariantsByRule(variants, dimensions, 'vitrase-kombinasi');
+                    }
+
                     // If no matching variants after filter, show all variants
                     const variantsToShow = variants.length > 0 ? variants : (variantsRes.data || []);
 

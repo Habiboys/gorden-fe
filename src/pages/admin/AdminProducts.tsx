@@ -1270,7 +1270,7 @@ export default function AdminProducts() {
                     </div>
 
                     {Array.isArray(uploadedImages) && uploadedImages.length > 0 && (
-                      <div className="grid grid-cols-4 gap-4 mt-4">
+                      <div className="grid grid-cols-4 md:grid-cols-7 gap-4 mt-4">
                         {getProductImagesArray(uploadedImages).map((img, index) => (
                           <div key={index} className="relative group">
                             <img
@@ -1975,6 +1975,22 @@ export default function AdminProducts() {
                   Download Template
                 </Button>
               </div>
+
+              {/* Dynamic Columns Info - Only for Variants */}
+              {importTab === 'variants' && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-purple-900">Fitur Baru: Kolom Dinamis</h4>
+                      <p className="text-sm text-purple-800 mt-1">
+                        Anda dapat menambahkan kolom varian baru di Excel sesuai kebutuhan (contoh header: <strong>Warna</strong>, <strong>Bahan</strong>, <strong>Model</strong>).
+                        Sistem akan otomatis mendeteksi kolom tersebut sebagai atribut varian baru.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* File Upload */}
               <div
