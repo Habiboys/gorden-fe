@@ -1,19 +1,18 @@
 import { ChevronDown, ChevronRight, Filter, Grid3X3, LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { categoriesApi, productsApi, subcategoriesApi } from '../utils/api';
 
-import { useSearchParams } from 'react-router-dom';
-
 export default function ProductListing() {
-  const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('random'); // Default to random
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
 
   // Special filters
   const [filterCustom, setFilterCustom] = useState(false);
@@ -89,23 +88,21 @@ export default function ProductListing() {
     fetchSubcategories();
   }, []);
 
-  // Sync with URL params
+  // Initialize filters from URL params
   useEffect(() => {
-    const categoryParam = searchParams.get('category');
-    if (categoryParam && categories.length > 0) {
-      // Try to find by ID first
-      const byId = categories.find(c => String(c.id) === categoryParam);
-      if (byId) {
-        setSelectedCategory(String(byId.id));
-      } else {
-        // Try filter by name (case-insensitive)
-        const byName = categories.find(c => c.name.toLowerCase() === categoryParam.toLowerCase());
-        if (byName) {
-          setSelectedCategory(String(byName.id));
-        }
+    if (categories.length > 0) {
+      const catIdParam = searchParams.get('categoryId');
+      const catNameParam = searchParams.get('category');
+
+      if (catIdParam) {
+        setSelectedCategory(catIdParam);
+      } else if (catNameParam) {
+        // Fallback for name-based links
+        const cat = categories.find(c => c.name.toLowerCase() === catNameParam.toLowerCase());
+        if (cat) setSelectedCategory(String(cat.id));
       }
     }
-  }, [searchParams, categories]);
+  }, [categories, searchParams]);
 
   // Toggle category expansion
   const toggleCategory = (categoryId: string) => {

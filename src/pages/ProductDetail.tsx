@@ -122,6 +122,34 @@ export default function ProductDetail() {
       }
     };
 
+    const fetchRelatedProducts = async (categoryId?: number, currentSku?: string) => {
+      try {
+        console.log('🔄 Fetching related products...', categoryId ? `for category ${categoryId}` : 'random');
+        // Prioritize category match, otherwise random
+        const params: any = { limit: 20 };
+        if (categoryId) params.category_id = categoryId;
+
+        const response = await productsApi.getAll(params);
+        let related = (response.data || []).filter((p: any) => p.sku !== currentSku && p.id !== currentSku);
+
+        // If not enough category products, fetch random ones to fill up? 
+        // For now, let's stick to what we found or random if no category passed.
+
+        // Shuffle array (Fisher-Yates)
+        for (let i = related.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [related[i], related[j]] = [related[j], related[i]];
+        }
+
+        // Take up to 20 items (10 for grid + 10 for slider)
+        setRelatedProducts(related.slice(0, 20));
+      } catch (error) {
+        console.error('❌ Error fetching related products:', error);
+      } finally {
+        setLoading(false); // Ensure loading is cleared here if this is the last chain
+      }
+    };
+
     const fetchProduct = async () => {
       if (!sku) return;
 
@@ -168,31 +196,20 @@ export default function ProductDetail() {
           console.log('🔗 Using product UUID for variants:', productData.id);
           fetchVariants(productData.id);
         }
+
+        // Fetch related products using category ID
+        fetchRelatedProducts(productData.category_id || productData.Category?.id, productData.sku);
+
       } catch (error: any) {
         console.error('❌ Error fetching product:', error);
         alert('Error loading product: ' + error.message);
         navigate('/products');
-      }
-    };
-
-    const fetchRelatedProducts = async () => {
-      if (!sku) return;
-
-      try {
-        console.log('🔄 Fetching related products...');
-        const response = await productsApi.getAll({ limit: 4 });
-        console.log('✅ Related products fetched:', response);
-        const related = (response.data || []).filter((p: any) => p.sku !== sku && p.id !== sku).slice(0, 4);
-        setRelatedProducts(related);
-      } catch (error) {
-        console.error('❌ Error fetching related products:', error);
-      } finally {
         setLoading(false);
       }
     };
 
+    // fetchProduct calls the others now.
     fetchProduct();
-    fetchRelatedProducts();
   }, [sku, navigate]);
 
   if (loading) {
@@ -769,7 +786,7 @@ export default function ProductDetail() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl lg:text-3xl text-gray-900">Produk Terkait</h2>
             <Button
-              onClick={() => navigate(`/products?category=${encodeURIComponent(product.category)}`)}
+              onClick={() => navigate('/products')}
               variant="outline"
               className="border-[#EB216A] text-[#EB216A] hover:!bg-[#EB216A] hover:!text-white"
             >

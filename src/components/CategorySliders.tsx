@@ -11,9 +11,10 @@ interface ProductSliderProps {
   badgeIcon?: React.ReactNode;
   products: any[];
   loading?: boolean;
+  categoryId?: number | string; // Add categoryId prop
 }
 
-function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSliderProps) {
+function ProductSlider({ title, badge, badgeIcon, products, loading, categoryId }: ProductSliderProps) {
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -104,7 +105,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
               <ChevronRight className="w-5 h-5" />
             </Button>
             <Button
-              onClick={() => navigate('/products')}
+              onClick={() => navigate(categoryId ? `/products?categoryId=${categoryId}` : '/products')}
               variant="outline"
               className="ml-2"
             >
@@ -149,7 +150,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading }: ProductSl
         {/* Mobile View All Button */}
         <div className="lg:hidden mt-6 text-center">
           <Button
-            onClick={() => navigate('/products')}
+            onClick={() => navigate(categoryId ? `/products?categoryId=${categoryId}` : '/products')}
             variant="outline"
             className="border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
           >
@@ -237,6 +238,7 @@ export function CategorySliders() {
       {categories.map((category) => (
         <ProductSlider
           key={category.id}
+          categoryId={category.id} // Pass categoryId
           title={category.name}
           badge={category.description || 'Koleksi Lengkap'}
           badgeIcon={

@@ -18,7 +18,7 @@ import { categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploa
 import { getProductImagesArray, safelyParseImages } from '../../utils/imageHelper';
 import UnifiedVariantManager from './UnifiedVariantManager';
 
-const MAX_IMAGES = 4;
+const MAX_IMAGES = 7;
 
 /**
  * Generate SKU from product name
@@ -585,7 +585,7 @@ export default function AdminProductForm() {
                     onChange={handleFileUpload}
                     className="hidden"
                 />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
                     {/* Render uploaded images */}
                     {getProductImagesArray(uploadedImages).map((img, idx) => (
                         <div key={idx} className="relative group aspect-square">
@@ -596,27 +596,27 @@ export default function AdminProductForm() {
                             />
                             <button
                                 onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                             >
-                                <X className="w-4 h-4" />
+                                <X className="w-3 h-3" />
                             </button>
                             {idx === 0 && (
-                                <span className="absolute bottom-2 left-2 bg-[#EB216A] text-white text-xs px-2 py-1 rounded">
+                                <span className="absolute bottom-1 left-1 bg-[#EB216A] text-white text-[10px] px-1.5 py-0.5 rounded">
                                     Utama
                                 </span>
                             )}
                         </div>
                     ))}
                     {/* Empty slots for remaining images */}
-                    {Array.from({ length: MAX_IMAGES - uploadedImages.length }).map((_, idx) => (
+                    {Array.from({ length: Math.max(0, MAX_IMAGES - uploadedImages.length) }).map((_, idx) => (
                         <div
                             key={`empty-${idx}`}
                             onClick={() => fileInputRef.current?.click()}
                             className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#EB216A] hover:bg-pink-50 transition-colors"
                         >
-                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                            <span className="text-sm text-gray-500">
-                                {uploading ? 'Uploading...' : 'Upload'}
+                            <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                            <span className="text-xs text-center text-gray-500">
+                                {uploading ? '...' : 'Upload'}
                             </span>
                         </div>
                     ))}

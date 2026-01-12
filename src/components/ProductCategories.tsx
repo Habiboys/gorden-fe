@@ -119,7 +119,7 @@ export function ProductCategories() {
             // Prioritize uploaded image, then image_url (legacy), then default
             const imageUrl = category.image || category.image_url || defaultImage;
             return (
-              <Link key={category.id || category.name} to={`/products?category=${encodeURIComponent(category.name)}`}>
+              <Link key={category.id || category.name} to={`/products?categoryId=${category.id}`}>
                 <Card
                   className="overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group rounded-md"
                 >
