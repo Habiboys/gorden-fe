@@ -3,17 +3,20 @@ import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import whatsappIcon from '../assets/whatsapp.png';
 
+import { useSettings } from '../context/SettingsContext';
+
 export function FloatingWhatsApp() {
     const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const { settings } = useSettings();
 
     // Don't show on admin pages
     if (location.pathname.startsWith('/admin')) {
         return null;
     }
 
-    const phoneNumber = '6285142247464';
+    const phoneNumber = settings.whatsappNumber;
 
     const handleOptionClick = (message: string) => {
         const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;

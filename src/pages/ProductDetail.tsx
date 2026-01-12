@@ -29,6 +29,7 @@ export default function ProductDetail() {
   const { sku } = useParams<{ sku: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { settings } = useSettings();
   const [product, setProduct] = useState<any>(null);
   const [variants, setVariants] = useState<any[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -550,7 +551,7 @@ export default function ProductDetail() {
                       const message = `Halo kak, saya tertarik dengan produk "${fullProductName}" seharga ${priceStr}. Boleh minta info lebih lanjut?\n\nLink: ${productLink}`;
 
                       // Open WhatsApp directly
-                      const phoneNumber = '6285142247464';
+                      const phoneNumber = settings.whatsappNumber || import.meta.env.VITE_WHATSAPP_NUMBER;
                       const encodedMessage = encodeURIComponent(message);
                       window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
                     }}

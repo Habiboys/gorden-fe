@@ -982,15 +982,12 @@ export default function AdminProducts() {
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                let pageNum = i + 1;
-                if (pagination.totalPages > 5) {
-                  if (pagination.page > 3) {
-                    pageNum = pagination.page - 2 + i;
-                  }
-                  if (pageNum > pagination.totalPages) {
-                    pageNum = pagination.totalPages - (4 - i);
-                  }
+                // Logic to show 5 pages window centered on current page
+                let startPage = Math.max(1, pagination.page - 2);
+                if (startPage + 4 > pagination.totalPages) {
+                  startPage = Math.max(1, pagination.totalPages - 4);
                 }
+                const pageNum = startPage + i;
                 return (
                   <button
                     key={i}
