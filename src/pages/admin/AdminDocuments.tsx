@@ -342,7 +342,13 @@ export default function AdminDocuments() {
                           const dateVal = doc.created_at || doc.createdAt;
                           if (!dateVal) return '-';
                           const date = new Date(dateVal);
-                          return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID');
+                          return isNaN(date.getTime()) ? '-' : date.toLocaleString('id-ID', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
                         })()}
                       </p>
                     </td>

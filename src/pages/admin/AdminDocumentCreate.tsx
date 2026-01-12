@@ -191,7 +191,8 @@ export default function AdminDocumentCreate() {
         customerAddress: '',
         validUntil: getDefaultValidUntil(),
         paymentTerms: 'Bank BRI 0256 0106 3614 506 A.n Abdul Latif',
-        notes: ''
+        notes: '',
+        discount: 0 // Additional Discount (Rp)
     });
 
     const [searchParams] = useSearchParams();
@@ -282,7 +283,7 @@ export default function AdminDocumentCreate() {
                     customerEmail: doc.customer_email || '',
                     customerAddress: doc.address || doc.customer_address || '',
                     // referralCode: doc.referral_code || '', // Removed from formData
-                    // discount: parsedData.discount || doc.discount_percentage || 0, // Removed from formData
+                    discount: parsedData.discount || 0, // Restore Global Discount Percentage
                     validUntil: doc.valid_until ? doc.valid_until.split('T')[0] : getDefaultValidUntil(),
                     paymentTerms: parsedData.paymentTerms || doc.payment_terms || '',
                     notes: parsedData.notes || doc.notes || ''
@@ -1012,7 +1013,8 @@ export default function AdminDocumentCreate() {
     };
 
     const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterGroupDiscount, 0);
+        const total = items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterGroupDiscount, 0);
+        return Math.max(0, total * (1 - (formData.discount || 0) / 100)); // Percentage Discount
     };
 
     // ================== SUBMIT ==================
@@ -1169,10 +1171,13 @@ export default function AdminDocumentCreate() {
                     price: selectedFabric?.price,
                     image: selectedFabric?.images?.[0] || selectedFabric?.image // Store image for reconstruction
                 },
-                // discount: formData.discount, // Persist Global Discount Percentage - Removed from formData
+                discount: formData.discount, // Persist Global Discount Percentage
                 paymentTerms: formData.paymentTerms || 'Bank BRI 0763 0100 1160 564 a.n ABDUL RAHIM',
                 notes: formData.notes || ''
             };
+
+            const totalBeforeDisc = items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterGroupDiscount, 0);
+            const discountAmount = Math.round(totalBeforeDisc * ((formData.discount || 0) / 100));
 
             const payload = {
                 type: docType,
@@ -1181,7 +1186,7 @@ export default function AdminDocumentCreate() {
                 customer_email: formData.customerEmail || null,
                 address: formData.customerAddress || null,  // Backend uses 'address' not 'customer_address'
                 // referral_code: formData.referralCode || null, // Removed from formData
-                discount_amount: 0, // Global discount is now handled per item/group, not a single global percentage
+                discount_amount: discountAmount, // Send Calculated Discount Value (Rp)
                 valid_until: formData.validUntil || null,
                 data: quotationData,  // This is the quotation/invoice data
                 total_amount: calculateTotal() // Backend uses 'total_amount'
@@ -2261,24 +2266,24 @@ export default function AdminDocumentCreate() {
                         </div>
                         <div>
                             <Label>Diskon Tambahan (%)</Label>
-                            <Input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseInt(e.target.value) || 0 })} placeholder="0" />
+                            <Input type="number" min="0" max="100" value={formData.discount} onChange={e => setFormData({ ...formData, discount: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })} placeholder="0" />
                         </div>
 
                         {/* Summary Display */}
                         <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm border border-gray-100">
                             <div className="flex justify-between text-gray-600">
                                 <span>Total Item</span>
-                                <span>Rp {formatRupiah(calculateTotal())}</span>
+                                <span>Rp {formatRupiah(items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterGroupDiscount, 0))}</span>
                             </div>
                             {formData.discount > 0 && (
                                 <div className="flex justify-between text-green-600">
                                     <span>Diskon ({formData.discount}%)</span>
-                                    <span>-Rp {formatRupiah(calculateTotal() * formData.discount / 100)}</span>
+                                    <span>-Rp {formatRupiah(items.reduce((sum, item) => sum + calculateItemPrice(item).totalAfterGroupDiscount, 0) * (formData.discount / 100))}</span>
                                 </div>
                             )}
                             <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 text-[#EB216A]">
                                 <span>Total Akhir</span>
-                                <span>Rp {formatRupiah(calculateTotal() * (1 - (formData.discount || 0) / 100))}</span>
+                                <span>Rp {formatRupiah(calculateTotal())}</span>
                             </div>
                         </div>
 
