@@ -197,6 +197,7 @@ export default function AdminDocumentCreate() {
     const [searchParams] = useSearchParams();
     const isNewDraftParam = searchParams.get('isNewDraft') === 'true';
     const [isNewDraftState, setIsNewDraftState] = useState(isNewDraftParam);
+    const [isSaved, setIsSaved] = useState(false); // State to track successful save
 
     // ================== ACTIONS ==================
     const handleCleanupDraft = useCallback(async () => {
@@ -215,7 +216,7 @@ export default function AdminDocumentCreate() {
     // Unsaved Changes Guard (Browser Refresh/Close)
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (items.length > 0 || formData.customerName) {
+            if ((items.length > 0 || formData.customerName) && !isSaved) {
                 e.preventDefault();
                 e.returnValue = '';
                 return '';
@@ -223,7 +224,7 @@ export default function AdminDocumentCreate() {
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [items.length, formData.customerName]);
+    }, [items.length, formData.customerName, isSaved]);
 
     // Unsaved Changes Guard (In-App Navigation)
     const isDirty = items.length > 0 || !!formData.customerName;
@@ -233,9 +234,16 @@ export default function AdminDocumentCreate() {
 
     useRouterBlocker(
         blockerMessage,
-        isDirty || isNewDraftState,
+        (isDirty || isNewDraftState) && !isSaved, // Only block if NOT saved
         isNewDraftState ? handleCleanupDraft : undefined
     );
+
+    // Handle navigation after save
+    useEffect(() => {
+        if (isSaved) {
+            navigate('/admin/documents');
+        }
+    }, [isSaved, navigate]);
 
     useEffect(() => {
         if (isNewDraftParam) {
@@ -1198,7 +1206,7 @@ export default function AdminDocumentCreate() {
                 toast.success(id ? 'Dokumen berhasil diperbarui' : 'Dokumen berhasil dibuat');
                 // Reset dirty state
                 setIsNewDraftState(false); // No longer a new draft after save
-                navigate('/admin/documents');
+                setIsSaved(true); // Trigger navigation
             } else {
                 toast.error(response.message || 'Gagal menyimpan dokumen');
             }
