@@ -769,7 +769,7 @@ export default function ProductDetail() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl lg:text-3xl text-gray-900">Produk Terkait</h2>
             <Button
-              onClick={() => navigate('/products')}
+              onClick={() => navigate(`/products?category=${encodeURIComponent(product.category)}`)}
               variant="outline"
               className="border-[#EB216A] text-[#EB216A] hover:!bg-[#EB216A] hover:!text-white"
             >

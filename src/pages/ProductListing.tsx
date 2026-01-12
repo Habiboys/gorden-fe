@@ -6,7 +6,10 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { categoriesApi, productsApi, subcategoriesApi } from '../utils/api';
 
+import { useSearchParams } from 'react-router-dom';
+
 export default function ProductListing() {
+  const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('random'); // Default to random
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -85,6 +88,24 @@ export default function ProductListing() {
     fetchCategories();
     fetchSubcategories();
   }, []);
+
+  // Sync with URL params
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam && categories.length > 0) {
+      // Try to find by ID first
+      const byId = categories.find(c => String(c.id) === categoryParam);
+      if (byId) {
+        setSelectedCategory(String(byId.id));
+      } else {
+        // Try filter by name (case-insensitive)
+        const byName = categories.find(c => c.name.toLowerCase() === categoryParam.toLowerCase());
+        if (byName) {
+          setSelectedCategory(String(byName.id));
+        }
+      }
+    }
+  }, [searchParams, categories]);
 
   // Toggle category expansion
   const toggleCategory = (categoryId: string) => {
