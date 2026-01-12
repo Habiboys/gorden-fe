@@ -1152,13 +1152,38 @@ export default function AdminDocumentCreate() {
         }
     };
 
+    // ================== UNSAVED CHANGES PROTECTION ==================
+    const isDirty = items.length > 0;
+
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isDirty]);
+
+    const handleBack = () => {
+        if (isDirty) {
+            if (confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin keluar? Data akan hilang.')) {
+                navigate('/admin/documents');
+            }
+        } else {
+            navigate('/admin/documents');
+        }
+    };
+
     // ================== RENDER ==================
 
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/admin/documents')}>
+                <Button variant="ghost" size="icon" onClick={handleBack}>
                     <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <div>
