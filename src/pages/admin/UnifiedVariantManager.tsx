@@ -280,7 +280,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 onClick={() => {
                                     const tinggiValues = [];
                                     for (let t = 200; t <= 280; t += 10) {
-                                        tinggiValues.push({ value: String(t), multiplier: null });
+                                        tinggiValues.push({ value: `T ${t}`, multiplier: null });
                                     }
                                     const tinggiOption = { name: 'Tinggi', values: tinggiValues, isMultiplierType: false };
                                     const newOptions = [...options.filter(o => o.name !== 'Tinggi'), tinggiOption];
@@ -288,7 +288,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                     generateCombinations(newOptions);
                                 }}
                                 className="text-xs h-8 px-3 border-green-500 text-green-600 hover:bg-green-50"
-                                title="Tambah tipe Tinggi (200-280 step 10)"
+                                title="Tambah tipe Tinggi (T 200 - T 280)"
                             >
                                 + Tinggi
                             </Button>
@@ -301,7 +301,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 onClick={() => {
                                     const lebarValues = [];
                                     for (let l = 100; l <= 300; l += 20) {
-                                        lebarValues.push({ value: String(l), multiplier: null });
+                                        lebarValues.push({ value: `L ${l}`, multiplier: null });
                                     }
                                     const lebarOption = { name: 'Lebar', values: lebarValues, isMultiplierType: false };
                                     const newOptions = [...options.filter(o => o.name !== 'Lebar'), lebarOption];
@@ -309,7 +309,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                     generateCombinations(newOptions);
                                 }}
                                 className="text-xs h-8 px-3 border-orange-500 text-orange-600 hover:bg-orange-50"
-                                title="Tambah tipe Lebar (100-300 step 20)"
+                                title="Tambah tipe Lebar (L 100 - L 300)"
                             >
                                 + Lebar
                             </Button>
