@@ -149,9 +149,10 @@ function filterRel4Sizes(variants: any[], input: DimensionInput): any[] {
  * Filter variants dengan aturan Vitrase (kombinasi)
  * 
  * Rules:
- * - Lebar: Find 4 width levels starting from the first available width >= input
  * - Tinggi: Find 4 height levels starting from the first available height >= input
- *   (Dynamic matching for both dimensions)
+ * - Lebar: Find 4 width levels starting from the first available width >= input
+ * - IMPORTANT: Results are sorted by HEIGHT first, then WIDTH
+ *   (so variants are grouped by height, starting from input height)
  */
 function filterVitraseKombinasi(variants: any[], input: DimensionInput): any[] {
     // 1. Map variants to include parsed dimensions
@@ -170,7 +171,8 @@ function filterVitraseKombinasi(variants: any[], input: DimensionInput): any[] {
     const allowedWidths = getNextNValues(allWidths, input.width, 4);
     const allowedHeights = getNextNValues(allHeights, input.height, 4);
 
-    return parsedVariants.filter(item => {
+    // 4. Filter variants
+    const filtered = parsedVariants.filter(item => {
         // Width check: if variant has width, it must match one of the allowed widths
         const widthMatch = item.w === null || allowedWidths.length === 0 || allowedWidths.includes(item.w);
 
@@ -178,7 +180,19 @@ function filterVitraseKombinasi(variants: any[], input: DimensionInput): any[] {
         const heightMatch = item.h === null || allowedHeights.length === 0 || allowedHeights.includes(item.h);
 
         return widthMatch && heightMatch;
-    }).map(item => item.v);
+    });
+
+    // 5. Sort by HEIGHT first, then WIDTH (so variants are grouped by height starting from input)
+    filtered.sort((a, b) => {
+        // Primary sort: by height (ascending)
+        const heightDiff = (a.h ?? 0) - (b.h ?? 0);
+        if (heightDiff !== 0) return heightDiff;
+
+        // Secondary sort: by width (ascending)
+        return (a.w ?? 0) - (b.w ?? 0);
+    });
+
+    return filtered.map(item => item.v);
 }
 
 /**

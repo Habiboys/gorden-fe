@@ -427,11 +427,14 @@ export default function AdminDocumentDetail() {
         const mainProduct = firstItem?.product || baseFabric;
         const productName = mainProduct?.name || 'Produk';
 
-        // Check if blinds or has variant
-        const quotationDataParsed = typeof doc?.quotation_data === 'string' ? JSON.parse(doc.quotation_data) : doc?.quotation_data;
-        const isBlindCategory = quotationDataParsed?.calculatorTypeSlug?.includes('blind');
+        // Check if blinds - use calculatorSchema which was already parsed from doc.data
+        const isBlindCategory = calculatorSchema?.slug?.includes('blind') ||
+            calculatorSchema?.has_item_type === false;
 
+        // Extract variant info from first item or all items
         let variantInfo = '';
+
+        // Try firstItem selectedVariant
         if (firstItem?.selectedVariant) {
             try {
                 const attrs = typeof firstItem.selectedVariant.attributes === 'string'
@@ -441,10 +444,23 @@ export default function AdminDocumentDetail() {
                 if (attrs && Object.keys(attrs).length > 0) {
                     variantInfo = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
                 } else if (firstItem.selectedVariant.name) {
-                    variantInfo = firstItem.selectedVariant.name;
+                    // Extract variant part from name if it's in format "Product Name (Variant)"
+                    const nameMatch = firstItem.selectedVariant.name.match(/\(([^)]+)\)$/);
+                    variantInfo = nameMatch ? nameMatch[1] : firstItem.selectedVariant.name;
                 }
             } catch (e) {
-                if (firstItem.selectedVariant.name) variantInfo = firstItem.selectedVariant.name;
+                if (firstItem.selectedVariant.name) {
+                    const nameMatch = firstItem.selectedVariant.name.match(/\(([^)]+)\)$/);
+                    variantInfo = nameMatch ? nameMatch[1] : firstItem.selectedVariant.name;
+                }
+            }
+        }
+
+        // Fallback: Try to extract from product name if it contains variant info in parentheses
+        if (!variantInfo && mainProduct?.name) {
+            const nameMatch = mainProduct.name.match(/\|([^|]+)$/);  // Look for "| Variant" pattern
+            if (nameMatch) {
+                variantInfo = nameMatch[1].trim();
             }
         }
 
