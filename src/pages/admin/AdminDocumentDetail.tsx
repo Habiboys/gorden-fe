@@ -460,7 +460,7 @@ export default function AdminDocumentDetail() {
         message += `*Nama:* ${formData.customerName}\n`;
         message += `*Produk:* ${productName}\n`;
         if (isBlindCategory && variantInfo) {
-            message += `*Variasi:* ${variantInfo}\n`;
+            message += `*Variasi Tipe:* ${variantInfo}\n`;
         }
         message += `\n`;
         message += `*Subtotal:* Rp ${subtotal.toLocaleString('id-ID')}\n`;

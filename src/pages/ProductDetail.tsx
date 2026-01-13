@@ -20,6 +20,7 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useCart } from '../context/CartContext';
+import { useSettings } from '../context/SettingsContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';

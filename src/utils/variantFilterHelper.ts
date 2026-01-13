@@ -2,6 +2,10 @@
  * Variant Filter Helper
  * 
  * Utility untuk filter varian berdasarkan dimensi input dan aturan filter.
+ * 
+ * UPDATED: Uses dynamic range-based matching instead of exact-match.
+ * This allows odd dimensions (e.g., 115cm, 227cm) to correctly find
+ * the next available variant sizes.
  */
 
 export interface DimensionInput {
@@ -20,9 +24,9 @@ export type VariantFilterRule =
  */
 export const VARIANT_FILTER_RULES: { value: VariantFilterRule; label: string; description: string }[] = [
     { value: 'none', label: 'Tanpa Filter', description: 'Tampilkan semua varian' },
-    { value: 'gorden-smokering', label: 'Gorden Smokering', description: 'Sibak 1/2 + Tinggi ±30cm' },
-    { value: 'rel-4-sizes', label: 'Rel (4 Ukuran)', description: '4 ukuran lebar: +0, +10, +20, +30' },
-    { value: 'vitrase-kombinasi', label: 'Vitrase (Kombinasi)', description: 'Lebar +20~+80 × Tinggi +0~+30' },
+    { value: 'gorden-smokering', label: 'Gorden Smokering', description: 'Sibak 1/2 + 4 tinggi terdekat' },
+    { value: 'rel-4-sizes', label: 'Rel (4 Ukuran)', description: '4 ukuran lebar terdekat' },
+    { value: 'vitrase-kombinasi', label: 'Vitrase (Kombinasi)', description: '4 lebar × 4 tinggi terdekat' },
 ];
 
 /**
@@ -55,22 +59,44 @@ function getNumericAttr(attrs: Record<string, any>, keys: string[]): number | nu
 }
 
 /**
+ * Get unique sorted attribute values from all variants
+ */
+function getUniqueAttrValues(variants: any[], attrKeys: string[]): number[] {
+    const values = new Set<number>();
+    variants.forEach(v => {
+        const attrs = parseAttributes(v.attributes);
+        const val = getNumericAttr(attrs, attrKeys);
+        if (val !== null) values.add(val);
+    });
+    return Array.from(values).sort((a, b) => a - b);
+}
+
+/**
+ * Find the next N values >= minValue from a sorted array
+ * This enables dynamic matching for odd dimensions
+ */
+function getNextNValues(sortedValues: number[], minValue: number, count: number): number[] {
+    const filtered = sortedValues.filter(v => v >= minValue);
+    return filtered.slice(0, count);
+}
+
+/**
  * Filter variants dengan aturan Gorden Smokering
  * 
  * Rules:
  * - Lebar < 90cm → Sibak = 1
  * - Lebar >= 90cm → Sibak = 2
- * - Lebar >= 90cm → Sibak = 2
- * - Tinggi filter: input, +10, +20, +30
+ * - Tinggi: Find 4 levels starting from the first available height >= input
+ *   (Dynamic matching - works with any input value)
  */
 function filterGordenSmokering(variants: any[], input: DimensionInput): any[] {
     const targetSibak = input.width < 90 ? 1 : 2;
-    const allowedHeights = [
-        input.height,
-        input.height + 10,
-        input.height + 20,
-        input.height + 30
-    ];
+
+    // Get all unique heights from variants
+    const allHeights = getUniqueAttrValues(variants, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);
+
+    // Find the next 4 heights starting from input height
+    const allowedHeights = getNextNValues(allHeights, input.height, 4);
 
     return variants.filter(v => {
         const attrs = parseAttributes(v.attributes);
@@ -81,11 +107,9 @@ function filterGordenSmokering(variants: any[], input: DimensionInput): any[] {
             return false;
         }
 
-
-
         // Check Tinggi (if present in variant) - must be in allowed range
         const tinggi = getNumericAttr(attrs, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);
-        if (tinggi !== null && !allowedHeights.includes(tinggi)) {
+        if (tinggi !== null && allowedHeights.length > 0 && !allowedHeights.includes(tinggi)) {
             return false;
         }
 
@@ -97,22 +121,22 @@ function filterGordenSmokering(variants: any[], input: DimensionInput): any[] {
  * Filter variants dengan aturan Rel (4 sizes)
  * 
  * Rules:
- * - Filter lebar: input, +10, +20, +30
+ * - Find 4 width levels starting from the first available width >= input
+ *   (Dynamic matching - works with any input value)
  */
 function filterRel4Sizes(variants: any[], input: DimensionInput): any[] {
-    const allowedWidths = [
-        input.width,
-        input.width + 10,
-        input.width + 20,
-        input.width + 30
-    ];
+    // Get all unique widths from variants
+    const allWidths = getUniqueAttrValues(variants, ['Lebar', 'lebar', 'Width', 'width', 'L']);
+
+    // Find the next 4 widths starting from input width
+    const allowedWidths = getNextNValues(allWidths, input.width, 4);
 
     return variants.filter(v => {
         const attrs = parseAttributes(v.attributes);
         const lebar = getNumericAttr(attrs, ['Lebar', 'lebar', 'Width', 'width', 'L']);
 
         // If variant has Lebar attribute, filter it
-        if (lebar !== null) {
+        if (lebar !== null && allowedWidths.length > 0) {
             return allowedWidths.includes(lebar);
         }
 
@@ -125,41 +149,33 @@ function filterRel4Sizes(variants: any[], input: DimensionInput): any[] {
  * Filter variants dengan aturan Vitrase (kombinasi)
  * 
  * Rules:
- * - Lebar: +20, +40, +60, +80 dari input (4 tingkatan)
- * - Tinggi: +0, +10, +20, +30 dari input (4 tingkatan)
- * Total: 16 kombinasi per produk
+ * - Lebar: Find 4 width levels starting from the first available width >= input
+ * - Tinggi: Find 4 height levels starting from the first available height >= input
+ *   (Dynamic matching for both dimensions)
  */
 function filterVitraseKombinasi(variants: any[], input: DimensionInput): any[] {
-    // 1. Map variants to include parsed dimensions and filter by width >= input
-    const validVariants = variants.map(v => {
+    // 1. Map variants to include parsed dimensions
+    const parsedVariants = variants.map(v => {
         const attrs = parseAttributes(v.attributes);
         const w = getNumericAttr(attrs, ['Lebar', 'lebar', 'Width', 'width', 'L']);
         const h = getNumericAttr(attrs, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);
         return { v, w, h };
-    }).filter(item => item.w !== null && item.w >= input.width);
+    });
 
-    // 2. Identify the next 4 unique width levels (sorted)
-    const uniqueWidths = Array.from(new Set(validVariants.map(i => i.w!)))
-        .sort((a, b) => a - b)
-        .slice(0, 4);
+    // 2. Get unique widths and heights from all variants
+    const allWidths = getUniqueAttrValues(variants, ['Lebar', 'lebar', 'Width', 'width', 'L']);
+    const allHeights = getUniqueAttrValues(variants, ['Tinggi', 'tinggi', 'Height', 'height', 'T']);
 
-    // 3. Define allowed heights (keep strict steps for now as per previous logic, or maybe should also be dynamic?)
-    // User complaint was specifically about "nilai ganjil" (odd input) on width causing no show.
-    // Existing height logic allows exact match + 3 steps up.
-    const allowedHeights = [
-        input.height,
-        input.height + 10,
-        input.height + 20,
-        input.height + 30
-    ];
+    // 3. Find the next 4 widths and heights starting from input
+    const allowedWidths = getNextNValues(allWidths, input.width, 4);
+    const allowedHeights = getNextNValues(allHeights, input.height, 4);
 
-    return validVariants.filter(item => {
-        // Must match one of the 4 selected widths
-        const widthMatch = uniqueWidths.includes(item.w!);
+    return parsedVariants.filter(item => {
+        // Width check: if variant has width, it must match one of the allowed widths
+        const widthMatch = item.w === null || allowedWidths.length === 0 || allowedWidths.includes(item.w);
 
         // Height check: if variant has height, it must match one of the allowed heights
-        // If variant has NO height attribute (null), we assume it's valid (generic variant)
-        const heightMatch = item.h === null || allowedHeights.includes(item.h!);
+        const heightMatch = item.h === null || allowedHeights.length === 0 || allowedHeights.includes(item.h);
 
         return widthMatch && heightMatch;
     }).map(item => item.v);
