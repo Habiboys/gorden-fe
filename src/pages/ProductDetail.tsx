@@ -828,7 +828,10 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
   return (
     <div className="group relative h-full">
       {/* Card Container */}
-      <div className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col">
+      <div
+        className="relative bg-white rounded-md overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 h-full flex flex-col cursor-pointer"
+        onClick={() => navigate(`/product/${product.sku || product.id}`)}
+      >
         {/* Image Section */}
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <img
@@ -888,7 +891,10 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => navigate(`/product/${product.sku || product.id}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/product/${product.sku || product.id}`);
+              }}
             >
               <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4" />
               <span className="hidden lg:inline">Lihat Detail</span>

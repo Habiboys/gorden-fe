@@ -8,7 +8,7 @@ import {
     Trash2,
     X
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -89,6 +89,7 @@ interface CalculatorItem {
     itemDiscount?: number;    // Discount percentage for entire item subtotal
     groupDiscount?: number;  // Discount percentage for entire group (blind flow)
     components: SelectedComponents;
+    note?: string;
     selectedVariant?: {
         id: string;
         width: number;
@@ -1022,6 +1023,12 @@ export default function AdminDocumentCreate() {
         return Math.max(0, total * (1 - (formData.discount || 0) / 100)); // Percentage Discount
     };
 
+    const updateItemNote = (itemId: string, note: string) => {
+        setItems(prevItems => prevItems.map(item =>
+            item.id === itemId ? { ...item, note } : item
+        ));
+    };
+
     // ================== SUBMIT ==================
 
     const handleSubmit = async () => {
@@ -1441,48 +1448,63 @@ export default function AdminDocumentCreate() {
                                                                                 {groupItems.map((item) => {
                                                                                     const prices = calculateItemPrice(item);
                                                                                     return (
-                                                                                        <tr key={item.id} className="hover:bg-gray-50/50">
-                                                                                            <td className="py-3 px-3 relative">
-                                                                                                <p className="font-medium text-gray-900">{item.name || '-'}</p>
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-center">
-                                                                                                {item.width} x {item.height}
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-center text-gray-500">
-                                                                                                {prices.fabricMeters.toFixed(2)}
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-right text-gray-600">
-                                                                                                {/* Base Price + Discount Logic if needed */}
-                                                                                                Rp {formatRupiah(prices.fabricPricePerMeter ?? 0)}
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-center">
-                                                                                                <input
-                                                                                                    type="number"
-                                                                                                    min="0"
-                                                                                                    max="100"
-                                                                                                    value={item.fabricDiscount || 0}
-                                                                                                    onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
-                                                                                                    className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
-                                                                                                />
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-right text-gray-600 font-medium bg-gray-50/50">
-                                                                                                Rp {formatRupiah(prices.fabricPricePerMeterNet ?? prices.fabricPricePerMeter)}
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-center font-medium">
-                                                                                                {item.quantity}
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-right font-bold text-gray-900">
-                                                                                                Rp {formatRupiah(prices.total)}
-                                                                                            </td>
-                                                                                            <td className="py-3 px-3 text-center">
-                                                                                                <button
-                                                                                                    onClick={() => handleRemoveItem(item.id)}
-                                                                                                    className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
-                                                                                                >
-                                                                                                    <X className="w-4 h-4" />
-                                                                                                </button>
-                                                                                            </td>
-                                                                                        </tr>
+                                                                                        <Fragment key={item.id}>
+                                                                                            <tr className="hover:bg-gray-50/50">
+                                                                                                <td className="py-3 px-3 relative">
+                                                                                                    <p className="font-medium text-gray-900">{item.name || '-'}</p>
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-center">
+                                                                                                    {item.width} x {item.height}
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-center text-gray-500">
+                                                                                                    {prices.fabricMeters.toFixed(2)}
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-right text-gray-600">
+                                                                                                    {/* Base Price + Discount Logic if needed */}
+                                                                                                    Rp {formatRupiah(prices.fabricPricePerMeter ?? 0)}
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-center">
+                                                                                                    <input
+                                                                                                        type="number"
+                                                                                                        min="0"
+                                                                                                        max="100"
+                                                                                                        value={item.fabricDiscount || 0}
+                                                                                                        onChange={(e) => updateFabricDiscount(item.id, parseInt(e.target.value) || 0)}
+                                                                                                        className="w-12 h-8 px-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-[#EB216A] outline-none"
+                                                                                                    />
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-right text-gray-600 font-medium bg-gray-50/50">
+                                                                                                    Rp {formatRupiah(prices.fabricPricePerMeterNet ?? prices.fabricPricePerMeter)}
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-center font-medium">
+                                                                                                    {item.quantity}
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-right font-bold text-gray-900">
+                                                                                                    Rp {formatRupiah(prices.total)}
+                                                                                                </td>
+                                                                                                <td className="py-3 px-3 text-center">
+                                                                                                    <button
+                                                                                                        onClick={() => handleRemoveItem(item.id)}
+                                                                                                        className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                                                                                                    >
+                                                                                                        <X className="w-4 h-4" />
+                                                                                                    </button>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                            <tr>
+                                                                                                <td colSpan={8} className="px-3 pb-3 pt-0 border-b border-gray-100">
+                                                                                                    <div className="relative">
+                                                                                                        <input
+                                                                                                            type="text"
+                                                                                                            value={item.note || ''}
+                                                                                                            onChange={(e) => updateItemNote(item.id, e.target.value)}
+                                                                                                            placeholder="Catatan item (opsional)..."
+                                                                                                            className="w-full text-xs px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-gray-600 placeholder:text-gray-400 focus:outline-none focus:border-[#EB216A]/30 focus:bg-white transition-all"
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        </Fragment>
                                                                                     );
                                                                                 })}
                                                                             </tbody>
@@ -1598,6 +1620,16 @@ export default function AdminDocumentCreate() {
                                                                                         <span className="text-xs text-gray-500">Total Item</span>
                                                                                         <span className="text-sm font-bold text-gray-900">Rp {prices.total.toLocaleString('id-ID')}</span>
                                                                                     </div>
+
+                                                                                    <div className="mt-3">
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            value={item.note || ''}
+                                                                                            onChange={(e) => updateItemNote(item.id, e.target.value)}
+                                                                                            placeholder="Catatan item (opsional)..."
+                                                                                            className="w-full text-xs px-2 py-1.5 bg-white border border-gray-200 rounded text-gray-600 placeholder:text-gray-400 focus:outline-none focus:border-[#EB216A]/30 transition-all"
+                                                                                        />
+                                                                                    </div>
                                                                                 </div>
                                                                             );
                                                                         })}
@@ -1712,6 +1744,15 @@ export default function AdminDocumentCreate() {
                                                                             <Trash2 className="w-5 h-5" />
                                                                         </button>
                                                                     </div>
+                                                                </div>
+                                                                <div className="mt-3">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={item.note || ''}
+                                                                        onChange={(e) => updateItemNote(item.id, e.target.value)}
+                                                                        placeholder="Tambahkan catatan khusus untuk item ini (opsional)..."
+                                                                        className="w-full text-sm px-3 py-2 bg-white/50 border border-gray-200 rounded-lg text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#EB216A] focus:ring-1 focus:ring-[#EB216A] transition-all"
+                                                                    />
                                                                 </div>
                                                             </div>
 
@@ -2008,6 +2049,15 @@ export default function AdminDocumentCreate() {
                                                                                 )}
                                                                             </div>
                                                                         </div>
+                                                                        <div className="mt-2 px-0">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.note || ''}
+                                                                                onChange={(e) => updateItemNote(item.id, e.target.value)}
+                                                                                placeholder="Catatan item..."
+                                                                                className="w-full text-xs px-2 py-1.5 bg-white border border-gray-200 rounded text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#EB216A] focus:ring-1 focus:ring-[#EB216A] transition-all"
+                                                                            />
+                                                                        </div>
                                                                         <div className="mt-3 text-sm border-t border-gray-100 pt-2 space-y-3">
                                                                             {/* Price Details Grid */}
                                                                             <div className="grid grid-cols-2 gap-3">
@@ -2211,7 +2261,21 @@ export default function AdminDocumentCreate() {
                                                                                 </div>
                                                                             );
                                                                         })}
+                                                                    {selectedCalcType?.components
+                                                                        ?.filter(comp => {
+                                                                            if (item.packageType === 'gorden-saja') return false;
+                                                                            if (comp.hide_on_door && item.itemType === 'pintu') return false;
+                                                                            return true;
+                                                                        })
+                                                                        .length === 0 && (
+                                                                            <div className="text-center py-4 text-gray-400 text-sm italic">
+                                                                                Tidak ada komponen tambahan
+                                                                            </div>
+                                                                        )
+                                                                    }
                                                                 </div>
+
+
 
                                                                 {/* FOOTER per Item */}
                                                                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-dashed">

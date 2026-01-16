@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart } from 'lucide-react';
+import { ArrowRight, Heart, ShoppingCart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -21,13 +21,13 @@ export function TopProducts() {
     const fetchProducts = async () => {
       try {
         console.log('🔄 Fetching featured products for homepage...');
-        const response = await productsApi.getAll({ featured: true, limit: 8 });
+        const response = await productsApi.getAll({ featured: true, limit: 10 });
         console.log('✅ Featured products fetched:', response);
 
         // If no featured products, get latest products instead
         if (!response.data || response.data.length === 0) {
           console.log('⚠️ No featured products found, fetching latest products...');
-          const latestResponse = await productsApi.getAll({ limit: 8 });
+          const latestResponse = await productsApi.getAll({ limit: 10 });
           console.log('✅ Latest products fetched:', latestResponse);
           setProducts(latestResponse.data || []);
         } else {
@@ -86,12 +86,20 @@ export function TopProducts() {
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHeader
-          badge="Pilihan Terbaik"
-          title="Produk Teratas"
-          description="Produk pilihan terbaik dan paling diminati pelanggan kami"
-          alignment="left"
-        />
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-2">
+          <SectionHeader
+            badge="Pilihan Terbaik"
+            title="Produk Teratas"
+            description="Produk pilihan terbaik dan paling diminati pelanggan kami"
+            alignment="left"
+          />
+          <Link
+            to="/products?filter=featured"
+            className="hidden md:flex items-center gap-2 text-[#EB216A] font-medium hover:gap-3 transition-all mb-12"
+          >
+            Lihat Semua <ArrowRight className="w-5 h-5" />
+          </Link>
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-3">
           {products.map((product) => (

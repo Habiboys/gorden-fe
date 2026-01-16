@@ -18,7 +18,9 @@ export default function ProductListing() {
   const [filterCustom, setFilterCustom] = useState(false);
   const [filterWarranty, setFilterWarranty] = useState(false);
   const [filterNewArrival, setFilterNewArrival] = useState(false);
+
   const [filterBestSeller, setFilterBestSeller] = useState(false);
+  const [filterFeatured, setFilterFeatured] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -102,6 +104,15 @@ export default function ProductListing() {
         if (cat) setSelectedCategory(String(cat.id));
       }
     }
+
+
+    // Handle 'filter' query param
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'featured') setFilterFeatured(true);
+    if (filterParam === 'bestseller') setFilterBestSeller(true);
+    if (filterParam === 'newarrival') setFilterNewArrival(true);
+    if (filterParam === 'custom') setFilterCustom(true);
+    if (filterParam === 'warranty') setFilterWarranty(true);
   }, [categories, searchParams]);
 
   // Toggle category expansion
@@ -134,8 +145,9 @@ export default function ProductListing() {
     const matchesWarranty = !filterWarranty || product.is_warranty;
     const matchesNewArrival = !filterNewArrival || product.newArrival;
     const matchesBestSeller = !filterBestSeller || product.bestSeller;
+    const matchesFeatured = !filterFeatured || product.featured;
 
-    return matchesSearch && matchesCategory && matchesSubcategory && matchesCustom && matchesWarranty && matchesNewArrival && matchesBestSeller;
+    return matchesSearch && matchesCategory && matchesSubcategory && matchesCustom && matchesWarranty && matchesNewArrival && matchesBestSeller && matchesFeatured;
   });
 
   // Sort products
@@ -315,6 +327,15 @@ export default function ProductListing() {
               className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
             />
             <span className="text-sm text-gray-700">Terlaris</span>
+          </label>
+          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterFeatured}
+              onChange={(e) => setFilterFeatured(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+            />
+            <span className="text-sm text-gray-700">Featured</span>
           </label>
         </div>
       </div>

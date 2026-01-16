@@ -11,7 +11,7 @@ import {
     Printer,
     Send
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
@@ -731,34 +731,45 @@ export default function AdminDocumentDetail() {
                                                                         {items.map((item) => {
                                                                             const prices = calculateItemPriceRich(item);
                                                                             return (
-                                                                                <tr key={item.id} className="hover:bg-gray-50/50">
-                                                                                    <td className="py-3 px-3 relative">
-                                                                                        <div className="font-medium text-gray-900">
-                                                                                            {item.name?.split('(')[0]?.trim() || item.product?.name || '-'}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-center">
-                                                                                        {item.width} x {item.height}
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-center text-gray-500">
-                                                                                        {prices.fabricMeters.toFixed(2)}
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-right text-gray-600">
-                                                                                        Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-center text-gray-600">
-                                                                                        {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-right text-gray-700 bg-gray-50/50">
-                                                                                        Rp {(prices.fabricPricePerMeterNet || (prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100))).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-center font-medium">
-                                                                                        {item.quantity}
-                                                                                    </td>
-                                                                                    <td className="py-3 px-3 text-right font-bold text-gray-900">
-                                                                                        Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
-                                                                                    </td>
-                                                                                </tr>
+                                                                                <Fragment key={item.id}>
+                                                                                    <tr className="hover:bg-gray-50/50">
+                                                                                        <td className="py-3 px-3 relative">
+                                                                                            <div className="font-medium text-gray-900">
+                                                                                                {item.name?.split('(')[0]?.trim() || item.product?.name || '-'}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-center">
+                                                                                            {item.width} x {item.height}
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-center text-gray-500">
+                                                                                            {prices.fabricMeters.toFixed(2)}
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-right text-gray-600">
+                                                                                            Rp {(prices.fabricPricePerMeter ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-center text-gray-600">
+                                                                                            {item.fabricDiscount ? `${item.fabricDiscount}%` : '-'}
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-right text-gray-700 bg-gray-50/50">
+                                                                                            Rp {(prices.fabricPricePerMeterNet || (prices.fabricPricePerMeter * (1 - (item.fabricDiscount || 0) / 100))).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-center font-medium">
+                                                                                            {item.quantity}
+                                                                                        </td>
+                                                                                        <td className="py-3 px-3 text-right font-bold text-gray-900">
+                                                                                            Rp {prices.total.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                    {
+                                                                                        item.note && (
+                                                                                            <tr>
+                                                                                                <td colSpan={8} className="py-2 px-3 bg-yellow-50/50 text-gray-600 italic border-t border-gray-100">
+                                                                                                    <span className="font-medium not-italic mr-1">Catatan:</span> {item.note}
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        )
+                                                                                    }
+                                                                                </Fragment>
                                                                             );
                                                                         })}
                                                                     </tbody>
@@ -921,18 +932,25 @@ export default function AdminDocumentDetail() {
                                         return (
                                             <div key={item.id} className="border rounded-lg overflow-hidden bg-white">
                                                 {/* ITEM HEADER */}
-                                                <div className="bg-gray-50 border-b px-4 py-3 flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-8 h-8 rounded-full bg-[#EB216A] text-white flex items-center justify-center text-sm font-bold">
-                                                            {item.quantity}
-                                                        </span>
-                                                        <span className="font-bold text-gray-800">
-                                                            {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Kain Saja'}
+                                                <div className="bg-gray-50 border-b px-4 py-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="w-8 h-8 rounded-full bg-[#EB216A] text-white flex items-center justify-center text-sm font-bold">
+                                                                {item.quantity}
+                                                            </span>
+                                                            <span className="font-bold text-gray-800">
+                                                                {item.itemType === 'jendela' ? 'Jendela' : 'Pintu'} - {item.packageType === 'gorden-lengkap' ? 'Paket Lengkap' : 'Kain Saja'}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-sm text-gray-500">
+                                                            {item.width} cm × {item.height} cm
                                                         </span>
                                                     </div>
-                                                    <span className="text-sm text-gray-500">
-                                                        {item.width} cm × {item.height} cm
-                                                    </span>
+                                                    {item.note && (
+                                                        <div className="mt-2 text-sm text-gray-500 bg-white p-2 rounded border border-gray-100 italic">
+                                                            <span className="font-medium not-italic mr-1">Catatan:</span> {item.note}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* TABLE */}
@@ -990,6 +1008,7 @@ export default function AdminDocumentDetail() {
                                                                     </td>
                                                                 </tr>
                                                             ))}
+
                                                         </tbody>
                                                     </table>
 
