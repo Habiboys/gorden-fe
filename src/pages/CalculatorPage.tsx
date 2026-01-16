@@ -2321,7 +2321,13 @@ export default function CalculatorPageV2() {
           style={{ width: 'clamp(320px, 95vw, 1200px)', maxWidth: '1600px' }}
         >
           <DialogHeader>
-            <DialogTitle>Pilih Varian - {pendingProductForVariant?.name}</DialogTitle>
+            <DialogTitle>
+              Pilih Varian - {pendingProductForVariant?.name}
+              {variantSelectionMode === 'component' && editingComponentId !== null && (() => {
+                const comp = currentType?.components?.find(c => c.id === editingComponentId);
+                return comp ? <span className="block text-sm font-normal text-gray-500 mt-0.5">{comp.label}</span> : null;
+              })()}
+            </DialogTitle>
             <DialogDescription>
               {/* General Recommendation Banner */}
               {(() => {

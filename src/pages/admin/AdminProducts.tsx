@@ -687,6 +687,8 @@ export default function AdminProducts() {
         toast.success('Produk berhasil dihapus!');
         // Remove product from local state immediately
         setProducts(prev => prev.filter(p => p.id !== productId));
+        // Update filtered products as well since this is what is rendered
+        setFilteredProducts(prev => prev.filter(p => p.id !== productId));
         // Update total count
         setPagination(prev => ({ ...prev, total: prev.total - 1 }));
       } catch (error) {

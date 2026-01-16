@@ -269,7 +269,7 @@ export default function ProductDetail() {
 
                 {/* Short Description */}
                 {product.description && (
-                  <p className="text-gray-600 text-sm mb-3 text-justify">{product.description}</p>
+                  <p className="text-gray-600 text-sm mb-3" style={{ textAlign: 'justify' }}>{product.description}</p>
                 )}
 
                 <div className="flex flex-col gap-1 text-sm text-gray-600">
@@ -284,23 +284,29 @@ export default function ProductDetail() {
 
                 {/* Badges - Garansi & Custom */}
                 {(product.is_warranty || product.is_custom) && (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 space-y-3">
                     <div className="flex flex-wrap gap-2">
                       {product.is_warranty && (
                         <Badge className="bg-blue-100 text-blue-700 border-0">
                           Garansi 1 Tahun
                         </Badge>
                       )}
-                      {product.is_custom && (
-                        <Badge className="bg-pink-100 text-pink-700 border-0">
-                          Gorden Custom
-                        </Badge>
-                      )}
                     </div>
                     {product.is_custom && (
-                      <p className="text-xs text-gray-500">
-                        Produk ini dapat dihitung menggunakan <a href="/calculator" className="text-[#EB216A] hover:underline font-medium">Kalkulator Gorden</a>
-                      </p>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Gorden Custom</p>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            Produk ini dapat dihitung menggunakan{' '}
+                            <a href="/calculator" className="text-[#EB216A] font-medium hover:underline">Kalkulator Gorden</a>
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

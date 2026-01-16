@@ -2438,7 +2438,13 @@ export default function AdminDocumentCreate() {
                             style={{ width: 'clamp(320px, 95vw, 1200px)', maxWidth: '1600px' }}
                         >
                             <div className="p-4 border-b flex items-center justify-between">
-                                <h3 className="text-lg font-semibold">Pilih Varian</h3>
+                                <div>
+                                    <h3 className="text-lg font-semibold">Pilih Varian</h3>
+                                    {variantSelectionMode === 'component' && editingComponentId !== null && (() => {
+                                        const comp = selectedCalcType?.components?.find(c => c.id === editingComponentId);
+                                        return comp ? <p className="text-sm text-gray-500 mt-0.5">{comp.label}</p> : null;
+                                    })()}
+                                </div>
                                 <Button size="sm" variant="ghost" onClick={() => { setShowVariantPicker(false); setVariantItemId(null); }}><X className="w-4 h-4" /></Button>
                             </div>
 
