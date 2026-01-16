@@ -594,7 +594,7 @@ export default function AdminCalculatorLeads() {
             subtotal: item.subtotal || 0
           };
         }),
-        paymentTerms: 'Bank BRI 0763 0100 1160 564 a.n ABDUL RAHIM',
+        paymentTerms: 'Bank BRI 0256 0106 3614 506 A.n Abdul Latif',
         notes: calcData.notes || 'Terima kasih atas kepercayaannya'
       }
     };

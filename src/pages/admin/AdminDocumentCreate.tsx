@@ -1184,7 +1184,7 @@ export default function AdminDocumentCreate() {
                     image: selectedFabric?.images?.[0] || selectedFabric?.image // Store image for reconstruction
                 },
                 discount: formData.discount, // Persist Global Discount Percentage
-                paymentTerms: formData.paymentTerms || 'Bank BRI 0763 0100 1160 564 a.n ABDUL RAHIM',
+                paymentTerms: formData.paymentTerms || 'Bank BRI 0256 0106 3614 506 A.n Abdul Latif',
                 notes: formData.notes || ''
             };
 

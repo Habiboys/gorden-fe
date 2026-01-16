@@ -89,7 +89,7 @@ export function DocumentDetailModal({ doc, onClose, onRefresh }: DocumentDetailM
         customerAddress: doc?.address || doc?.customerAddress || '',
         referralCode: doc?.referral_code || doc?.referralCode || '',
         discount: doc?.discount || 0,
-        paymentTerms: quotationData?.paymentTerms || 'Bank BRI 0763 0100 1160 564 a.n ABDUL RAHIM',
+        paymentTerms: quotationData?.paymentTerms || 'Bank BRI 0256 0106 3614 506 A.n Abdul Latif',
         notes: quotationData?.notes || ''
     });
 
