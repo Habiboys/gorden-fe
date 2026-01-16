@@ -2066,22 +2066,38 @@ export default function AdminDocumentCreate() {
                                                                                                     />
                                                                                                 </div>
                                                                                                 <div className="flex-1 min-w-0">
-                                                                                                    <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
-                                                                                                        {selection.product.name}
-                                                                                                    </h4>
                                                                                                     {(() => {
+                                                                                                        // Parse product name to extract variant info from parentheses
+                                                                                                        const fullName = selection.product.name || '';
+                                                                                                        const match = fullName.match(/^(.+?)\s*\(([^)]+)\)$/);
+                                                                                                        const baseName = match ? match[1].trim() : fullName;
+                                                                                                        const embeddedVariant = match ? match[2] : null;
+
                                                                                                         // Check multiple sources for variant attributes
                                                                                                         const attrSource = selection.product.variantAttributes
                                                                                                             || selection.product.attributes
                                                                                                             || selection.variantAttributes
                                                                                                             || selection.selectedVariant?.attributes;
-                                                                                                        if (!attrSource) return null;
-                                                                                                        const attrs = safeJSONParse(attrSource, {});
-                                                                                                        if (Object.keys(attrs).length === 0) return null;
+                                                                                                        const attrs = attrSource ? safeJSONParse(attrSource, {}) : {};
+                                                                                                        const hasExternalAttrs = Object.keys(attrs).length > 0;
+
                                                                                                         return (
-                                                                                                            <div className="text-xs text-gray-500 mt-1 truncate">
-                                                                                                                {Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')}
-                                                                                                            </div>
+                                                                                                            <>
+                                                                                                                <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                                                                                                                    {baseName}
+                                                                                                                </h4>
+                                                                                                                {/* Show variant info: prefer embedded in name, fallback to external attrs */}
+                                                                                                                {embeddedVariant && (
+                                                                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                                                                        {embeddedVariant}
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                                {!embeddedVariant && hasExternalAttrs && (
+                                                                                                                    <div className="text-xs text-gray-500 mt-1 truncate">
+                                                                                                                        {Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                            </>
                                                                                                         );
                                                                                                     })()}
                                                                                                 </div>
