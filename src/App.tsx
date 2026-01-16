@@ -27,6 +27,7 @@ import VerificationPendingPage from './pages/VerificationPendingPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AdminArticleEdit from './pages/admin/AdminArticleEdit';
 import AdminArticles from './pages/admin/AdminArticles';
+import AdminBadges from './pages/admin/AdminBadges';
 import AdminCalculatorComponents from './pages/admin/AdminCalculatorComponents';
 import AdminCalculatorLeads from './pages/admin/AdminCalculatorLeads';
 import AdminCalculatorTypes from './pages/admin/AdminCalculatorTypes';
@@ -129,6 +130,7 @@ const router = createBrowserRouter(
           <Route path="products/add" element={<AdminProductForm />} />
           <Route path="products/edit/:id" element={<AdminProductForm />} />
           <Route path="categories" element={<AdminCategories />} />
+          <Route path="badges" element={<AdminBadges />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="calculator-leads" element={<AdminCalculatorLeads />} />
           <Route path="calculator-components" element={<AdminCalculatorComponents />} />

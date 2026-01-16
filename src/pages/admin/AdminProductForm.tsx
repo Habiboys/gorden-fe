@@ -1,4 +1,4 @@
-import { ArrowLeft, Bold, Image as ImageIcon, Italic, List, ListOrdered, Loader2, Underline, Upload, X } from 'lucide-react';
+import { ArrowLeft, Bold, Check, Image as ImageIcon, Italic, List, ListOrdered, Loader2, Underline, Upload, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import {
     SelectValue,
 } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
-import { categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploadApi } from '../../utils/api';
+import { badgesApi, categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploadApi } from '../../utils/api';
 import { getProductImagesArray, safelyParseImages } from '../../utils/imageHelper';
 import UnifiedVariantManager from './UnifiedVariantManager';
 
@@ -226,6 +226,13 @@ export default function AdminProductForm() {
         variant_options: [] as any[],
     });
 
+    const [allBadges, setAllBadges] = useState<any[]>([]);
+    const [selectedBadgeIds, setSelectedBadgeIds] = useState<number[]>([]);
+
+    useEffect(() => {
+        badgesApi.getAll().then(res => setAllBadges(res.data)).catch(console.error);
+    }, []);
+
     useEffect(() => {
         const loadCategories = async () => {
             try {
@@ -279,6 +286,10 @@ export default function AdminProductForm() {
                 variant_options: product.variant_options || [],
             });
             setUploadedImages(safelyParseImages(product.images));
+
+            if (product.badges) {
+                setSelectedBadgeIds(product.badges.map((b: any) => b.id));
+            }
 
             // Determine variant options from product or infer
             let loadedOptions = product.variant_options || [];
@@ -402,13 +413,14 @@ export default function AdminProductForm() {
                 meta_title: formData.metaTitle,
                 meta_description: formData.metaDescription,
                 meta_keywords: formData.metaKeywords,
-                is_featured: formData.featured,
-                is_new_arrival: formData.newArrival,
-                is_best_seller: formData.bestSeller,
-                is_warranty: formData.warranty,
-                is_custom: formData.custom,
-                variant_options: variantOptions,
                 images: uploadedImages,
+                badgeIds: selectedBadgeIds,
+                // Sync legacy flags based on selected badges
+                is_featured: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Featured'),
+                is_new_arrival: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'New Arrival'),
+                is_best_seller: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Best Seller'),
+                is_warranty: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Garansi 1 Tahun'),
+                is_custom: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Gorden Custom'),
             };
 
             let productId = id;
@@ -947,32 +959,38 @@ export default function AdminProductForm() {
             <Card className="p-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Pengaturan Lanjutan</h2>
                 <div className="space-y-3">
-                    {[
-                        { key: 'featured', label: 'Featured Product', desc: 'Tampil di section unggulan' },
-                        { key: 'newArrival', label: 'New Arrival', desc: 'Tampilkan badge "New"' },
-                        { key: 'bestSeller', label: 'Best Seller', desc: 'Tampilkan badge "Best Seller"' },
-                        { key: 'warranty', label: 'Garansi 1 Tahun', desc: 'Produk memiliki garansi 1 tahun' },
-                        { key: 'custom', label: 'Gorden Custom', desc: 'Produk bisa di-custom sesuai pesanan' },
-                    ].map((item) => (
-                        <div
-                            key={item.key}
-                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                        >
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">{item.label}</p>
-                                <p className="text-xs text-gray-600">{item.desc}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {allBadges.map((badge) => {
+                            const isSelected = selectedBadgeIds.includes(badge.id);
+                            return (
+                                <div
+                                    key={badge.id}
+                                    onClick={() => {
+                                        if (isSelected) setSelectedBadgeIds(prev => prev.filter(id => id !== badge.id));
+                                        else setSelectedBadgeIds(prev => [...prev, badge.id]);
+                                    }}
+                                    className={`cursor-pointer border rounded-lg p-3 transition-all relative ${isSelected ? 'border-[#EB216A] bg-pink-50 ring-1 ring-[#EB216A]' : 'border-gray-200 hover:border-gray-300'}`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-900">{badge.label}</span>
+                                        {isSelected && <div className="bg-[#EB216A] rounded-full p-0.5"><Check className="w-3 h-3 text-white" /></div>}
+                                    </div>
+                                    <span
+                                        className="text-[10px] px-2 py-0.5 rounded shadow-sm inline-block"
+                                        style={{ backgroundColor: badge.bg_color, color: badge.text_color }}
+                                    >
+                                        Preview
+                                    </span>
+                                    <p className="text-xs text-gray-500 mt-2 capitalize">{badge.position.replace('-', ' ')}</p>
+                                </div>
+                            );
+                        })}
+                        {allBadges.length === 0 && (
+                            <div className="col-span-full text-center py-4 text-gray-500 text-sm">
+                                Belum ada badge tersedia. Silahkan buat di menu Badges.
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={(formData as any)[item.key]}
-                                    onChange={(e) => setFormData({ ...formData, [item.key]: e.target.checked })}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#EB216A]"></div>
-                            </label>
-                        </div>
-                    ))}
+                        )}
+                    </div>
                 </div>
             </Card>
 

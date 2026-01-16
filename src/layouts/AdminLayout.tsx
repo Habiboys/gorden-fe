@@ -17,6 +17,7 @@ import {
   Package,
   Settings,
   Sparkles,
+  Tag,
   X
 } from 'lucide-react';
 import { useState } from 'react';
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Produk', href: '/admin/products', icon: Package },
   { name: 'Kategori', href: '/admin/categories', icon: FolderTree },
+  { name: 'Badges', href: '/admin/badges', icon: Tag },
   { name: 'Kalkulator Leads', href: '/admin/calculator-leads', icon: Calculator },
   { name: 'Jenis Kalkulator', href: '/admin/calculator-types', icon: Box },
   { name: 'Dokumen', href: '/admin/documents', icon: FileText },

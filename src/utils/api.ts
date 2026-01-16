@@ -803,3 +803,19 @@ export const contactApi = {
         method: 'DELETE',
     }),
 };
+
+// Badges API
+export const badgesApi = {
+    getAll: () => apiCall('/badges'),
+    create: (data: any) => apiCall('/badges', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    update: (id: string | number, data: any) => apiCall(`/badges/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    delete: (id: string | number) => apiCall(`/badges/${id}`, {
+        method: 'DELETE',
+    }),
+};

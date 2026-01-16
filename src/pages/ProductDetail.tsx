@@ -282,16 +282,24 @@ export default function ProductDetail() {
                   )}
                 </div>
 
-                {/* Badges - Garansi & Custom */}
-                {(product.is_warranty || product.is_custom) && (
+                {/* Badges Section */}
+                {(product.badges?.length > 0 || product.is_custom) && (
                   <div className="mt-3 space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      {product.is_warranty && (
-                        <Badge className="bg-blue-100 text-blue-700 border-0">
-                          Garansi 1 Tahun
-                        </Badge>
-                      )}
-                    </div>
+                    {/* Generic Badges */}
+                    {product.badges?.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {product.badges
+                          // Filter out "Gorden Custom" from generic chips if we show the special block below
+                          .filter((b: any) => b.label !== 'Gorden Custom')
+                          .map((badge: any) => (
+                            <Badge key={badge.id} className="border-0 px-2.5 py-0.5 text-xs font-semibold shadow-sm" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                              {badge.label}
+                            </Badge>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Special Custom Badge Block (Functional CTA) */}
                     {product.is_custom && (
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -303,7 +311,7 @@ export default function ProductDetail() {
                           <p className="text-sm font-medium text-gray-800">Gorden Custom</p>
                           <p className="text-xs text-gray-600 mt-0.5">
                             Produk ini dapat dihitung menggunakan{' '}
-                            <a href="/calculator" className="text-[#EB216A] font-medium hover:underline">Kalkulator Gorden</a>
+                            <Link to="/calculator" className="text-[#EB216A] font-medium hover:underline">Kalkulator Gorden</Link>
                           </p>
                         </div>
                       </div>

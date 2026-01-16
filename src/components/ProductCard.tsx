@@ -27,9 +27,16 @@ interface ProductCardProps {
   newArrival?: boolean;
   is_custom?: boolean;
   is_warranty?: boolean;
+  badges?: {
+    id: number;
+    label: string;
+    text_color: string;
+    bg_color: string;
+    position: string;
+  }[];
 }
 
-export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan, is_custom, is_warranty }: ProductCardProps) {
+export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, image, images, featured, bestSeller, newArrival, original_price, price_unit, satuan, is_custom, is_warranty, badges }: ProductCardProps) {
   const productImage = getProductImageUrl(images || image);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -79,26 +86,67 @@ export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, ima
           {/* Gradient Overlay on Hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Main Badge (Featured/Best Seller/New) */}
-          {(featured || bestSeller || newArrival) && (
-            <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
-              {bestSeller ? 'Best Seller' : newArrival ? 'New' : 'Featured'}
-            </Badge>
-          )}
+          {/* Dynamic Badges Rendering */}
+          {badges && badges.length > 0 ? (
+            <>
+              {/* Top Left Group */}
+              <div className="absolute top-4 left-4 flex flex-col gap-1 items-start z-10">
+                {badges.filter(b => b.position === 'top-left').map(badge => (
+                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
 
-          {/* Custom & Warranty Badges - Bottom Left (Fade out on hover to show Quick Add) */}
-          <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0">
-            {is_warranty && (
-              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
-                Garansi 1 Tahun
-              </Badge>
-            )}
-            {is_custom && (
-              <Badge className="bg-purple-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
-                Gorden Custom
-              </Badge>
-            )}
-          </div>
+              {/* Bottom Left Group */}
+              <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0 z-10">
+                {badges.filter(b => b.position === 'bottom-left').map(badge => (
+                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Top Right Group - Below Wishlist if needed, or overlay */}
+              <div className="absolute top-16 right-4 flex flex-col gap-1 items-end z-10">
+                {badges.filter(b => b.position === 'top-right').map(badge => (
+                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Bottom Right Group */}
+              <div className="absolute bottom-4 right-4 flex flex-col gap-1 items-end z-10">
+                {badges.filter(b => b.position === 'bottom-right').map(badge => (
+                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Legacy Badges Fallback */}
+              {(featured || bestSeller || newArrival) && (
+                <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
+                  {bestSeller ? 'Best Seller' : newArrival ? 'New' : 'Featured'}
+                </Badge>
+              )}
+              <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0">
+                {is_warranty && (
+                  <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
+                    Garansi 1 Tahun
+                  </Badge>
+                )}
+                {is_custom && (
+                  <Badge className="bg-purple-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
+                    Gorden Custom
+                  </Badge>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Wishlist Button */}
           <button
