@@ -2069,14 +2069,21 @@ export default function AdminDocumentCreate() {
                                                                                                     <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
                                                                                                         {selection.product.name}
                                                                                                     </h4>
-                                                                                                    {selection.product.variantAttributes && (
-                                                                                                        <div className="text-xs text-gray-500 mt-1 truncate">
-                                                                                                            {(() => {
-                                                                                                                const attrs = safeJSONParse(selection.product.variantAttributes, {});
-                                                                                                                return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                                                                            })()}
-                                                                                                        </div>
-                                                                                                    )}
+                                                                                                    {(() => {
+                                                                                                        // Check multiple sources for variant attributes
+                                                                                                        const attrSource = selection.product.variantAttributes
+                                                                                                            || selection.product.attributes
+                                                                                                            || selection.variantAttributes
+                                                                                                            || selection.selectedVariant?.attributes;
+                                                                                                        if (!attrSource) return null;
+                                                                                                        const attrs = safeJSONParse(attrSource, {});
+                                                                                                        if (Object.keys(attrs).length === 0) return null;
+                                                                                                        return (
+                                                                                                            <div className="text-xs text-gray-500 mt-1 truncate">
+                                                                                                                {Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                                            </div>
+                                                                                                        );
+                                                                                                    })()}
                                                                                                 </div>
                                                                                             </div>
                                                                                             <div className="mt-3 text-sm border-t border-gray-100 pt-2 space-y-3">
