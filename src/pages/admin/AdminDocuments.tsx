@@ -77,6 +77,39 @@ const getDocumentTotal = (doc: any): number => {
   return 0;
 };
 
+// Helper to get calculator type from document data
+const getCalculatorType = (doc: any): string | null => {
+  try {
+    let data = doc.data;
+    if (!data) return null;
+    while (typeof data === 'string') {
+      data = JSON.parse(data);
+    }
+    return data.calculatorType || null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper to get discount info from document data
+const getDiscountInfo = (doc: any): { discount: number; discountAmount: number } | null => {
+  try {
+    let data = doc.data;
+    if (!data) return null;
+    while (typeof data === 'string') {
+      data = JSON.parse(data);
+    }
+    const discount = data.discount || 0;
+    if (discount > 0) {
+      const discountAmount = doc.discount_amount || 0;
+      return { discount, discountAmount };
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+
 export default function AdminDocuments() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<any[]>([]);
@@ -298,6 +331,7 @@ export default function AdminDocuments() {
               <tr>
                 <th className="px-6 py-4 text-left text-sm text-gray-600">No. Dokumen</th>
                 <th className="px-6 py-4 text-left text-sm text-gray-600">Tipe</th>
+                <th className="px-6 py-4 text-left text-sm text-gray-600">Kalkulator</th>
                 <th className="px-6 py-4 text-left text-sm text-gray-600">Customer</th>
                 <th className="px-6 py-4 text-left text-sm text-gray-600">Nilai</th>
                 <th className="px-6 py-4 text-left text-sm text-gray-600">Tanggal</th>
@@ -328,13 +362,35 @@ export default function AdminDocuments() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
+                      {(() => {
+                        const calcType = getCalculatorType(doc);
+                        return calcType ? (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">{calcType}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="space-y-1">
                         <p className="text-sm text-gray-900">{doc.customer_name}</p>
                         <p className="text-xs text-gray-600">{doc.customer_email}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-900">Rp{getDocumentTotal(doc).toLocaleString('id-ID')}</p>
+                      {(() => {
+                        const total = getDocumentTotal(doc);
+                        const discountInfo = getDiscountInfo(doc);
+                        if (discountInfo && discountInfo.discount > 0) {
+                          return (
+                            <div className="space-y-0.5">
+                              <p className="text-sm font-medium text-[#EB216A]">Rp{total.toLocaleString('id-ID')}</p>
+                              <p className="text-xs text-green-600">Disc: {discountInfo.discount}%</p>
+                            </div>
+                          );
+                        }
+                        return <p className="text-sm text-gray-900">Rp{total.toLocaleString('id-ID')}</p>;
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-600">
