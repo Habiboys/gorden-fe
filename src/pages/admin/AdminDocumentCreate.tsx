@@ -1856,20 +1856,40 @@ export default function AdminDocumentCreate() {
                                                                                         </div>
                                                                                         <div className="flex flex-col leading-tight min-w-0">
                                                                                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{comp.label}</span>
-                                                                                            <span className="text-sm font-medium text-gray-900 line-clamp-2" title={selection?.product?.name}>
-                                                                                                {selection?.product?.name || '-'}
-                                                                                            </span>
-                                                                                            {selection?.product && (
-                                                                                                <span className="text-[10px] text-gray-500 truncate">
-                                                                                                    {(() => {
-                                                                                                        if (selection.product.variantAttributes) {
-                                                                                                            const attrs = safeJSONParse(selection.product.variantAttributes, {});
-                                                                                                            return Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ');
-                                                                                                        }
-                                                                                                        return '';
-                                                                                                    })()}
-                                                                                                </span>
-                                                                                            )}
+                                                                                            {(() => {
+                                                                                                // Parse product name to extract variant info from parentheses
+                                                                                                const fullName = selection?.product?.name || '';
+                                                                                                const match = fullName.match(/^(.+?)\s*\(([^)]+)\)$/);
+                                                                                                const baseName = match ? match[1].trim() : fullName;
+                                                                                                const embeddedVariant = match ? match[2] : null;
+
+                                                                                                // Check multiple sources for variant attributes
+                                                                                                const attrSource = selection?.product?.variantAttributes
+                                                                                                    || selection?.product?.attributes
+                                                                                                    || selection?.variantAttributes
+                                                                                                    || selection?.selectedVariant?.attributes;
+                                                                                                const attrs = attrSource ? safeJSONParse(attrSource, {}) : {};
+                                                                                                const hasExternalAttrs = Object.keys(attrs).length > 0;
+
+                                                                                                return (
+                                                                                                    <>
+                                                                                                        <span className="text-sm font-medium text-gray-900 line-clamp-2" title={fullName}>
+                                                                                                            {baseName || '-'}
+                                                                                                        </span>
+                                                                                                        {/* Show variant info: prefer embedded in name, fallback to external attrs */}
+                                                                                                        {embeddedVariant && (
+                                                                                                            <span className="text-[10px] text-gray-500">
+                                                                                                                {embeddedVariant}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                        {!embeddedVariant && hasExternalAttrs && (
+                                                                                                            <span className="text-[10px] text-gray-500 truncate">
+                                                                                                                {Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </>
+                                                                                                );
+                                                                                            })()}
                                                                                         </div>
                                                                                     </div>
 
