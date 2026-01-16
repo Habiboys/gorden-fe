@@ -422,6 +422,7 @@ export default function AdminDocumentCreate() {
                     setAvailableVariants(variantsRes.data);
                     setVariantItemId(item.id);
                     setItemModalTargetProduct(item.product);
+                    setVariantSelectionMode('item'); // Ensure we're in 'item' mode for gorden/fabric
                     setShowVariantPicker(true);
                     return;
                 }
@@ -675,6 +676,7 @@ export default function AdminDocumentCreate() {
 
                     setVariantItemId(newItem.id);
                     setAvailableVariants(variantsToShow);
+                    setVariantSelectionMode('item'); // Ensure we're in 'item' mode for gorden/fabric
                     setShowVariantPicker(true);
                 }
             } catch (error) {
@@ -856,9 +858,12 @@ export default function AdminDocumentCreate() {
                     variants = filterVariantsByRule(variants, dimensions, filterRule);
                 }
 
+                // If filter returns empty, show all variants as fallback
+                const variantsToShow = variants.length > 0 ? variants : (variantsRes.data || []);
+
                 // Has variants: Open variant picker
                 setItemModalTargetProduct(product);
-                setAvailableVariants(variants);
+                setAvailableVariants(variantsToShow);
                 setVariantSelectionMode('component');
                 setShowComponentPicker(false);
                 setShowVariantPicker(true);
@@ -2493,7 +2498,9 @@ export default function AdminDocumentCreate() {
 
                             {/* General Recommendation Banner */}
                             {(() => {
-                                const item = items.find(i => i.id === variantItemId);
+                                // Use editingItemId for component variant selection, variantItemId for fabric
+                                const itemId = variantSelectionMode === 'component' ? editingItemId : variantItemId;
+                                const item = items.find(i => i.id === itemId);
                                 const w = item ? item.width : width;
                                 const h = item ? item.height : height;
 
@@ -2506,7 +2513,6 @@ export default function AdminDocumentCreate() {
                                         </div>
                                     );
                                 }
-                                return null;
                                 return null;
                             })()}
 
