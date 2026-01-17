@@ -859,7 +859,7 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
             // Check if dynamic badge for each type exists (to avoid duplicates)
             const hasBestSellerBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('best seller') || b.label.toLowerCase().includes('terlaris'));
             const hasNewArrivalBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('new') || b.label.toLowerCase().includes('baru'));
-            const hasFeaturedBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('featured'));
+            const hasFeaturedBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('featured') || b.label.toLowerCase().includes('unggulan'));
             const hasWarrantyBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('garansi'));
             const hasCustomBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('custom'));
 
