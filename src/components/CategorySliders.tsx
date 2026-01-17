@@ -12,9 +12,10 @@ interface ProductSliderProps {
   products: any[];
   loading?: boolean;
   categoryId?: number | string; // Add categoryId prop
+  filterType?: string; // Add filterType prop
 }
 
-function ProductSlider({ title, badge, badgeIcon, products, loading, categoryId }: ProductSliderProps) {
+function ProductSlider({ title, badge, badgeIcon, products, loading, categoryId, filterType }: ProductSliderProps) {
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -105,7 +106,13 @@ function ProductSlider({ title, badge, badgeIcon, products, loading, categoryId 
               <ChevronRight className="w-5 h-5" />
             </Button>
             <Button
-              onClick={() => navigate(categoryId ? `/products?categoryId=${categoryId}` : '/products')}
+              onClick={() => {
+                if (filterType) {
+                  navigate(`/products?filter=${filterType}`);
+                } else {
+                  navigate(categoryId ? `/products?categoryId=${categoryId}` : '/products');
+                }
+              }}
               variant="outline"
               className="ml-2"
             >
@@ -151,7 +158,13 @@ function ProductSlider({ title, badge, badgeIcon, products, loading, categoryId 
         {/* Mobile View All Button */}
         <div className="lg:hidden mt-6 text-center">
           <Button
-            onClick={() => navigate(categoryId ? `/products?categoryId=${categoryId}` : '/products')}
+            onClick={() => {
+              if (filterType) {
+                navigate(`/products?filter=${filterType}`);
+              } else {
+                navigate(categoryId ? `/products?categoryId=${categoryId}` : '/products');
+              }
+            }}
             variant="outline"
             className="border-[#EB216A] text-[#EB216A] hover:bg-[#EB216A] hover:text-white"
           >
@@ -224,6 +237,7 @@ export function CategorySliders() {
         badgeIcon={<TrendingUp className="w-4 h-4" />}
         products={bestSellers}
         loading={loading}
+        filterType="bestseller"
       />
 
       {/* New Arrivals Section */}
@@ -233,6 +247,7 @@ export function CategorySliders() {
         badgeIcon={<Sparkles className="w-4 h-4" />}
         products={newArrivals}
         loading={loading}
+        filterType="newarrival"
       />
 
       {/* Category-Based Sections */}
