@@ -937,7 +937,7 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
           })()}
 
           {/* Quick View Button - Shows on Hover */}
-          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 z-30">
+          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 z-50">
             <button
               className="w-full shadow-xl border-0 rounded-md py-2 px-3 text-xs lg:text-sm font-medium flex items-center justify-center gap-1 lg:gap-2 transition-all"
               style={{
