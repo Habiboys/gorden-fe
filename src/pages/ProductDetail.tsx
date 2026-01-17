@@ -255,66 +255,6 @@ export default function ProductDetail() {
           {/* Left Column - Gallery (7 cols) */}
           <div className="lg:col-span-7 lg:sticky lg:top-24 self-start relative">
             <ProductGallery images={product.images} productName={product.name} />
-
-            {/* Positioned Badges Overlay */}
-            {(() => {
-              const dynamicBadges = product.badges || [];
-              const legacyBadges: { id: string; label: string; bg_color: string; text_color: string; position: string }[] = [];
-
-              const hasWarrantyBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('garansi'));
-              const hasCustomBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('custom'));
-              const hasFeaturedBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('featured'));
-              const hasBestSellerBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('best seller') || b.label.toLowerCase().includes('terlaris'));
-
-              if (product.is_best_seller && !hasBestSellerBadge) {
-                legacyBadges.push({ id: 'legacy-bestseller', label: 'Best Seller', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
-              } else if (product.is_featured && !hasFeaturedBadge) {
-                legacyBadges.push({ id: 'legacy-featured', label: 'Featured', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
-              }
-              if (product.is_warranty && !hasWarrantyBadge) {
-                legacyBadges.push({ id: 'legacy-warranty', label: 'Garansi 1 Tahun', bg_color: '#3B82F6', text_color: '#FFFFFF', position: 'bottom-left' });
-              }
-              if (product.is_custom && !hasCustomBadge) {
-                legacyBadges.push({ id: 'legacy-custom', label: 'Gorden Custom', bg_color: '#8B5CF6', text_color: '#FFFFFF', position: 'bottom-left' });
-              }
-
-              const allBadges = [...dynamicBadges, ...legacyBadges];
-              const topLeftBadges = allBadges.filter((b: any) => b.position === 'top-left');
-              const topRightBadges = allBadges.filter((b: any) => b.position === 'top-right');
-              const bottomLeftBadges = allBadges.filter((b: any) => b.position === 'bottom-left');
-
-              return (
-                <>
-                  {topLeftBadges.length > 0 && (
-                    <div className="absolute top-4 left-4 flex flex-col gap-1 z-10">
-                      {topLeftBadges.map((badge: any) => (
-                        <Badge key={badge.id} className="border-0 shadow-lg text-xs px-2.5 py-1 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                          {badge.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {topRightBadges.length > 0 && (
-                    <div className="absolute top-4 right-4 flex flex-col gap-1 items-end z-10">
-                      {topRightBadges.map((badge: any) => (
-                        <Badge key={badge.id} className="border-0 shadow-lg text-xs px-2.5 py-1 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                          {badge.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {bottomLeftBadges.length > 0 && (
-                    <div className="absolute bottom-16 left-4 flex flex-col gap-1 z-10">
-                      {bottomLeftBadges.map((badge: any) => (
-                        <Badge key={badge.id} className="border-0 shadow-lg text-xs px-2.5 py-1 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                          {badge.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
           </div>
 
           {/* Right Column - Details (5 cols) */}
@@ -344,7 +284,7 @@ export default function ProductDetail() {
 
                 {/* Badges Section */}
                 {(product.badges?.length > 0 || product.is_custom) && (
-                  <div className="mt-3 space-y-3">
+                  <div className="mt-6 space-y-3 px-2">
                     {/* Generic Badges */}
                     {product.badges?.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -352,7 +292,7 @@ export default function ProductDetail() {
                           // Filter out "Gorden Custom" from generic chips if we show the special block below
                           .filter((b: any) => b.label !== 'Gorden Custom')
                           .map((badge: any) => (
-                            <Badge key={badge.id} className="border-0 px-2.5 py-0.5 text-xs font-semibold shadow-sm" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                            <Badge key={badge.id} className="border-0 px-3 py-1 text-xs font-semibold shadow-sm" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
                               {badge.label}
                             </Badge>
                           ))}
@@ -911,43 +851,58 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
           {/* Gradient Overlay on Hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Badge */}
-          {(product.badge || product.featured || product.bestSeller || product.newArrival) && (
-            <Badge className="absolute top-3 left-3 bg-[#EB216A] text-white border-0 shadow-lg text-xs">
-              {product.badge || (product.bestSeller ? 'Best Seller' : product.newArrival ? 'New' : 'Featured')}
-            </Badge>
-          )}
+          {/* Combined Badges Rendering: Dynamic + Legacy */}
+          {(() => {
+            const dynamicBadges = product.badges || [];
+            const legacyBadges: { id: string; label: string; bg_color: string; text_color: string; position: string }[] = [];
 
-          {/* Custom & Warranty Badges - Top Right Stacked */}
-          <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-            {product.is_warranty && (
-              <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
-                Garansi 1 Tahun
-              </Badge>
-            )}
-            {product.is_custom && (
-              <Badge className="bg-purple-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
-                Gorden Custom
-              </Badge>
-            )}
-          </div>
+            // Check if dynamic badge for each type exists (to avoid duplicates)
+            const hasBestSellerBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('best seller') || b.label.toLowerCase().includes('terlaris'));
+            const hasNewArrivalBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('new') || b.label.toLowerCase().includes('baru'));
+            const hasFeaturedBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('featured'));
+            const hasWarrantyBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('garansi'));
+            const hasCustomBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('custom'));
 
-          {/* Wishlist Button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (isInWishlist(product.id)) {
-                removeFromWishlist(product.id);
-              } else {
-                addToWishlist(product.id);
-              }
-            }}
-            className={`absolute top-3 right-3 w-8 h-8 lg:w-10 lg:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isInWishlist(product.id) ? 'text-[#EB216A] opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
-              }`}
-          >
-            <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-          </button>
+            // Add legacy badges only if no corresponding dynamic badge exists
+            if (product.bestSeller && !hasBestSellerBadge) {
+              legacyBadges.push({ id: 'legacy-bestseller', label: 'Best Seller', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+            }
+            if (product.newArrival && !hasNewArrivalBadge && !product.bestSeller) {
+              legacyBadges.push({ id: 'legacy-newarrival', label: 'New', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+            }
+            if (product.featured && !hasFeaturedBadge && !product.bestSeller && !product.newArrival) {
+              legacyBadges.push({ id: 'legacy-featured', label: 'Featured', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+            }
+            if (product.is_warranty && !hasWarrantyBadge) {
+              legacyBadges.push({ id: 'legacy-warranty', label: 'Garansi 1 Tahun', bg_color: '#3B82F6', text_color: '#FFFFFF', position: 'top-right' });
+            }
+            if (product.is_custom && !hasCustomBadge) {
+              legacyBadges.push({ id: 'legacy-custom', label: 'Gorden Custom', bg_color: '#8B5CF6', text_color: '#FFFFFF', position: 'top-right' });
+            }
+
+            const allBadges = [...dynamicBadges, ...legacyBadges];
+
+            return (
+              <>
+                {/* Top Left Group */}
+                <div className="absolute top-3 left-3 flex flex-col gap-1 items-start z-10">
+                  {allBadges.filter((b: any) => b.position === 'top-left').map((badge: any) => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+                {/* Top Right Group */}
+                <div className="absolute top-3 right-3 flex flex-col gap-1 items-end z-10">
+                  {allBadges.filter((b: any) => b.position === 'top-right').map((badge: any) => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
 
           {/* Quick View Button - Shows on Hover */}
           <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
@@ -1015,8 +970,19 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
                 Per {product.price_unit || 'meter'}
               </span>
             </div>
-            <button className="text-gray-400 hover:text-[#EB216A] transition-colors lg:hidden">
-              <Heart className="w-4 h-4" />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isInWishlist(product.id)) {
+                  removeFromWishlist(product.id);
+                } else {
+                  addToWishlist(product.id);
+                }
+              }}
+              className={`transition-colors ${isInWishlist(product.id) ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'}`}
+            >
+              <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
             </button>
           </div>
         </div>

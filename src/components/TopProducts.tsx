@@ -263,6 +263,16 @@ export function TopProducts() {
             </Link>
           ))}
         </div>
+
+        {/* Mobile View All Button */}
+        <div className="md:hidden mt-6 text-center">
+          <Link
+            to="/products?filter=featured"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#EB216A] text-white rounded-full font-medium hover:bg-[#d11d5f] transition-colors"
+          >
+            Lihat Semua <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
     </section>
   );

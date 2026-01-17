@@ -352,7 +352,7 @@ export default function ProductListing() {
               onChange={(e) => setFilterFeatured(e.target.checked)}
               className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
             />
-            <span className="text-sm text-gray-700">Featured</span>
+            <span className="text-sm text-gray-700">Produk Unggulan</span>
           </label>
 
           {/* Dynamic Badge Filters */}
