@@ -161,7 +161,7 @@ export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, ima
           })()}
 
           {/* Quick Add Button - Shows on Hover */}
-          <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+          <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 z-30">
             <button
               className="w-full shadow-xl border-0 rounded-md py-2 px-3 text-sm font-medium flex items-center justify-center gap-2 transition-all"
               style={{
@@ -220,13 +220,22 @@ export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, ima
               )}
               <span className="text-[10px] text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 mt-1 self-start">Per {price_unit || satuan || 'meter'}</span>
             </div>
-            <button
-              onClick={handleWishlistToggle}
-              className={`transition-colors ${inWishlist ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'
-                }`}
-            >
-              <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAddToCart}
+                className={`transition-colors text-gray-400 hover:text-[#EB216A]`}
+                title="Tambah ke Keranjang"
+              >
+                <ShoppingCart className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleWishlistToggle}
+                className={`transition-colors ${inWishlist ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'
+                  }`}
+              >
+                <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

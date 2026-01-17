@@ -832,6 +832,20 @@ export default function ProductDetail() {
 // Sub-component for Product Card to reduce duplication
 function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWishlist, isInWishlist }: any) {
   const [isHovered, setIsHovered] = useState(false);
+  const { addToCart } = useCart();
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      price: Number(product.minPrice || 0),
+      image: getProductImageUrl(product.images),
+    });
+  };
 
   return (
     <div className="group relative h-full">
@@ -923,7 +937,7 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
           })()}
 
           {/* Quick View Button - Shows on Hover */}
-          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 z-30">
             <button
               className="w-full shadow-xl border-0 rounded-md py-2 px-3 text-xs lg:text-sm font-medium flex items-center justify-center gap-1 lg:gap-2 transition-all"
               style={{
@@ -932,14 +946,11 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/product/${product.sku || product.id}`);
-              }}
+              onClick={handleAddToCart}
             >
               <ShoppingCart className="w-3 h-3 lg:w-4 lg:h-4" />
-              <span className="hidden lg:inline">Lihat Detail</span>
-              <span className="lg:hidden">Detail</span>
+              <span className="hidden lg:inline">Tambah ke Keranjang</span>
+              <span className="lg:hidden">Keranjang</span>
             </button>
           </div>
         </div>
@@ -988,20 +999,29 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
                 Per {product.price_unit || 'meter'}
               </span>
             </div>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (isInWishlist(product.id)) {
-                  removeFromWishlist(product.id);
-                } else {
-                  addToWishlist(product.id);
-                }
-              }}
-              className={`transition-colors ${isInWishlist(product.id) ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'}`}
-            >
-              <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAddToCart}
+                className={`transition-colors text-gray-400 hover:text-[#EB216A]`}
+                title="Tambah ke Keranjang"
+              >
+                <ShoppingCart className="w-4 h-4 lg:w-5 lg:h-5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (isInWishlist(product.id)) {
+                    removeFromWishlist(product.id);
+                  } else {
+                    addToWishlist(product.id);
+                  }
+                }}
+                className={`transition-colors ${isInWishlist(product.id) ? 'text-[#EB216A]' : 'text-gray-400 hover:text-[#EB216A]'}`}
+              >
+                <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
