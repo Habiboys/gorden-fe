@@ -1,11 +1,11 @@
-import { ChevronDown, ChevronRight, Filter, Grid3X3, LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Grid3X3, LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { categoriesApi, productsApi, subcategoriesApi } from '../utils/api';
+import { badgesApi, categoriesApi, productsApi, subcategoriesApi } from '../utils/api';
 
 export default function ProductListing() {
   const [sortBy, setSortBy] = useState('random'); // Default to random
@@ -24,6 +24,8 @@ export default function ProductListing() {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [allBadges, setAllBadges] = useState<any[]>([]);
+  const [selectedBadgeFilters, setSelectedBadgeFilters] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -55,7 +57,8 @@ export default function ProductListing() {
           bestSeller: p.is_best_seller,
           newArrival: p.is_new_arrival,
           is_custom: p.is_custom,
-          is_warranty: p.is_warranty
+          is_warranty: p.is_warranty,
+          badges: p.badges || []
         }));
         setProducts(mappedProducts);
       } catch (error) {
@@ -85,9 +88,19 @@ export default function ProductListing() {
       }
     };
 
+    const fetchBadges = async () => {
+      try {
+        const response = await badgesApi.getAll();
+        setAllBadges(response.data || []);
+      } catch (error) {
+        console.error('❌ Error fetching badges:', error);
+      }
+    };
+
     fetchProducts();
     fetchCategories();
     fetchSubcategories();
+    fetchBadges();
   }, []);
 
   // Initialize filters from URL params
@@ -147,7 +160,11 @@ export default function ProductListing() {
     const matchesBestSeller = !filterBestSeller || product.bestSeller;
     const matchesFeatured = !filterFeatured || product.featured;
 
-    return matchesSearch && matchesCategory && matchesSubcategory && matchesCustom && matchesWarranty && matchesNewArrival && matchesBestSeller && matchesFeatured;
+    // Badge filter: if any badge filters selected, product must have at least one of them
+    const matchesBadges = selectedBadgeFilters.length === 0 ||
+      (product.badges && product.badges.some((b: any) => selectedBadgeFilters.includes(b.id)));
+
+    return matchesSearch && matchesCategory && matchesSubcategory && matchesCustom && matchesWarranty && matchesNewArrival && matchesBestSeller && matchesFeatured && matchesBadges;
   });
 
   // Sort products
@@ -204,7 +221,7 @@ export default function ProductListing() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Filter className="w-4 h-4 text-[#EB216A]" />
+            <SlidersHorizontal className="w-4 h-4 text-[#EB216A]" />
             Kategori Produk
           </h3>
         </div>
@@ -337,6 +354,25 @@ export default function ProductListing() {
             />
             <span className="text-sm text-gray-700">Featured</span>
           </label>
+
+          {/* Dynamic Badge Filters */}
+          {allBadges.map((badge: any) => (
+            <label key={badge.id} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedBadgeFilters.includes(badge.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedBadgeFilters([...selectedBadgeFilters, badge.id]);
+                  } else {
+                    setSelectedBadgeFilters(selectedBadgeFilters.filter((id: number) => id !== badge.id));
+                  }
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+              />
+              <span className="text-sm text-gray-700">{badge.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 

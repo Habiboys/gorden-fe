@@ -253,8 +253,68 @@ export default function ProductDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8">
           {/* Left Column - Gallery (7 cols) */}
-          <div className="lg:col-span-7 lg:sticky lg:top-24 self-start">
+          <div className="lg:col-span-7 lg:sticky lg:top-24 self-start relative">
             <ProductGallery images={product.images} productName={product.name} />
+
+            {/* Positioned Badges Overlay */}
+            {(() => {
+              const dynamicBadges = product.badges || [];
+              const legacyBadges: { id: string; label: string; bg_color: string; text_color: string; position: string }[] = [];
+
+              const hasWarrantyBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('garansi'));
+              const hasCustomBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('custom'));
+              const hasFeaturedBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('featured'));
+              const hasBestSellerBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('best seller') || b.label.toLowerCase().includes('terlaris'));
+
+              if (product.is_best_seller && !hasBestSellerBadge) {
+                legacyBadges.push({ id: 'legacy-bestseller', label: 'Best Seller', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+              } else if (product.is_featured && !hasFeaturedBadge) {
+                legacyBadges.push({ id: 'legacy-featured', label: 'Featured', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+              }
+              if (product.is_warranty && !hasWarrantyBadge) {
+                legacyBadges.push({ id: 'legacy-warranty', label: 'Garansi 1 Tahun', bg_color: '#3B82F6', text_color: '#FFFFFF', position: 'bottom-left' });
+              }
+              if (product.is_custom && !hasCustomBadge) {
+                legacyBadges.push({ id: 'legacy-custom', label: 'Gorden Custom', bg_color: '#8B5CF6', text_color: '#FFFFFF', position: 'bottom-left' });
+              }
+
+              const allBadges = [...dynamicBadges, ...legacyBadges];
+              const topLeftBadges = allBadges.filter((b: any) => b.position === 'top-left');
+              const topRightBadges = allBadges.filter((b: any) => b.position === 'top-right');
+              const bottomLeftBadges = allBadges.filter((b: any) => b.position === 'bottom-left');
+
+              return (
+                <>
+                  {topLeftBadges.length > 0 && (
+                    <div className="absolute top-4 left-4 flex flex-col gap-1 z-10">
+                      {topLeftBadges.map((badge: any) => (
+                        <Badge key={badge.id} className="border-0 shadow-lg text-xs px-2.5 py-1 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                          {badge.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {topRightBadges.length > 0 && (
+                    <div className="absolute top-4 right-4 flex flex-col gap-1 items-end z-10">
+                      {topRightBadges.map((badge: any) => (
+                        <Badge key={badge.id} className="border-0 shadow-lg text-xs px-2.5 py-1 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                          {badge.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {bottomLeftBadges.length > 0 && (
+                    <div className="absolute bottom-16 left-4 flex flex-col gap-1 z-10">
+                      {bottomLeftBadges.map((badge: any) => (
+                        <Badge key={badge.id} className="border-0 shadow-lg text-xs px-2.5 py-1 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                          {badge.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Right Column - Details (5 cols) */}

@@ -124,13 +124,14 @@ export default function AdminBadges() {
     };
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Manajemen Badge Produk</h1>
-                    <p className="text-gray-500">Buat dan atur label/badge untuk produk</p>
+                    <h1 className="text-3xl text-gray-900">Manajemen Badge</h1>
+                    <p className="text-gray-600 mt-1">Buat dan atur label/badge untuk produk</p>
                 </div>
-                <Button onClick={handleCreate} className="bg-[#EB216A] hover:bg-[#D61C5F]">
+                <Button onClick={handleCreate} className="bg-[#EB216A] hover:bg-[#d11d5e] text-white">
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Badge
                 </Button>
@@ -174,22 +175,22 @@ export default function AdminBadges() {
                                     )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
+                                    <div className="flex justify-end gap-1">
                                         <Button
                                             variant="ghost"
-                                            size="icon"
+                                            size="sm"
                                             onClick={() => handleEdit(badge)}
-                                            className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                            title="Edit Badge"
                                         >
                                             <Edit className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
-                                            size="icon"
+                                            size="sm"
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                             onClick={() => handleDelete(badge.id)}
-                                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                                             disabled={badge.is_system}
-                                            title={badge.is_system ? "System badge cannot be deleted" : "Delete"}
+                                            title={badge.is_system ? "System badge tidak bisa dihapus" : "Hapus Badge"}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>

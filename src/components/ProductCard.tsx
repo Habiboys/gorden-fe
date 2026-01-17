@@ -86,78 +86,79 @@ export function ProductCard({ id, sku, name, price, minPrice, minPriceGross, ima
           {/* Gradient Overlay on Hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Dynamic Badges Rendering */}
-          {badges && badges.length > 0 ? (
-            <>
-              {/* Top Left Group */}
-              <div className="absolute top-4 left-4 flex flex-col gap-1 items-start z-10">
-                {badges.filter(b => b.position === 'top-left').map(badge => (
-                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                    {badge.label}
-                  </Badge>
-                ))}
-              </div>
+          {/* Combined Badges Rendering: Dynamic + Legacy */}
+          {(() => {
+            const dynamicBadges = badges || [];
+            const legacyBadges: { id: string; label: string; bg_color: string; text_color: string; position: string }[] = [];
 
-              {/* Bottom Left Group */}
-              <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0 z-10">
-                {badges.filter(b => b.position === 'bottom-left').map(badge => (
-                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                    {badge.label}
-                  </Badge>
-                ))}
-              </div>
+            // Check if dynamic badge for each type exists (to avoid duplicates)
+            const hasBestSellerBadge = dynamicBadges.some(b => b.label.toLowerCase().includes('best seller') || b.label.toLowerCase().includes('terlaris'));
+            const hasNewArrivalBadge = dynamicBadges.some(b => b.label.toLowerCase().includes('new') || b.label.toLowerCase().includes('baru'));
+            const hasFeaturedBadge = dynamicBadges.some(b => b.label.toLowerCase().includes('featured'));
+            const hasWarrantyBadge = dynamicBadges.some(b => b.label.toLowerCase().includes('garansi'));
+            const hasCustomBadge = dynamicBadges.some(b => b.label.toLowerCase().includes('custom'));
 
-              {/* Top Right Group - Below Wishlist if needed, or overlay */}
-              <div className="absolute top-16 right-4 flex flex-col gap-1 items-end z-10">
-                {badges.filter(b => b.position === 'top-right').map(badge => (
-                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                    {badge.label}
-                  </Badge>
-                ))}
-              </div>
+            // Add legacy badges only if no corresponding dynamic badge exists
+            if (bestSeller && !hasBestSellerBadge) {
+              legacyBadges.push({ id: 'legacy-bestseller', label: 'Best Seller', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+            }
+            if (newArrival && !hasNewArrivalBadge && !bestSeller) {
+              legacyBadges.push({ id: 'legacy-newarrival', label: 'New', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+            }
+            if (featured && !hasFeaturedBadge && !bestSeller && !newArrival) {
+              legacyBadges.push({ id: 'legacy-featured', label: 'Featured', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+            }
+            // Bottom-left legacy badges (only if no dynamic version)
+            if (is_warranty && !hasWarrantyBadge) {
+              legacyBadges.push({ id: 'legacy-warranty', label: 'Garansi 1 Tahun', bg_color: '#3B82F6', text_color: '#FFFFFF', position: 'bottom-left' });
+            }
+            if (is_custom && !hasCustomBadge) {
+              legacyBadges.push({ id: 'legacy-custom', label: 'Gorden Custom', bg_color: '#8B5CF6', text_color: '#FFFFFF', position: 'bottom-left' });
+            }
 
-              {/* Bottom Right Group */}
-              <div className="absolute bottom-4 right-4 flex flex-col gap-1 items-end z-10">
-                {badges.filter(b => b.position === 'bottom-right').map(badge => (
-                  <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
-                    {badge.label}
-                  </Badge>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Legacy Badges Fallback */}
-              {(featured || bestSeller || newArrival) && (
-                <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
-                  {bestSeller ? 'Best Seller' : newArrival ? 'New' : 'Featured'}
-                </Badge>
-              )}
-              <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0">
-                {is_warranty && (
-                  <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
-                    Garansi 1 Tahun
-                  </Badge>
-                )}
-                {is_custom && (
-                  <Badge className="bg-purple-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5 h-auto whitespace-nowrap">
-                    Gorden Custom
-                  </Badge>
-                )}
-              </div>
-            </>
-          )}
+            // Combine: dynamic badges first (their positions from DB), then legacy
+            const allBadges = [...dynamicBadges, ...legacyBadges];
 
-          {/* Wishlist Button */}
-          <button
-            onClick={handleWishlistToggle}
-            className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${inWishlist
-              ? 'bg-[#EB216A] text-white'
-              : 'bg-white/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
-              }`}
-          >
-            <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
-          </button>
+            return (
+              <>
+                {/* Top Left Group */}
+                <div className="absolute top-4 left-4 flex flex-col gap-1 items-start z-10">
+                  {allBadges.filter(b => b.position === 'top-left').map(badge => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Bottom Left Group */}
+                <div className="absolute bottom-4 left-4 flex flex-col items-start gap-1 transition-opacity duration-300 group-hover:opacity-0 z-10">
+                  {allBadges.filter(b => b.position === 'bottom-left').map(badge => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Top Right Group */}
+                <div className="absolute top-4 right-4 flex flex-col gap-1 items-end z-20">
+                  {allBadges.filter(b => b.position === 'top-right').map(badge => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Bottom Right Group */}
+                <div className="absolute bottom-4 right-4 flex flex-col gap-1 items-end z-10">
+                  {allBadges.filter(b => b.position === 'bottom-right').map(badge => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
 
           {/* Quick Add Button - Shows on Hover */}
           <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">

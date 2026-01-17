@@ -142,6 +142,7 @@ function ProductSlider({ title, badge, badgeIcon, products, loading, categoryId 
                 featured={product.is_featured}
                 is_custom={product.is_custom}
                 is_warranty={product.is_warranty}
+                badges={product.badges}
               />
             </div>
           ))}

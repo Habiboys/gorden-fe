@@ -117,42 +117,62 @@ export function TopProducts() {
                   {/* Gradient Overlay on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  {/* Badge */}
-                  {(product.is_featured || product.is_best_seller || product.is_new_arrival) && (
-                    <Badge className="absolute top-4 left-4 bg-[#EB216A] text-white border-0 shadow-lg">
-                      {product.is_best_seller ? 'Best Seller' : product.is_new_arrival ? 'New' : 'Featured'}
-                    </Badge>
-                  )}
+                  {/* Combined Badges Rendering: Dynamic + Legacy */}
+                  {(() => {
+                    const dynamicBadges = product.badges || [];
+                    const legacyBadges: { id: string; label: string; bg_color: string; text_color: string; position: string }[] = [];
 
-                  {/* Custom Badge - Bottom Left */}
-                  {/* Custom & Warranty Badges - Side by Side */}
-                  <div className="absolute bottom-4 left-4 flex items-center gap-1">
-                    {product.is_warranty && (
-                      <Badge className="bg-blue-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
-                        Garansi
-                      </Badge>
-                    )}
-                    {product.is_custom && (
-                      <Badge className="bg-pink-500 text-white border-0 shadow-lg text-[10px] px-1.5 py-0.5 h-auto">
-                        Custom
-                      </Badge>
-                    )}
-                  </div>
+                    // Check if dynamic badge for each type exists (to avoid duplicates)
+                    const hasBestSellerBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('best seller') || b.label.toLowerCase().includes('terlaris'));
+                    const hasNewArrivalBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('new') || b.label.toLowerCase().includes('baru'));
+                    const hasFeaturedBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('featured'));
+                    const hasWarrantyBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('garansi'));
+                    const hasCustomBadge = dynamicBadges.some((b: any) => b.label.toLowerCase().includes('custom'));
 
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (isInWishlist(product.id)) {
-                        removeFromWishlist(product.id);
-                      } else {
-                        addToWishlist(product.id);
-                      }
-                    }}
-                    className={`absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isInWishlist(product.id) ? 'text-[#EB216A] opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-[#EB216A] hover:text-white'
-                      }`}
-                  >
-                    <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                  </button>
+                    // Add legacy badges only if no corresponding dynamic badge exists
+                    if (product.is_best_seller && !hasBestSellerBadge) {
+                      legacyBadges.push({ id: 'legacy-bestseller', label: 'Best Seller', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+                    }
+                    if (product.is_new_arrival && !hasNewArrivalBadge && !product.is_best_seller) {
+                      legacyBadges.push({ id: 'legacy-newarrival', label: 'New', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+                    }
+                    if (product.is_featured && !hasFeaturedBadge && !product.is_best_seller && !product.is_new_arrival) {
+                      legacyBadges.push({ id: 'legacy-featured', label: 'Featured', bg_color: '#EB216A', text_color: '#FFFFFF', position: 'top-left' });
+                    }
+
+                    // Combine: dynamic badges first (their positions from DB), then legacy
+                    const allBadges = [...dynamicBadges, ...legacyBadges];
+
+                    return (
+                      <>
+                        {/* Top Left Group */}
+                        <div className="absolute top-4 left-4 flex flex-col gap-1 items-start z-10">
+                          {allBadges.filter((b: any) => b.position === 'top-left').map((badge: any) => (
+                            <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-1.5 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                              {badge.label}
+                            </Badge>
+                          ))}
+                        </div>
+                        {/* Top Right Group */}
+                        <div className="absolute top-4 right-4 flex flex-col gap-1 items-end z-20">
+                          {allBadges.filter((b: any) => b.position === 'top-right').map((badge: any) => (
+                            <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-1.5 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                              {badge.label}
+                            </Badge>
+                          ))}
+                        </div>
+                        {/* Bottom Left Group */}
+                        <div className="absolute bottom-4 left-4 flex flex-col gap-1 items-start z-10 group-hover:opacity-0 transition-opacity">
+                          {allBadges.filter((b: any) => b.position === 'bottom-left').map((badge: any) => (
+                            <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-1.5 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                              {badge.label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </>
+                    );
+
+                  })()}
 
                   {/* Quick View Button - Shows on Hover */}
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
