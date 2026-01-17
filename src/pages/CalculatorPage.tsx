@@ -2226,6 +2226,16 @@ export default function CalculatorPageV2() {
                           ? `Rp ${product.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}/m`
                           : 'Lihat Varian'}
                     </p>
+                    {(product.variantMinWidth || product.variantMaxWidth) && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Lebar Mulai {product.variantMinWidth ?? 0} s/d {product.variantMaxWidth ?? '...'}
+                      </p>
+                    )}
+                    {(product.variantMinHeight || product.variantMaxHeight) && (
+                      <p className="text-xs text-gray-500">
+                        Tinggi Mulai {product.variantMinHeight ?? 0} s/d {product.variantMaxHeight ?? '...'}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
