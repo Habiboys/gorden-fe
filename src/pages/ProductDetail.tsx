@@ -900,6 +900,24 @@ function ProductCardForDetail({ product, navigate, addToWishlist, removeFromWish
                     </Badge>
                   ))}
                 </div>
+
+                {/* Bottom Left Group */}
+                <div className="absolute bottom-3 left-3 flex flex-col gap-1 items-start z-10 transition-opacity duration-300 group-hover:opacity-0">
+                  {allBadges.filter((b: any) => b.position === 'bottom-left').map((badge: any) => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Bottom Right Group */}
+                <div className="absolute bottom-3 right-3 flex flex-col gap-1 items-end z-10 transition-opacity duration-300 group-hover:opacity-0">
+                  {allBadges.filter((b: any) => b.position === 'bottom-right').map((badge: any) => (
+                    <Badge key={badge.id} className="border-0 shadow-lg text-[10px] px-2 py-0.5 whitespace-nowrap" style={{ backgroundColor: badge.bg_color, color: badge.text_color }}>
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </div>
               </>
             );
           })()}
