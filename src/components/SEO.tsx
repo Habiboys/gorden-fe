@@ -20,11 +20,20 @@ export const SEO: React.FC<SEOProps> = ({
     const siteName = 'Amagriya Gorden';
     const defaultTitle = 'Amagriya Gorden - Pusat Gorden Berkualitas';
     const defaultDescription = 'Pusat gorden berkualitas dengan harga terjangkau. Melayani pembuatan gorden custom, survey gratis, dan pemasangan profesional.';
-    const defaultImage = '/logo.png'; // Make sure you have a default og:image
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://amagriya.com';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.amagriya.com';
+    const defaultImage = `${siteUrl}/logo.png`;
 
     const finalTitle = title ? `${title} | ${siteName}` : defaultTitle;
     const finalDescription = description || defaultDescription;
-    const finalImage = image || defaultImage;
+
+    // Convert relative image paths to absolute URLs
+    let finalImage = image || defaultImage;
+    if (finalImage && finalImage.startsWith('/uploads/')) {
+        finalImage = `${apiBaseUrl}${finalImage}`;
+    } else if (finalImage && finalImage.startsWith('/')) {
+        finalImage = `${siteUrl}${finalImage}`;
+    }
 
     return (
         <Helmet>

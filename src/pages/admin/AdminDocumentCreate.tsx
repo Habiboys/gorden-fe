@@ -26,6 +26,7 @@ import { useRouterBlocker } from '../../hooks/useRouterBlocker';
 import { calculatorTypesApi, documentsApi, productsApi, productVariantsApi } from '../../utils/api';
 import { getProductImageUrl } from '../../utils/imageHelper';
 import { safeJSONParse } from '../../utils/jsonHelper';
+import { deduplicateVariants, formatAttrValue } from '../../utils/variantDisplayHelper';
 import type { VariantFilterRule } from '../../utils/variantFilterHelper';
 import { filterVariantsByRule } from '../../utils/variantFilterHelper';
 
@@ -68,6 +69,8 @@ interface ComponentSelection {
     product: any;
     qty: number;
     discount: number;  // Per-component discount percentage
+    variantAttributes?: any;
+    selectedVariant?: any;
 }
 
 interface SelectedComponents {
@@ -112,9 +115,12 @@ interface DocumentForm {
     validUntil: string;
     paymentTerms: string;
     notes: string;
+    referralCode?: string;
+    discount?: number;
 }
 
 // ================== HELPER FUNCTIONS ==================
+
 /**
  * Format number as Rupiah currency (no decimals)
  * @param amount - The amount to format
@@ -258,6 +264,13 @@ export default function AdminDocumentCreate() {
         loadFabricProducts();
     }, []);
 
+    // Ensure component products are loaded if selectedCalcType changes or if they are missing
+    useEffect(() => {
+        if (selectedCalcType?.components && Object.keys(componentProducts).length === 0 && selectedCalcType.components.length > 0) {
+            loadComponentProducts(selectedCalcType);
+        }
+    }, [selectedCalcType, componentProducts]);
+
     // Load document if ID exists (Edit Mode)
     useEffect(() => {
         if (id) {
@@ -344,15 +357,24 @@ export default function AdminDocumentCreate() {
     const loadComponentProducts = async (calcType: CalculatorTypeFromDB) => {
         if (!calcType?.components) return;
 
-        const newComponentProducts: { [subcategoryId: number]: any[] } = {};
-        for (const comp of calcType.components) {
+        // Use Promise.all for parallel fetching
+        const promises = calcType.components.map(async (comp) => {
             try {
                 const response = await calculatorTypesApi.getProductsBySubcategory(comp.subcategory_id);
-                newComponentProducts[comp.subcategory_id] = response.data || [];
+                return { id: comp.subcategory_id, data: response.data || [] };
             } catch (error) {
-                console.error('Error loading component products:', error);
+                console.error(`Error loading products for subcategory ${comp.subcategory_id}:`, error);
+                return { id: comp.subcategory_id, data: [] };
             }
-        }
+        });
+
+        const results = await Promise.all(promises);
+        const newComponentProducts: { [subcategoryId: number]: any[] } = {};
+
+        results.forEach(res => {
+            newComponentProducts[res.id] = res.data;
+        });
+
         setComponentProducts(newComponentProducts);
     };
 
@@ -420,7 +442,7 @@ export default function AdminDocumentCreate() {
             try {
                 const variantsRes = await productVariantsApi.getByProduct(item.product.id);
                 if (variantsRes.data?.length > 0) {
-                    setAvailableVariants(variantsRes.data);
+                    setAvailableVariants(deduplicateVariants(variantsRes.data));
                     setVariantItemId(item.id);
                     setItemModalTargetProduct(item.product);
                     setVariantSelectionMode('item'); // Ensure we're in 'item' mode for gorden/fabric
@@ -484,7 +506,7 @@ export default function AdminDocumentCreate() {
                 if (variants.length > 0) {
                     // Has variants: Open variant picker
                     setItemModalTargetProduct(product);
-                    setAvailableVariants(variants);
+                    setAvailableVariants(deduplicateVariants(variants));
                     setVariantItemId(editingItemId); // Set this so handleSelectVariant knows we are editing this item
                     setShowVariantPicker(true);
                     setShowFabricPicker(false);
@@ -520,7 +542,7 @@ export default function AdminDocumentCreate() {
                 if (variants.length > 0) {
                     // Show Variant Picker FIRST
                     setItemModalTargetProduct(product); // Set target product
-                    setAvailableVariants(variants);
+                    setAvailableVariants(deduplicateVariants(variants));
                     setTempGroupVariant(null); // Reset temp variant
                     setVariantSelectionMode('item'); // Ensure mode is 'item' for Blind flow
                     setShowVariantPicker(true);
@@ -676,7 +698,7 @@ export default function AdminDocumentCreate() {
                     const variantsToShow = variants.length > 0 ? variants : (variantsRes.data || []);
 
                     setVariantItemId(newItem.id);
-                    setAvailableVariants(variantsToShow);
+                    setAvailableVariants(deduplicateVariants(variantsToShow));
                     setVariantSelectionMode('item'); // Ensure we're in 'item' mode for gorden/fabric
                     setShowVariantPicker(true);
                 }
@@ -2759,7 +2781,7 @@ export default function AdminDocumentCreate() {
                                                                             );
                                                                         }
                                                                         const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                                                                        const val = matchKey ? attrs[matchKey] : '-';
+                                                                        const val = matchKey ? formatAttrValue(matchKey, attrs[matchKey]) : '-';
                                                                         return (
                                                                             <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
                                                                                 {val}
@@ -2863,7 +2885,7 @@ export default function AdminDocumentCreate() {
                                                                             val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
                                                                         } else {
                                                                             const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                                                                            val = matchKey ? attrs[matchKey] : '-';
+                                                                            val = matchKey ? formatAttrValue(matchKey, attrs[matchKey]) : '-';
                                                                         }
 
                                                                         return (

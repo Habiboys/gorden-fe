@@ -15,7 +15,7 @@ import {
 } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { badgesApi, categoriesApi, productsApi, productVariantsApi, subcategoriesApi, uploadApi } from '../../utils/api';
-import { getProductImagesArray, safelyParseImages } from '../../utils/imageHelper';
+import { getImageUrl, getProductImagesArray, safelyParseImages } from '../../utils/imageHelper';
 import UnifiedVariantManager from './UnifiedVariantManager';
 
 const MAX_IMAGES = 7;
@@ -113,7 +113,7 @@ export default function AdminProductForm() {
         if (!pendingImageUrl || !informationEditorRef.current) return;
 
         const img = document.createElement('img');
-        img.src = pendingImageUrl;
+        img.src = getImageUrl(pendingImageUrl);
         img.alt = 'Image';
 
         let inlineStyle = '';
@@ -415,12 +415,38 @@ export default function AdminProductForm() {
                 meta_keywords: formData.metaKeywords,
                 images: uploadedImages,
                 badgeIds: selectedBadgeIds,
-                // Sync legacy flags based on selected badges
-                is_featured: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Featured'),
-                is_new_arrival: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'New Arrival'),
-                is_best_seller: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Best Seller'),
-                is_warranty: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Garansi 1 Tahun'),
-                is_custom: selectedBadgeIds.some(id => allBadges.find(b => b.id === id)?.label === 'Gorden Custom'),
+                // Sync legacy flags based on selected badges - flexible matching
+                is_featured: selectedBadgeIds.some(id => {
+                    const badge = allBadges.find(b => b.id === id);
+                    if (!badge) return false;
+                    const label = badge.label.toLowerCase();
+                    return label.includes('featured') || label.includes('unggulan');
+                }),
+                is_new_arrival: selectedBadgeIds.some(id => {
+                    const badge = allBadges.find(b => b.id === id);
+                    if (!badge) return false;
+                    const label = badge.label.toLowerCase();
+                    return label.includes('new') || label.includes('baru');
+                }),
+                is_best_seller: selectedBadgeIds.some(id => {
+                    const badge = allBadges.find(b => b.id === id);
+                    if (!badge) return false;
+                    const label = badge.label.toLowerCase();
+                    return label.includes('best seller') || label.includes('terlaris');
+                }),
+                is_warranty: selectedBadgeIds.some(id => {
+                    const badge = allBadges.find(b => b.id === id);
+                    if (!badge) return false;
+                    const label = badge.label.toLowerCase();
+                    return label.includes('garansi');
+                }),
+                is_custom: selectedBadgeIds.some(id => {
+                    const badge = allBadges.find(b => b.id === id);
+                    if (!badge) return false;
+                    const label = badge.label.toLowerCase();
+                    return label.includes('custom') || label.includes('gorden custom');
+                }),
+                variant_options: variantOptions, // Save the variant schema (options definition)
             };
 
             let productId = id;

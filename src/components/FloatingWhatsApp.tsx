@@ -16,7 +16,7 @@ export function FloatingWhatsApp() {
         return null;
     }
 
-    const phoneNumber = settings.whatsappNumber;
+    const phoneNumber = settings.whatsappNumber || import.meta.env.VITE_WHATSAPP_NUMBER || '+6289508965456';
 
     const handleOptionClick = (message: string) => {
         const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;

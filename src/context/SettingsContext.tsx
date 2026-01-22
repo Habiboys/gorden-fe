@@ -25,12 +25,12 @@ interface SettingsContextType {
 
 const defaultSettings: SiteSettings = {
     siteName: 'Amagriya Gorden',
-    siteEmail: 'info@amagriya.com',
-    sitePhone: '081234567890',
-    siteAddress: 'Jl. Sudirman No. 123, Jakarta Selatan',
-    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER || '',
-    instagramUrl: 'https://instagram.com/amagriya',
-    facebookUrl: 'https://facebook.com/amagriya',
+    siteEmail: 'amagriyacom@gmail.com',
+    sitePhone: '+6289508965456',
+    siteAddress: 'Jl. Ahmad Yani no e.21 Kota Payakumbuh',
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER || '+6289508965456',
+    instagramUrl: 'https://www.instagram.com/amagriyacom',
+    facebookUrl: 'https://facebook.com/amagriyacom',
     brandColor: '#EB216A',
     siteLogo: '',
     enableNotifications: true,

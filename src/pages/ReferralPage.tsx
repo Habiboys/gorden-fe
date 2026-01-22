@@ -54,13 +54,13 @@ const steps = [
     number: '01',
     icon: FileText,
     title: 'Isi Formulir Pendaftaran',
-    description: 'Isi formulir pendaftaran melalui link https://amagriya.com/index.php/program-affiliate/ atau klik tombol "Daftar Program Affiliate" di bagian bawah halaman ini.',
+    description: 'Isi formulir pendaftaran melalui link https://amagriya.com/register/ atau klik tombol "Daftar Program Affiliate" di bagian bawah halaman ini.',
   },
   {
     number: '02',
     icon: Clock,
     title: 'Proses Verifikasi',
-    description: 'Tim admin akan memproses pendaftaran Anda dalam waktu maksimal 3 hari kerja.',
+    description: 'Tim admin akan memproses pendaftaran Anda',
   },
   {
     number: '03',
@@ -71,7 +71,7 @@ const steps = [
 ];
 
 const flowSteps = [
-  { label: 'Referral', description: 'Anda bagikan link' },
+  { label: 'Referral', description: 'Bagikan kode referral Anda' },
   { label: 'Customer Order', description: 'Teman Anda beli' },
   { label: 'Order Selesai', description: 'Transaksi selesai' },
   { label: 'Komisi Masuk', description: 'Anda dapat komisi' },
@@ -136,7 +136,7 @@ export default function ReferralPage() {
               </div>
 
               {/* Floating Stats Card */}
-              <div className="absolute -bottom-4 left-4 sm:-bottom-6 sm:left-6 lg:-left-6 bg-white rounded-xl shadow-lg p-3 sm:p-4 border border-gray-100">
+              {/* <div className="absolute -bottom-4 left-4 sm:-bottom-6 sm:left-6 lg:-left-6 bg-white rounded-xl shadow-lg p-3 sm:p-4 border border-gray-100">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#EB216A]/10 rounded-lg flex items-center justify-center">
                     <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#EB216A]" />
@@ -146,7 +146,7 @@ export default function ReferralPage() {
                     <p className="text-[10px] sm:text-xs text-gray-500">Mitra Aktif</p>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

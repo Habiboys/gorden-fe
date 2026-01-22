@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { articlesApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 export default function ArticleDetailPage() {
   const { slug } = useParams();
@@ -27,7 +28,7 @@ export default function ArticleDetailPage() {
       if (response.success && response.data) {
         const articleData = {
           ...response.data,
-          image: response.data.image_url,
+          image: getProductImageUrl(response.data.image_url),
           publishDate: (() => {
             const dateRaw = response.data.createdAt || response.data.created_at || response.data.updatedAt || response.data.updated_at;
             if (!dateRaw) return '-';
@@ -63,8 +64,13 @@ export default function ArticleDetailPage() {
           .slice(0, 3)
           .map((a: any) => ({
             ...a,
-            image: a.image_url,
-            publishDate: new Date(a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+            image: getProductImageUrl(a.image_url),
+            publishDate: (() => {
+              const dateRaw = a.createdAt || a.created_at || a.updatedAt || a.updated_at;
+              if (!dateRaw) return '-';
+              const date = new Date(dateRaw);
+              return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            })(),
             categoryLabel: getCategoryLabel(a.category)
           }));
         setRelatedArticles(related);

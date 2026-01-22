@@ -11,6 +11,7 @@ interface UnifiedVariantManagerProps {
 }
 
 import { safeJSONParse } from '../../utils/jsonHelper';
+import { formatAttrValue } from '../../utils/variantDisplayHelper';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -280,7 +281,8 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 onClick={() => {
                                     const tinggiValues = [];
                                     for (let t = 200; t <= 280; t += 10) {
-                                        tinggiValues.push({ value: `T ${t}`, multiplier: null });
+                                        // Store number only, display will add T prefix
+                                        tinggiValues.push({ value: String(t), multiplier: null });
                                     }
                                     const tinggiOption = { name: 'Tinggi', values: tinggiValues, isMultiplierType: false };
                                     const newOptions = [...options.filter(o => o.name !== 'Tinggi'), tinggiOption];
@@ -301,7 +303,8 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                 onClick={() => {
                                     const lebarValues = [];
                                     for (let l = 100; l <= 300; l += 20) {
-                                        lebarValues.push({ value: `L ${l}`, multiplier: null });
+                                        // Store number only, display will add L prefix
+                                        lebarValues.push({ value: String(l), multiplier: null });
                                     }
                                     const lebarOption = { name: 'Lebar', values: lebarValues, isMultiplierType: false };
                                     const newOptions = [...options.filter(o => o.name !== 'Lebar'), lebarOption];
@@ -396,7 +399,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                                     key={vIdx}
                                                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border font-medium ${option.isMultiplierType ? 'bg-pink-50 text-[#EB216A] border-pink-300' : 'bg-gray-100 text-gray-700 border-gray-200'}`}
                                                 >
-                                                    {valStr}
+                                                    {formatAttrValue(option.name, valStr)}
                                                     {/* Editable multiplier input for multiplier type */}
                                                     {option.isMultiplierType && (
                                                         <input
@@ -542,7 +545,7 @@ export default function UnifiedVariantManager({ variants, variantOptions, onVari
                                                         key={k}
                                                         className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 group-hover:bg-pink-100 group-hover:text-[#EB216A] transition-colors"
                                                     >
-                                                        <span className="font-medium">{k}:</span> {v}
+                                                        <span className="font-medium">{k}:</span> {formatAttrValue(k, v)}
                                                     </span>
                                                 ))}
                                             </div>

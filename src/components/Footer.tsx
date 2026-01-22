@@ -1,11 +1,19 @@
 import logo from 'figma:asset/729ffa7b27b7c7977cedc406f32ba754f846d200.png';
 import { Facebook, Instagram, Mail, MapPin, Phone } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 
 export function Footer() {
   const { settings } = useSettings();
 
-  const quickLinks = ['Beranda', 'Produk', 'Program Referal', 'Kalkulator', 'Galeri'];
+  const quickLinks = [
+    { label: 'Beranda', to: '/' },
+    { label: 'Produk', to: '/products' },
+    { label: 'Artikel', to: '/articles' },
+    { label: 'Kalkulator', to: '/calculator' },
+    { label: 'Galeri', to: '/gallery' },
+    { label: 'Kontak', to: '/contact' },
+  ];
 
   // Dynamic Social Media
   const socialMedia = [
@@ -44,13 +52,13 @@ export function Footer() {
             <h4 className="mb-4">Menu Cepat</h4>
             <ul className="space-y-2">
               {quickLinks.map((link) => (
-                <li key={link}>
-                  <a
-                    href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
+                <li key={link.label}>
+                  <Link
+                    to={link.to}
                     className="text-gray-400 hover:text-[#EB216A] transition-colors"
                   >
-                    {link}
-                  </a>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>

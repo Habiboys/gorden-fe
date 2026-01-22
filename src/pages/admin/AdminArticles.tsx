@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { articlesApi, uploadApi } from '../../utils/api';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 const statusConfig = {
   DRAFT: { label: 'Draft', color: 'bg-gray-500' },
@@ -362,7 +363,7 @@ export default function AdminArticles() {
               <div className="relative aspect-video bg-gray-100">
                 {article.image_url || article.image ? (
                   <img
-                    src={article.image_url || article.image}
+                    src={getProductImageUrl(article.image_url || article.image)}
                     alt={article.title}
                     className="w-full h-full object-cover"
                   />
@@ -461,7 +462,7 @@ export default function AdminArticles() {
                   {formData.image && (
                     <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
                       <img
-                        src={formData.image}
+                        src={getProductImageUrl(formData.image)}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />

@@ -2,6 +2,7 @@ import { Blinds, Circle, Folder, Grid3x3, Sparkles, Square, Sun, Waves, Wind } f
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { categoriesApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
 import { SectionHeader } from './SectionHeader';
 import { Card } from './ui/card';
 
@@ -117,7 +118,7 @@ export function ProductCategories() {
           {categories.map((category) => {
             const Icon = getIconComponent(category.name, category.icon_url);
             // Prioritize uploaded image, then image_url (legacy), then default
-            const imageUrl = category.image || category.image_url || defaultImage;
+            const imageUrl = getProductImageUrl(category.image || category.image_url, defaultImage);
             return (
               <Link key={category.id || category.name} to={`/products?categoryId=${category.id}`}>
                 <Card

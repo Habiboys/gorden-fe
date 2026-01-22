@@ -40,6 +40,7 @@ import {
 import { Textarea } from '../../components/ui/textarea';
 import { useConfirm } from '../../context/ConfirmContext';
 import { galleryApi, uploadApi } from '../../utils/api';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 const categories = ['Rumah Tinggal', 'Apartemen', 'Kantor', 'Cafe / Resto'];
 
@@ -282,7 +283,7 @@ export default function AdminGallery() {
                 <TableRow key={item.id}>
                   <TableCell>
                     <img
-                      src={item.image_url || item.image}
+                      src={getProductImageUrl(item.image_url || item.image)}
                       alt={item.title}
                       className="w-16 h-16 object-cover rounded"
                     />
@@ -359,7 +360,7 @@ export default function AdminGallery() {
                 {formData.image && (
                   <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <img
-                      src={formData.image}
+                      src={getProductImageUrl(formData.image)}
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />

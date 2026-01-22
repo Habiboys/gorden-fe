@@ -14,6 +14,7 @@ import {
   DialogDescription,
 } from '../components/ui/dialog';
 import { galleryApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 const categories = [
   { id: 'all', name: 'Semua' },
@@ -45,7 +46,7 @@ export default function GalleryPage() {
         // Map backend fields to frontend expectation
         const mappedItems = response.data.map((item: any) => ({
           ...item,
-          image: item.image_url,
+          image: getProductImageUrl(item.image_url),
           category: item.category, // ensure category matches strictly if needed, backend sends string
           type: item.type || item.installation_type, // fallback
           date: item.date, // already dateonly string

@@ -23,8 +23,10 @@ import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productsApi, productVariantsApi } from '../utils/api';
+import { processHtmlContentCallbacks } from '../utils/htmlHelper';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { safeJSONParse } from '../utils/jsonHelper';
+import { formatAttrValue } from '../utils/variantDisplayHelper';
 
 export default function ProductDetail() {
   const { sku } = useParams<{ sku: string }>();
@@ -228,7 +230,7 @@ export default function ProductDetail() {
         title={product.metaTitle || product.name}
         description={product.metaDescription || product.description}
         keywords={product.metaKeywords}
-        image={product.images?.[0] || product.image}
+        image={getProductImageUrl(product.images || product.image)}
         url={window.location.href}
         type="product"
       />
@@ -345,7 +347,9 @@ export default function ProductDetail() {
                     {/* Variant Info */}
                     <p className="text-sm text-gray-600 mt-2">
                       {selectedVariant.attributes
-                        ? Object.entries(safeJSONParse(selectedVariant.attributes, {}) as Record<string, any>).map(([k, v]) => `${k}: ${v}`).join(', ')
+                        ? Object.entries(safeJSONParse(selectedVariant.attributes, {}) as Record<string, any>)
+                          .map(([k, v]) => `${k}: ${formatAttrValue(k, v)}`)
+                          .join(', ')
                         : `${selectedVariant.attribute_name}: ${selectedVariant.attribute_value}`}
                     </p>
                   </>
@@ -441,7 +445,7 @@ export default function ProductDetail() {
                                       : 'border-gray-200 text-gray-700 hover:border-gray-300'
                                       }`}
                                   >
-                                    {val}
+                                    {formatAttrValue(key, val)}
                                   </button>
                                 );
                               })}
@@ -552,7 +556,7 @@ export default function ProductDetail() {
                       // Build variant info
                       const variantInfo = selectedVariant?.attributes
                         ? Object.entries(safeJSONParse(selectedVariant.attributes, {}) as Record<string, any>)
-                          .map(([k, v]) => `${k}: ${v}`)
+                          .map(([k, v]) => `${k}: ${formatAttrValue(k, v)}`)
                           .join(', ')
                         : '';
 
@@ -653,12 +657,7 @@ export default function ProductDetail() {
             <TabsContent value="info" className="mt-6">
               <div className="bg-white rounded-2xl border border-gray-100 p-6 lg:p-8 space-y-6">
                 <h3 className="text-xl font-bold text-gray-900">Deskripsi Produk</h3>
-                {/* Short Description */}
-                {product.description && (
-                  <div>
-                    <p className="text-gray-700 leading-relaxed">{product.description}</p>
-                  </div>
-                )}
+                {/* Short Description removed as requested - already shown in header */}
 
                 {/* Long Description (Rich Text) */}
                 {product.information && (
@@ -682,7 +681,7 @@ export default function ProductDetail() {
                     `}</style>
                     <div
                       className="product-info-content text-gray-700 leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: product.information }}
+                      dangerouslySetInnerHTML={{ __html: processHtmlContentCallbacks(product.information) }}
                     />
                   </div>
                 )}
@@ -731,7 +730,7 @@ export default function ProductDetail() {
                           {displayedVariants.map((variant: any) => {
                             const attrs = safeJSONParse(variant.attributes, {}) as Record<string, any>;
                             const attrDisplay = Object.entries(attrs)
-                              .map(([k, v]) => `${k}: ${v}`)
+                              .map(([k, v]) => `${k}: ${formatAttrValue(k, v)}`)
                               .join(' - ');
 
                             return (

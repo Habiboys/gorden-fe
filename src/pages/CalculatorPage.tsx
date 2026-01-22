@@ -25,6 +25,7 @@ import {
 import { calculatorLeadsApi, calculatorTypesApi, productsApi, productVariantsApi } from '../utils/api';
 import { getProductImageUrl } from '../utils/imageHelper';
 import { safeJSONParse } from '../utils/jsonHelper';
+import { deduplicateVariants, formatAttrValue } from '../utils/variantDisplayHelper';
 import type { VariantFilterRule } from '../utils/variantFilterHelper';
 import { filterVariantsByRule } from '../utils/variantFilterHelper';
 import { chatAdminFromCalculator } from '../utils/whatsappHelper';
@@ -519,7 +520,7 @@ export default function CalculatorPageV2() {
 
           setEditingVariantItemId(newItem.id);
           setPendingProductForVariant(selectedFabric);
-          setAvailableVariants(variantsToShow);
+          setAvailableVariants(deduplicateVariants(variantsToShow));
           setVariantSelectionMode('fabric');
           setIsVariantModalOpen(true);
         }
@@ -581,7 +582,7 @@ export default function CalculatorPageV2() {
         if (variants.length > 0) {
           // Has variants: Open variant selection modal
           setPendingProductForVariant(product);
-          setAvailableVariants(variants);
+          setAvailableVariants(deduplicateVariants(variants));
           setVariantSelectionMode('fabric'); // Global variant selection
           setIsProductModalOpen(false);
           setIsVariantModalOpen(true);
@@ -632,7 +633,7 @@ export default function CalculatorPageV2() {
 
         // Product has variants - show variant picker
         setPendingProductForVariant(product);
-        setAvailableVariants(variants);
+        setAvailableVariants(deduplicateVariants(variants));
         setVariantSelectionMode('component');
         setIsComponentModalOpen(false);
         setIsVariantModalOpen(true);
@@ -2536,7 +2537,7 @@ export default function CalculatorPageV2() {
                                 }
 
                                 const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                                const val = matchKey ? attrs[matchKey] : '-';
+                                const val = matchKey ? formatAttrValue(matchKey, attrs[matchKey]) : '-';
                                 return (
                                   <td key={key} className="px-3 py-3 text-gray-800 whitespace-nowrap">
                                     {val}
@@ -2618,7 +2619,7 @@ export default function CalculatorPageV2() {
                                   val = lebar !== 999999 ? Math.round(lebar / 10) : '-';
                                 } else {
                                   const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key.toLowerCase());
-                                  val = matchKey ? attrs[matchKey] : '-';
+                                  val = matchKey ? formatAttrValue(matchKey, attrs[matchKey]) : '-';
                                 }
                                 return (
                                   <span key={key} style={{ marginRight: '16px', marginBottom: '4px', whiteSpace: 'nowrap' }}>

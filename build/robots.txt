@@ -1,0 +1,13 @@
+# Robots.txt for Amagriya Gorden
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://amagriya.com/sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin/
+Disallow: /admin
+
+# Disallow API endpoints
+Disallow: /api/

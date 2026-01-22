@@ -97,7 +97,7 @@ function DetailModalContent({ product, onClose }: { product: any; onClose: () =>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <img
-                src={safelyParseImages(product.images)[0] || product.image || 'https://images.unsplash.com/photo-1684261556324-a09b2cdf68b1?w=100'}
+                src={getProductImageUrl(product.images)}
                 alt={product.name}
                 className="w-full h-64 object-cover rounded-xl"
               />

@@ -85,10 +85,10 @@ export default function ContactPage() {
                                             <MapPin className="w-6 h-6 text-[#EB216A]" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 mb-1">Alamat Showroom</h3>
+                                            <h3 className="font-semibold text-gray-900 mb-1">Alamat</h3>
                                             <p className="text-gray-600 leading-relaxed">
-                                                Jl. Contoh Alamat No. 123<br />
-                                                Jakarta Selatan, DKI Jakarta 12345
+                                                Jl. Ahmad Yani no e.21<br />
+                                                Kota Payakumbuh
                                             </p>
                                         </div>
                                     </div>
@@ -98,9 +98,8 @@ export default function ContactPage() {
                                             <Phone className="w-6 h-6 text-[#EB216A]" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 mb-1">Telepon & WhatsApp</h3>
-                                            <p className="text-gray-600 mb-1">Telepon: (021) 1234-5678</p>
-                                            <p className="text-gray-600">WhatsApp: 0812-3456-7890</p>
+                                            <h3 className="font-semibold text-gray-900 mb-1">WhatsApp</h3>
+                                            <p className="text-gray-600">+6289508965456</p>
                                         </div>
                                     </div>
 
@@ -110,8 +109,7 @@ export default function ContactPage() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
-                                            <p className="text-gray-600">info@amagriyagorden.com</p>
-                                            <p className="text-gray-600">sales@amagriyagorden.com</p>
+                                            <p className="text-gray-600">amagriyacom@gmail.com</p>
                                         </div>
                                     </div>
                                 </div>
@@ -121,17 +119,10 @@ export default function ContactPage() {
                                 <h3 className="font-semibold text-gray-900 mb-2">Jam Operasional</h3>
                                 <div className="space-y-2 text-gray-600">
                                     <div className="flex justify-between">
-                                        <span>Senin - Jumat</span>
-                                        <span>08:00 - 17:00</span>
+                                        <span>Senin - Minggu</span>
+                                        <span>08:00 - 17:30 WIB</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Sabtu</span>
-                                        <span>08:00 - 15:00</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>Minggu</span>
-                                        <span>Tutup</span>
-                                    </div>
+                                    <p className="text-sm text-[#EB216A] font-medium mt-3">Hari Raya Lebaran Libur</p>
                                 </div>
                             </div>
                         </div>

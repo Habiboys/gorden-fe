@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { articlesApi } from '../utils/api';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 const categories = [
   { id: 'all', name: 'Semua Artikel' },
@@ -44,7 +45,7 @@ export default function ArticlesPage() {
 
           return {
             ...article,
-            image: article.image_url || article.image,
+            image: getProductImageUrl(article.image_url || article.image),
             publishDate: (() => {
               if (!dateRaw) return '-';
               const date = new Date(dateRaw);

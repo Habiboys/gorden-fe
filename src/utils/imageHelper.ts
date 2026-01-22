@@ -9,7 +9,7 @@ const getBaseUrl = (): string => {
  * Transform image URL from localhost to production URL
  * Handles old data that was saved with localhost URLs
  */
-const getImageUrl = (url: string | null | undefined): string => {
+export const getImageUrl = (url: string | null | undefined): string => {
     if (!url) return '';
 
     // If it's already a relative path, prepend the base URL

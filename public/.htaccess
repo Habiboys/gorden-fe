@@ -2,10 +2,30 @@
   RewriteEngine On
   RewriteBase /
   
+  # ===========================================
+  # SOCIAL MEDIA BOT DETECTION
+  # Redirect bots to backend with ?bot=true to prevent loop
+  # ===========================================
+  
+  # Detect social media crawlers/bots
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|Pinterest|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|vkShare|W3C_Validator) [NC]
+  # CRITICAL: Prevent loop for in-app browsers that identify as bots but run JS
+  RewriteCond %{QUERY_STRING} !human=1
+  
+  # Redirect product pages to backend share endpoint with bot flag
+  RewriteRule ^product/(.*)$ https://api.amagriya.com/share/product/$1?bot=true [R=302,L]
+  
+  # Redirect article pages to backend share endpoint with bot flag
+  RewriteRule ^articles/(.*)$ https://api.amagriya.com/share/article/$1?bot=true [R=302,L]
+  
+  # ===========================================
+  # NORMAL SPA ROUTING
+  # ===========================================
+  
   # Don't rewrite files or directories
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   
-  # Rewrite everything else to index.html
+  # Rewrite everything else to index.html (SPA routing)
   RewriteRule ^ index.html [L]
 </IfModule>
