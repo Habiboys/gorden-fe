@@ -28,7 +28,7 @@ export function PromoBanner() {
 
               {/* Description */}
               <p className="text-lg text-white/90 mb-8 max-w-xl">
-                Dapatkan layanan survey ukuran dan pemasangan gratis untuk setiap pembelian gorden. Berlaku untuk area Jabodetabek.
+                Dapatkan layanan survey ukuran dan pemasangan gratis untuk setiap pembelian gorden. Berlaku untuk area Sumbar.
               </p>
 
               {/* CTA Button */}

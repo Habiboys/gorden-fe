@@ -2538,7 +2538,7 @@ export default function AdminDocumentCreate() {
                                     }
 
                                     return true;
-                                }).slice(0, 20).map((product: any) => (
+                                }).map((product: any) => (
                                     <div key={product.id} className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#EB216A]" onClick={() => handleSelectFabric(product)}>
                                         <div className="flex items-center gap-3">
                                             <img src={getProductImageUrl(product.images || product.image)} alt="" className="w-12 h-12 rounded object-cover bg-gray-100" />

@@ -167,7 +167,7 @@ export default function GalleryPage() {
                 className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 cursor-pointer"
               >
                 {/* Image */}
-                <div className="relative h-56 overflow-hidden bg-gray-100">
+                <div className="relative w-full overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
                   <img
                     src={item.image}
                     alt={item.title}

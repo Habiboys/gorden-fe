@@ -637,10 +637,11 @@ export default function AdminCalculatorLeads() {
       const id = p.id || calcData.fabric?.id; // fallback
 
       // We prefer SKU link
+      const baseUrl = import.meta.env.VITE_SITE_URL || 'https://amagriya.com';
       if (sku) {
-        productLinks.add(`https://gorden-fe.vercel.app/product/${sku}`);
+        productLinks.add(`${baseUrl}/product/${sku}`);
       } else if (id && !p.sku) {
-        productLinks.add(`https://gorden-fe.vercel.app/product/${id}`);
+        productLinks.add(`${baseUrl}/product/${id}`);
       }
     });
 
@@ -684,7 +685,8 @@ export default function AdminCalculatorLeads() {
             // Add to links if component has SKU
             const cSku = comp.productSku || comp.product?.sku;
             if (cSku) {
-              productLinks.add(`https://gorden-fe.vercel.app/product/${cSku}`);
+              const baseUrl = import.meta.env.VITE_SITE_URL || 'https://amagriya.com';
+              productLinks.add(`${baseUrl}/product/${cSku}`);
             }
 
             if (name) {
@@ -692,6 +694,7 @@ export default function AdminCalculatorLeads() {
             }
           });
         }
+
         message += `\n`;
       });
       message += `Total Group: Rp ${formatRupiah(groupTotal)}\n`;

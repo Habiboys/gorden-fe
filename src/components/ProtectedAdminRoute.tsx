@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export function ProtectedAdminRoute() {
-  const { isAdmin, loading } = useAuth();
+  const { canAccessAdmin, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -14,7 +14,7 @@ export function ProtectedAdminRoute() {
     );
   }
 
-  if (!isAdmin) {
+  if (!canAccessAdmin) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

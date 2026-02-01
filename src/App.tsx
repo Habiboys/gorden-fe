@@ -7,6 +7,8 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
 import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
+import { ProtectedFinanceRoute } from './components/ProtectedFinanceRoute';
+
 import { ScrollToTop } from './components/ScrollToTop';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { AdminLayout } from './layouts/AdminLayout';
@@ -38,12 +40,16 @@ import AdminDocumentCreate from './pages/admin/AdminDocumentCreate';
 import AdminDocumentDetail from './pages/admin/AdminDocumentDetail';
 import AdminDocuments from './pages/admin/AdminDocuments';
 import AdminFAQ from './pages/admin/AdminFAQ';
+import AdminFinanceCategories from './pages/admin/AdminFinanceCategories';
 import AdminGallery from './pages/admin/AdminGallery';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminReferrals from './pages/admin/AdminReferrals';
 import AdminServices from './pages/admin/AdminServices';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminStores from './pages/admin/AdminStores';
+import AdminUsers from './pages/admin/AdminUsers';
+import FinanceDashboard from './pages/finance/FinanceDashboard';
 
 import { CartSidebar } from './components/CartSidebar';
 import { AuthProvider } from './context/AuthContext';
@@ -146,7 +152,18 @@ const router = createBrowserRouter(
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="faqs" element={<AdminFAQ />} />
           <Route path="contacts" element={<AdminContacts />} />
+
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="stores" element={<AdminStores />} />
+          <Route path="finance-categories" element={<AdminFinanceCategories />} />
           <Route path="referrals" element={<AdminReferrals />} />
+        </Route>
+      </Route>
+
+      {/* Finance Routes - Protected for Finance & Admin */}
+      <Route element={<ProtectedFinanceRoute />}>
+        <Route path="/finance" element={<AdminLayout />}>
+          <Route index element={<FinanceDashboard />} />
         </Route>
       </Route>
     </Route>

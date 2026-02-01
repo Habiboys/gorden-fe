@@ -55,7 +55,7 @@ export function FAQ() {
             id: '5',
             question: 'Area mana saja yang dilayani?',
             answer:
-              'Kami melayani area Jabodetabek dan sekitarnya. Untuk area di luar Jabodetabek, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
+              'Kami melayani area Sumbar dan sekitarnya. Untuk area di luar Sumbar, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
           },
           {
             id: '6',
@@ -97,7 +97,7 @@ export function FAQ() {
           id: '5',
           question: 'Area mana saja yang dilayani?',
           answer:
-            'Kami melayani area Jabodetabek dan sekitarnya. Untuk area di luar Jabodetabek, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
+            'Kami melayani area Sumbar dan sekitarnya. Untuk area di luar Sumbar, silakan hubungi tim kami untuk informasi lebih lanjut mengenai ketersediaan layanan.',
         },
         {
           id: '6',

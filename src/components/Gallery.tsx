@@ -4,6 +4,8 @@ import { galleryApi } from '../utils/api';
 import { SectionHeader } from './SectionHeader';
 import { Button } from './ui/button';
 
+import { getProductImageUrl } from '../utils/imageHelper';
+
 export function Gallery() {
   const [galleryImages, setGalleryImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,13 +75,15 @@ export function Gallery() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           {galleryImages.map((item, index) => {
             // Backend returns image_url, but some legacy might have image
-            const imageUrl = typeof item === 'string' ? item : (item.image_url || item.image);
+            const rawImage = typeof item === 'string' ? item : (item.image_url || item.image);
+            const imageUrl = getProductImageUrl(rawImage);
             const title = typeof item === 'string' ? `Gallery ${index + 1}` : item.title;
 
             return (
               <div
                 key={index}
-                className="relative h-64 overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer group"
+                className="relative w-full overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer group"
+                style={{ aspectRatio: '4/3' }}
               >
                 <img
                   src={imageUrl}

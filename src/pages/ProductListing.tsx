@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Grid3X3, LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/ui/button';
@@ -8,19 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { badgesApi, categoriesApi, productsApi, subcategoriesApi } from '../utils/api';
 
 export default function ProductListing() {
+  const [randomSeed] = useState(Math.floor(Math.random() * 100000));
   const [sortBy, setSortBy] = useState('random'); // Default to random
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
-  // Special filters
-  const [filterCustom, setFilterCustom] = useState(false);
-  const [filterWarranty, setFilterWarranty] = useState(false);
-  const [filterNewArrival, setFilterNewArrival] = useState(false);
-
-  const [filterBestSeller, setFilterBestSeller] = useState(false);
-  const [filterFeatured, setFilterFeatured] = useState(false);
+  // All filters now come from badges database - no more hardcoded filters
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -31,43 +26,105 @@ export default function ProductListing() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [gridCols, setGridCols] = useState<3 | 4>(4);
 
-  // Pagination state
+  // Debug: Watch badge filter changes
+  useEffect(() => {
+    console.log('🔔 selectedBadgeFilters state changed:', selectedBadgeFilters);
+  }, [selectedBadgeFilters]);
+
+  // Server-side pagination state
   const ITEMS_PER_PAGE = 20;
-  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Fetch products from backend
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        console.log('🔄 Fetching products from backend...');
-        const response = await productsApi.getAll({ limit: 1000 });
-        console.log('✅ Products fetched:', response);
-        const mappedProducts = (response.data || []).map((p: any) => ({
-          ...p,
-          image: p.image_url,
-          category: p.category_id || p.category,
-          categoryName: p.category?.name || p.categoryName || '',
-          subcategoryName: p.subcategory?.name || p.subcategoryName || '',
-          price: typeof p.price_self_measure === 'string' ? parseFloat(p.price_self_measure) : p.price_self_measure,
-          minPrice: p.minPrice,
-          minPriceGross: p.minPriceGross,
-          maxPrice: p.maxPrice,
-          featured: p.is_featured,
-          bestSeller: p.is_best_seller,
-          newArrival: p.is_new_arrival,
-          is_custom: p.is_custom,
-          is_warranty: p.is_warranty,
-          badges: p.badges || []
-        }));
-        setProducts(mappedProducts);
-      } catch (error) {
-        console.error('❌ Error fetching products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Map product data helper
+  const mapProductData = (p: any) => ({
+    ...p,
+    image: p.image_url,
+    category: p.category_id || p.category,
+    categoryName: p.category?.name || p.categoryName || '',
+    subcategoryName: p.subcategory?.name || p.subcategoryName || '',
+    price: typeof p.price_self_measure === 'string' ? parseFloat(p.price_self_measure) : p.price_self_measure,
+    minPrice: p.minPrice,
+    minPriceGross: p.minPriceGross,
+    maxPrice: p.maxPrice,
+    featured: p.is_featured,
+    bestSeller: p.is_best_seller,
+    newArrival: p.is_new_arrival,
+    is_custom: p.is_custom,
+    is_warranty: p.is_warranty,
+    badges: p.badges || []
+  });
 
+  // Fetch products from backend with pagination and filters
+  const fetchProducts = useCallback(async (
+    page: number = 1,
+    append: boolean = false,
+    filters?: { categoryId?: string | null; subcategoryId?: string | null; badgeIds?: number[]; search?: string }
+  ) => {
+    try {
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const params: any = { limit: ITEMS_PER_PAGE, page };
+
+      // Add random seed if sorting by random
+      if (sortBy === 'random') {
+        params.sort = 'random';
+        params.seed = randomSeed;
+      } else {
+        params.sort = sortBy; // Pass other sort options
+      }
+
+      // Add category filter if specified
+      if (filters?.categoryId) {
+        params.category_id = filters.categoryId;
+      }
+
+      // Add subcategory filter if specified
+      if (filters?.subcategoryId) {
+        params.subcategory_id = filters.subcategoryId;
+      }
+
+      // Add search filter if specified
+      if (filters?.search) {
+        params.search = filters.search;
+      }
+
+      // Add badge filter if specified (server-side filtering)
+      console.log('🔍 Badge filter check:', { badgeIds: filters?.badgeIds, length: filters?.badgeIds?.length });
+      if (filters?.badgeIds && filters.badgeIds.length > 0) {
+        params.badge_ids = filters.badgeIds.join(',');
+        console.log('✅ Added badge_ids to params:', params.badge_ids);
+      }
+
+      console.log(`🔄 Fetching products page ${page} with filters:`, params);
+      const response = await productsApi.getAll(params);
+      console.log('✅ Products fetched:', response);
+
+      const mappedProducts = (response.data || []).map(mapProductData);
+
+      if (append) {
+        setProducts(prev => [...prev, ...mappedProducts]);
+      } else {
+        setProducts(mappedProducts);
+      }
+
+      setTotalProducts(response.meta?.total || mappedProducts.length);
+      setCurrentPage(page);
+    } catch (error) {
+      console.error('❌ Error fetching products:', error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [sortBy, randomSeed]);
+
+  // Initial fetch for supporting data only (categories, subcategories, badges)
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
         console.log('🔄 Fetching categories from backend...');
@@ -97,11 +154,32 @@ export default function ProductListing() {
       }
     };
 
-    fetchProducts();
     fetchCategories();
     fetchSubcategories();
     fetchBadges();
   }, []);
+
+  // Fetch products when filters change (including badges - server-side filtering)
+  useEffect(() => {
+    // Debounce search
+    const timer = setTimeout(() => {
+      console.log('🔄 Filters changed, refetching products:', {
+        selectedCategory,
+        selectedSubcategory,
+        selectedBadgeFilters,
+        searchQuery,
+        badgeCount: selectedBadgeFilters.length
+      });
+      fetchProducts(1, false, {
+        categoryId: selectedCategory,
+        subcategoryId: selectedSubcategory,
+        badgeIds: selectedBadgeFilters,
+        search: searchQuery
+      });
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [selectedCategory, selectedSubcategory, selectedBadgeFilters, searchQuery, fetchProducts]);
 
   // Initialize filters from URL params
   useEffect(() => {
@@ -119,14 +197,30 @@ export default function ProductListing() {
     }
 
 
-    // Handle 'filter' query param
+    // Handle 'filter' query param - map to badge filter if badge exists with matching label
     const filterParam = searchParams.get('filter');
-    if (filterParam === 'featured') setFilterFeatured(true);
-    if (filterParam === 'bestseller') setFilterBestSeller(true);
-    if (filterParam === 'newarrival') setFilterNewArrival(true);
-    if (filterParam === 'custom') setFilterCustom(true);
-    if (filterParam === 'warranty') setFilterWarranty(true);
-  }, [categories, searchParams]);
+    if (filterParam && allBadges.length > 0) {
+      // Normalize generic filters to badge names
+      // Remove spaces and lowercase for comparison so "bestseller" matches "Best Seller"
+      const normalizedFilter = filterParam.toLowerCase().replace(/\s+/g, '');
+
+      const matchingBadge = allBadges.find((b: any) => {
+        const normalizedBadgeLabel = b.label?.toLowerCase().replace(/\s+/g, '');
+        return normalizedBadgeLabel === normalizedFilter || normalizedBadgeLabel.includes(normalizedFilter);
+      });
+
+      console.log('🔍 Filter param check:', {
+        param: filterParam,
+        normalized: normalizedFilter,
+        match: matchingBadge?.label
+      });
+
+      if (matchingBadge && !selectedBadgeFilters.includes(matchingBadge.id)) {
+        console.log('✅ Auto-selecting badge from URL filter:', matchingBadge.label);
+        setSelectedBadgeFilters([matchingBadge.id]);
+      }
+    }
+  }, [categories, searchParams, allBadges]);
 
   // Toggle category expansion
   const toggleCategory = (categoryId: string) => {
@@ -142,76 +236,33 @@ export default function ProductListing() {
     return subcategories.filter(sub => String(sub.category_id) === String(categoryId));
   };
 
-  // Filter products based on search, category, subcategory, and special filters
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesCategory = !selectedCategory ||
-      String(product.category_id) === String(selectedCategory) ||
-      String(product.category?.id) === String(selectedCategory);
+  // Sort products (no random option to maintain consistent order with pagination)
+  // Note: Sorting is now primarily handled by backend for pagination consistency,
+  // but we keep this simple sort for client-side reordering of the current page if needed,
+  // though optimally fetching with sort param is better.
+  const sortedProducts = products; // Directly use products from state, assuming backend sorts correctly or we rely on default.
 
-    const matchesSubcategory = !selectedSubcategory ||
-      String(product.subcategory_id) === String(selectedSubcategory);
-
-    // Special filters (only filter if checkbox checked)
-    const matchesCustom = !filterCustom || product.is_custom;
-    const matchesWarranty = !filterWarranty || product.is_warranty;
-    const matchesNewArrival = !filterNewArrival || product.newArrival;
-    const matchesBestSeller = !filterBestSeller || product.bestSeller;
-    const matchesFeatured = !filterFeatured || product.featured;
-
-    // Badge filter: if any badge filters selected, product must have at least one of them
-    const matchesBadges = selectedBadgeFilters.length === 0 ||
-      (product.badges && product.badges.some((b: any) => selectedBadgeFilters.includes(b.id)));
-
-    return matchesSearch && matchesCategory && matchesSubcategory && matchesCustom && matchesWarranty && matchesNewArrival && matchesBestSeller && matchesFeatured && matchesBadges;
-  });
-
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case 'random':
-        return Math.random() - 0.5; // Randomize order
-      case 'newest':
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-      case 'price-low':
-        return (a.minPrice || 0) - (b.minPrice || 0);
-      case 'price-high':
-        return (b.minPrice || 0) - (a.minPrice || 0);
-      case 'name':
-        return (a.name || '').localeCompare(b.name || '');
-      case 'bestseller':
-        return (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0);
-      default:
-        return 0;
-    }
-  });
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setSearchQuery('');
-    setDisplayCount(ITEMS_PER_PAGE);
   };
 
-  // Reset displayCount when filters change
-  useEffect(() => {
-    setDisplayCount(ITEMS_PER_PAGE);
-  }, [selectedCategory, selectedSubcategory, searchQuery, sortBy]);
+  // Check if there are more products to load from server
+  // Note: If client-side filters reduce visible products, user might need to load more to find matches
+  const hasMore = products.length < totalProducts;
 
-  // Products to display (paginated)
-  const displayedProducts = sortedProducts.slice(0, displayCount);
-  const hasMore = displayCount < sortedProducts.length;
-
-  // Load more handler
+  // Load more handler - fetches next page from server with current filters
   const handleLoadMore = () => {
-    setLoadingMore(true);
-    // Simulate slight delay for UX
-    setTimeout(() => {
-      setDisplayCount(prev => prev + ITEMS_PER_PAGE);
-      setLoadingMore(false);
-    }, 300);
+    fetchProducts(currentPage + 1, true, {
+      categoryId: selectedCategory,
+      subcategoryId: selectedSubcategory,
+      badgeIds: selectedBadgeFilters,
+      search: searchQuery
+    });
   };
 
   // Sidebar Filter Component
@@ -309,66 +360,30 @@ export default function ProductListing() {
           </h3>
         </div>
         <div className="p-3 space-y-2">
-          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterCustom}
-              onChange={(e) => setFilterCustom(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
-            />
-            <span className="text-sm text-gray-700">Bisa Custom</span>
-          </label>
-          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterWarranty}
-              onChange={(e) => setFilterWarranty(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
-            />
-            <span className="text-sm text-gray-700">Garansi 1 Tahun</span>
-          </label>
-          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterNewArrival}
-              onChange={(e) => setFilterNewArrival(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
-            />
-            <span className="text-sm text-gray-700">Produk Terbaru</span>
-          </label>
-          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterBestSeller}
-              onChange={(e) => setFilterBestSeller(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
-            />
-            <span className="text-sm text-gray-700">Terlaris</span>
-          </label>
-          <label className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterFeatured}
-              onChange={(e) => setFilterFeatured(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
-            />
-            <span className="text-sm text-gray-700">Featured</span>
-          </label>
-
-          {/* Dynamic Badge Filters */}
+          {/* All filters now come from database badges */}
           {allBadges.map((badge: any) => (
-            <label key={badge.id} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label
+              key={badge.id}
+              className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('🏷️ LABEL CLICKED for badge:', badge.label, badge.id);
+
+                setSelectedBadgeFilters(prev => {
+                  const isCurrentlySelected = prev.includes(badge.id);
+                  const newFilters = isCurrentlySelected
+                    ? prev.filter(id => id !== badge.id)
+                    : [...prev, badge.id];
+                  console.log('🏷️ New badge filters:', newFilters);
+                  return newFilters;
+                });
+              }}
+            >
               <input
                 type="checkbox"
                 checked={selectedBadgeFilters.includes(badge.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedBadgeFilters([...selectedBadgeFilters, badge.id]);
-                  } else {
-                    setSelectedBadgeFilters(selectedBadgeFilters.filter((id: number) => id !== badge.id));
-                  }
-                }}
-                className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A]"
+                readOnly
+                className="w-4 h-4 rounded border-gray-300 text-[#EB216A] focus:ring-[#EB216A] pointer-events-none"
               />
               <span className="text-sm text-gray-700">{badge.label}</span>
             </label>
@@ -447,14 +462,14 @@ export default function ProductListing() {
 
             {/* Sort & Grid Toggle */}
             <div className="hidden sm:flex items-center gap-2">
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={sortBy === 'random' ? '' : sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[160px] border-gray-200">
-                  <SelectValue placeholder="Urutkan" />
+                  <SelectValue placeholder={sortBy === 'random' ? "Acak (Default)" : "Urutkan"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="random">Acak</SelectItem>
-                  <SelectItem value="bestseller">Terlaris</SelectItem>
                   <SelectItem value="newest">Terbaru</SelectItem>
+                  <SelectItem value="oldest">Terlama</SelectItem>
+                  <SelectItem value="bestseller">Terlaris</SelectItem>
                   <SelectItem value="price-low">Termurah</SelectItem>
                   <SelectItem value="price-high">Termahal</SelectItem>
                   <SelectItem value="name">Nama A-Z</SelectItem>
@@ -494,7 +509,7 @@ export default function ProductListing() {
             {/* Results Info */}
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-600">
-                Menampilkan <span className="font-semibold text-gray-900">{displayedProducts.length}</span> dari <span className="font-semibold text-gray-900">{sortedProducts.length}</span> produk
+                Menampilkan <span className="font-semibold text-gray-900">{sortedProducts.length}</span> dari <span className="font-semibold text-gray-900">{totalProducts}</span> produk
                 {selectedCategory && (
                   <span> dalam <span className="font-semibold text-[#EB216A]">{categories.find(c => String(c.id) === String(selectedCategory))?.name}</span></span>
                 )}
@@ -517,7 +532,7 @@ export default function ProductListing() {
             ) : sortedProducts.length > 0 ? (
               <>
                 <div className={`grid grid-cols-2 ${gridCols === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2 lg:gap-4`}>
-                  {displayedProducts.map((product) => (
+                  {sortedProducts.map((product: any) => (
                     <ProductCard key={product.id} {...product} />
                   ))}
                 </div>
@@ -537,7 +552,7 @@ export default function ProductListing() {
                           Memuat...
                         </>
                       ) : (
-                        `Muat Lebih Banyak (${sortedProducts.length - displayCount} lainnya)`
+                        `Muat Lebih Banyak (${totalProducts - products.length} lainnya)`
                       )}
                     </Button>
                   </div>

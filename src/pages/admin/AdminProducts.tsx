@@ -1482,7 +1482,7 @@ export default function AdminProducts() {
                         {formData.metaTitle || formData.name || 'Nama Produk'}
                       </p>
                       <p className="text-green-700 text-xs">
-                        amagriyagorden.com &gt; products &gt; {formData.sku?.toLowerCase() || 'sku'}
+                        amagriya.com &gt; products &gt; {formData.sku?.toLowerCase() || 'sku'}
                       </p>
                       <p className="text-sm text-gray-700">
                         {formData.metaDescription || formData.description || 'Deskripsi produk akan tampil di sini...'}

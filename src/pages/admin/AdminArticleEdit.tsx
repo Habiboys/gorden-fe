@@ -19,6 +19,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { articlesApi, uploadApi } from '../../utils/api';
+import { getImageUrl, getProductImageUrl, processHtmlContent } from '../../utils/imageHelper';
 
 const categoryOptions = [
     { value: 'tips', label: 'Tips & Tricks' },
@@ -72,7 +73,7 @@ export default function AdminArticleEdit() {
     // Set initial content in editor (only once after load)
     useEffect(() => {
         if (editorRef.current && formData.content && !editorInitialized.current) {
-            editorRef.current.innerHTML = formData.content;
+            editorRef.current.innerHTML = processHtmlContent(formData.content);
             editorInitialized.current = true;
         }
     }, [formData.content]);
@@ -162,7 +163,7 @@ export default function AdminArticleEdit() {
         if (!pendingImageUrl || !editorRef.current) return;
 
         const img = document.createElement('img');
-        img.src = pendingImageUrl;
+        img.src = getImageUrl(pendingImageUrl);
         img.alt = 'Image';
 
         // Apply size
@@ -574,7 +575,7 @@ export default function AdminArticleEdit() {
                             {formData.image ? (
                                 <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden mb-3">
                                     <img
-                                        src={formData.image}
+                                        src={getProductImageUrl(formData.image)}
                                         alt="Featured"
                                         className="w-full h-full object-cover"
                                     />
@@ -710,7 +711,7 @@ export default function AdminArticleEdit() {
                             {/* Image Preview - Limited height */}
                             <div className="bg-gray-100 rounded-lg p-3 flex justify-center max-h-32 overflow-hidden">
                                 <img
-                                    src={pendingImageUrl}
+                                    src={getProductImageUrl(pendingImageUrl)}
                                     alt="Preview"
                                     className="max-h-24 max-w-full object-contain rounded"
                                 />

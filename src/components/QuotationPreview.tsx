@@ -349,7 +349,7 @@ export function QuotationPreview({ doc, onClose, onRefresh }: QuotationPreviewPr
             {/* Company Info Footer */}
             <div className="mt-8 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
               <p>Amagriya Gorden - Solusi Terbaik untuk Keindahan Rumah Anda</p>
-              <p className="mt-1">www.amagriyagorden.com | Instagram: @amagriyagorden</p>
+              <p className="mt-1">www.amagriya.com | Instagram: @amagriyagorden</p>
             </div>
           </div>
         </div>

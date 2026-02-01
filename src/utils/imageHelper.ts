@@ -84,3 +84,15 @@ export const getProductImagesArray = (images: any): string[] => {
     // Transform all URLs
     return parsedImages.map(img => getImageUrl(img) || FALLBACK_IMAGE);
 };
+
+/**
+ * Process HTML content to replace relative image URLs with absolute URLs
+ */
+export const processHtmlContent = (html: string | null | undefined): string => {
+    if (!html) return '';
+    const baseUrl = getBaseUrl();
+
+    return html
+        .replace(/src="\/uploads\//g, `src="${baseUrl}/uploads/`)
+        .replace(/src='\/uploads\//g, `src='${baseUrl}/uploads/`);
+};

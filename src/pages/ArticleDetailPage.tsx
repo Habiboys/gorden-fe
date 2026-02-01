@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { articlesApi } from '../utils/api';
-import { getProductImageUrl } from '../utils/imageHelper';
+import { getProductImageUrl, processHtmlContent } from '../utils/imageHelper';
 
 export default function ArticleDetailPage() {
   const { slug } = useParams();
@@ -213,7 +213,7 @@ export default function ArticleDetailPage() {
                   prose-strong:text-gray-900
                   prose-a:text-[#EB216A] prose-a:no-underline hover:prose-a:underline
                 "
-                dangerouslySetInnerHTML={{ __html: article.content || '' }}
+                dangerouslySetInnerHTML={{ __html: processHtmlContent(article.content || '') }}
               />
 
               {/* Tags */}

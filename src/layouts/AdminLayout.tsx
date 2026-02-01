@@ -17,7 +17,10 @@ import {
   Package,
   Settings,
   Sparkles,
+  Store,
   Tag,
+  Users,
+  Wallet,
   X
 } from 'lucide-react';
 import { useState } from 'react';
@@ -27,8 +30,12 @@ import { useSettings } from '../context/SettingsContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { name: 'Finance Dashboard', href: '/finance', icon: Wallet },
+  { name: 'Store', href: '/admin/stores', icon: Store },
+  { name: 'Akun', href: '/admin/users', icon: Users },
   { name: 'Produk', href: '/admin/products', icon: Package },
   { name: 'Kategori', href: '/admin/categories', icon: FolderTree },
+  { name: 'Kategori Keuangan', href: '/admin/finance-categories', icon: Wallet },
   { name: 'Badges', href: '/admin/badges', icon: Tag },
   { name: 'Kalkulator Leads', href: '/admin/calculator-leads', icon: Calculator },
   { name: 'Jenis Kalkulator', href: '/admin/calculator-types', icon: Box },
@@ -46,7 +53,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
 
 export function AdminLayout() {
-  const { logout } = useAuth();
+  const { logout, isFinance, user } = useAuth();
   const { settings } = useSettings();
   const { confirm } = useConfirm();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,7 +70,7 @@ export function AdminLayout() {
   const handleLogout = async () => {
     const confirmed = await confirm({
       title: 'Logout',
-      description: 'Yakin ingin keluar dari akun admin?',
+      description: 'Yakin ingin keluar dari akun?',
       confirmText: 'Ya, Keluar',
       cancelText: 'Batal',
       variant: 'destructive'
@@ -75,6 +82,14 @@ export function AdminLayout() {
       navigate('/');
     }
   };
+
+  // Finance filtered items
+  const financeNavigation = [
+    { name: 'Dashboard', href: '/finance', icon: Wallet },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
+  ];
+
+  const currentNavigation = isFinance ? financeNavigation : navigation;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,7 +108,7 @@ export function AdminLayout() {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
-          <Link to="/admin" className="flex items-center gap-2">
+          <Link to={isFinance ? "/finance" : "/admin"} className="flex items-center gap-2">
             {settings.siteLogo ? (
               <img
                 src={settings.siteLogo}
@@ -107,7 +122,9 @@ export function AdminLayout() {
                 className="h-8 w-auto object-contain"
               />
             )}
-            <span className="text-xl text-gray-900">Admin</span>
+            <span className="text-xl text-gray-900">
+              {isFinance ? 'Finance' : 'Admin'}
+            </span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -119,8 +136,9 @@ export function AdminLayout() {
 
         {/* Navigation - Scrollable */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {currentNavigation.map((item) => {
             const Icon = item.icon;
+            // Handle active state for finance dashboard specially if needed, but default logic works if href matches
             const active = isActive(item.href);
             return (
               <Link
@@ -143,11 +161,13 @@ export function AdminLayout() {
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 cursor-pointer">
             <div className="w-10 h-10 bg-[#EB216A]/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-[#EB216A]">AD</span>
+              <span className="text-[#EB216A]">
+                {user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 truncate">Admin User</p>
-              <p className="text-xs text-gray-500">admin@amagriya.com</p>
+              <p className="text-sm text-gray-900 truncate">{user?.name || 'Admin User'}</p>
+              <p className="text-xs text-gray-500">{user?.role || 'admin@amagriya.com'}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
           </div>
@@ -173,7 +193,7 @@ export function AdminLayout() {
               <Menu className="w-6 h-6 text-gray-600" />
             </button>
             <h1 className="text-xl text-gray-900 hidden lg:block">
-              Amagriya Gorden - Admin Panel
+              {isFinance ? 'Amagriya Gorden - Finance Panel' : 'Amagriya Gorden - Admin Panel'}
             </h1>
           </div>
 

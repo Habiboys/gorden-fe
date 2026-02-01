@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { useConfirm } from '../../context/ConfirmContext';
 import { articlesApi, uploadApi } from '../../utils/api';
 import { getProductImageUrl } from '../../utils/imageHelper';
 
@@ -39,6 +40,7 @@ const categoryOptions = [
 
 export default function AdminArticles() {
   const navigate = useNavigate();
+  const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -216,7 +218,15 @@ export default function AdminArticles() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Anda yakin ingin menghapus artikel ini?')) {
+    const isConfirmed = await confirm({
+      title: 'Hapus Artikel',
+      description: 'Apakah Anda yakin ingin menghapus artikel ini?',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      variant: 'destructive',
+    });
+
+    if (!isConfirmed) {
       return;
     }
 

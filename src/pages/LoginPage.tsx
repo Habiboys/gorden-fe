@@ -18,7 +18,7 @@ import { authApi } from '../utils/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isAdmin } = useAuth();
+  const { login, isAuthenticated, isAdmin, user } = useAuth();
   const { settings } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -30,14 +30,15 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      // Check if user is admin
       if (isAdmin) {
         navigate('/admin', { replace: true });
+      } else if (user?.role === 'FINANCE' || user?.role === 'finance') {
+        navigate('/finance', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
     }
-  }, [isAuthenticated, isAdmin, navigate]);
+  }, [isAuthenticated, isAdmin, navigate, user]);
 
   // Use dynamic logo from settings or fallback to default
   const logoSrc = settings.siteLogo || defaultLogo;
@@ -68,6 +69,8 @@ export default function LoginPage() {
         const userRole = response.user?.role?.toUpperCase();
         if (userRole === 'ADMIN') {
           navigate('/admin');
+        } else if (userRole === 'FINANCE') {
+          navigate('/finance');
         } else {
           navigate('/');
         }

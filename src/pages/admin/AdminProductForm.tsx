@@ -964,7 +964,7 @@ export default function AdminProductForm() {
                                 </div>
                                 <div>
                                     <div className="text-xs text-gray-800 font-medium">Amagriya Gorden</div>
-                                    <div className="text-[10px] text-gray-500">amagriyagorden.com {'>'} products {'>'} {formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'nama-produk'}</div>
+                                    <div className="text-[10px] text-gray-500">amagriya.com {'>'} products {'>'} {formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'nama-produk'}</div>
                                 </div>
                             </div>
                             <h3 className="text-[#1a0dab] text-lg font-medium hover:underline cursor-pointer truncate leading-tight">

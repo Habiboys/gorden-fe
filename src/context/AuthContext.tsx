@@ -5,12 +5,15 @@ interface User {
     name: string;
     email: string;
     role: string;
+    Stores?: any[];
 }
 
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isAdmin: boolean;
+    isFinance: boolean;
+    canAccessAdmin: boolean;
     login: (token: string, userData: User) => void;
     logout: () => void;
     loading: boolean;
@@ -71,6 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin' || user?.role === 'ADMIN',
+        isFinance: user?.role === 'finance' || user?.role === 'FINANCE',
+        canAccessAdmin: ['ADMIN', 'FINANCE'].includes(user?.role?.toUpperCase() || ''),
         login,
         logout,
         loading

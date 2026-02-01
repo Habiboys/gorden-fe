@@ -59,24 +59,36 @@ export const productsApi = {
     getAll: (params?: {
         category?: string;
         category_id?: number;
+        subcategory_id?: string | number;
         featured?: boolean;
         new_arrival?: string;
         best_seller?: string;
-        limit?: number
+        limit?: number;
+        page?: number;
+        sort?: string;
+        seed?: number;
+        badge_ids?: string;
+        search?: string;
     }) => {
         const queryParams = new URLSearchParams();
         if (params?.category) queryParams.append('category', params.category);
         if (params?.category_id) queryParams.append('category_id', params.category_id.toString());
+        if (params?.subcategory_id) queryParams.append('subcategory_id', params.subcategory_id.toString());
         if (params?.featured) queryParams.append('featured', 'true');
         if (params?.new_arrival) queryParams.append('new_arrival', params.new_arrival);
         if (params?.best_seller) queryParams.append('best_seller', params.best_seller);
         if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.sort) queryParams.append('sort', params.sort);
+        if (params?.seed) queryParams.append('seed', params.seed.toString());
+        if (params?.badge_ids) queryParams.append('badge_ids', params.badge_ids);
+        if (params?.search) queryParams.append('search', params.search);
 
         const query = queryParams.toString();
         return apiCall(`/products${query ? `?${query}` : ''}`);
     },
 
-    getProducts: (params?: { page?: number; limit?: number; search?: string; category?: string; subcategory_id?: string; status?: string; sort?: string }) => {
+    getProducts: (params?: { page?: number; limit?: number; search?: string; category?: string; subcategory_id?: string; status?: string; sort?: string; seed?: number }) => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -85,6 +97,7 @@ export const productsApi = {
         if (params?.subcategory_id) queryParams.append('subcategory_id', params.subcategory_id);
         if (params?.status) queryParams.append('status', params.status);
         if (params?.sort) queryParams.append('sort', params.sort);
+        if (params?.seed) queryParams.append('seed', params.seed.toString());
         const query = queryParams.toString();
         return apiCall(`/products${query ? `?${query}` : ''}`);
     },
@@ -816,6 +829,96 @@ export const badgesApi = {
         body: JSON.stringify(data),
     }),
     delete: (id: string | number) => apiCall(`/badges/${id}`, {
+        method: 'DELETE',
+    }),
+};
+
+// Stores API
+export const storesApi = {
+    getAll: () => apiCall('/stores'),
+    getById: (id: string) => apiCall(`/stores/${id}`),
+    create: (data: any) => apiCall('/stores', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    update: (id: string, data: any) => apiCall(`/stores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    delete: (id: string) => apiCall(`/stores/${id}`, {
+        method: 'DELETE',
+    }),
+    assignUser: (storeId: string, userId: string) => apiCall(`/stores/${storeId}/users`, {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+    }),
+    removeUser: (storeId: string, userId: string) => apiCall(`/stores/${storeId}/users/${userId}`, {
+        method: 'DELETE',
+    }),
+};
+
+// Finance API
+export const financeApi = {
+    createTransaction: (data: any) => apiCall('/finance/transactions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    getTransactions: (storeId: string, params?: any) => {
+        const queryParams = new URLSearchParams(params);
+        return apiCall(`/finance/stores/${storeId}/transactions?${queryParams.toString()}`);
+    },
+    getRecap: (storeId: string, params?: any) => {
+        const queryParams = new URLSearchParams(params);
+        return apiCall(`/finance/stores/${storeId}/recap?${queryParams.toString()}`);
+    },
+    exportTransactions: async (storeId: string, params?: any) => {
+        const queryParams = new URLSearchParams(params);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/finance/stores/${storeId}/export?${queryParams.toString()}`, {
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        });
+        if (!response.ok) throw new Error('Failed to download excel');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    },
+    getCategories: (type?: string) => {
+        const queryParams = new URLSearchParams();
+        if (type) queryParams.append('type', type);
+        return apiCall(`/finance/categories?${queryParams.toString()}`);
+    },
+    createCategory: (data: { name: string; type: string }) => apiCall('/finance/categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    deleteCategory: (id: string) => apiCall(`/finance/categories/${id}`, {
+        method: 'DELETE',
+    }),
+    deleteTransaction: (id: string) => apiCall(`/finance/transactions/${id}`, {
+        method: 'DELETE',
+    }),
+};
+
+// Users API
+export const usersApi = {
+    getAll: () => apiCall('/users'),
+    getById: (id: string) => apiCall(`/users/${id}`),
+    create: (data: any) => apiCall('/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    update: (id: string, data: any) => apiCall(`/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    delete: (id: string) => apiCall(`/users/${id}`, {
         method: 'DELETE',
     }),
 };

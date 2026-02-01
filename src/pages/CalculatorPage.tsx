@@ -302,7 +302,7 @@ export default function CalculatorPageV2() {
 
       const results: { [key: number]: ProductOption[] } = {};
 
-      for (const comp of currentType.components) {
+      await Promise.all(currentType.components.map(async (comp) => {
         try {
           const res = await calculatorTypesApi.getProductsBySubcategory(comp.subcategory_id);
           if (res.success && res.data) {
@@ -320,7 +320,7 @@ export default function CalculatorPageV2() {
         } catch (error) {
           console.error('Error loading products for subcategory:', comp.subcategory_id);
         }
-      }
+      }));
 
       setComponentProducts(results);
     };

@@ -16,7 +16,7 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, canAccessAdmin, isFinance, logout } = useAuth();
   const { openCart, getItemCount } = useCart();
   const { confirm } = useConfirm();
 
@@ -182,9 +182,9 @@ export function Navbar() {
 
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-                    {isAdmin ? (
+                    {canAccessAdmin ? (
                       <Link
-                        to="/admin"
+                        to={isFinance ? "/finance" : "/admin"}
                         className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setIsProfileOpen(false)}
                       >
@@ -278,8 +278,8 @@ export function Navbar() {
               <div className="pt-4 pl-4 space-y-2">
                 {isAuthenticated ? (
                   <>
-                    {isAdmin ? (
-                      <Link to="/admin" className="block">
+                    {canAccessAdmin ? (
+                      <Link to={isFinance ? "/finance" : "/admin"} className="block">
                         <Button
                           variant="outline"
                           className={`w-full rounded-full transition-colors ${isSolidNav
@@ -333,6 +333,6 @@ export function Navbar() {
           </div>
         )}
       </div>
-    </nav >
+    </nav>
   );
 }
